@@ -28,6 +28,8 @@ class EmailTasks:
             if not user:
                 logger.error(f"User {user_id} not found")
                 return {"status": "failed", "error": "User not found"}
+
+            # Run the async function properly
             EmailUtil.send_otp(user, email_type)
             logger.info(f"Email sent: {email_type} to user {user_id}")
             return {"status": "success", "user_id": user_id}

@@ -24,9 +24,9 @@ api = NinjaAPI(
     docs_url="/",
     throttle=[
         # Anonymous users: 100 requests per minute
-        AnonRateThrottle("100/m"),
+        AnonRateThrottle("1000/m"),
         # Authenticated users: 1000 requests per minute
-        AuthRateThrottle("1000/m"),
+        AuthRateThrottle("2000/m"),
     ],
 )
 

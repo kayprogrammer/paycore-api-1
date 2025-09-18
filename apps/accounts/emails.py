@@ -35,11 +35,11 @@ class EmailUtil:
             logger.error(f"Email sending failed for {recipient}: {e}", exc_info=True)
 
     @classmethod
-    async def send_otp(cls, user, purpose):
+    def send_otp(cls, user, purpose):
         code = random.randint(100000, 999999)
         user.otp_code = code
         user.otp_expires_at = timezone.now() + timedelta(minutes=cls.OTP_EXPIRY_MINUTES)
-        await user.asave(update_fields=["otp_code", "otp_expires_at"])
+        user.save(update_fields=["otp_code", "otp_expires_at"])
 
         cls._send_email(
             subject=purpose.title(),

@@ -112,11 +112,11 @@ app.conf.update(
 )
 
 # SSL/TLS configuration for production RabbitMQ
-if getattr(settings, 'CELERY_BROKER_USE_SSL', False):
+if getattr(settings, "CELERY_BROKER_USE_SSL", False):
     app.conf.broker_use_ssl = {
-        "keyfile": getattr(settings, 'CELERY_SSL_KEYFILE', ''),
-        "certfile": getattr(settings, 'CELERY_SSL_CERTFILE', ''),
-        "ca_certs": getattr(settings, 'CELERY_SSL_CA_CERTS', ''),
+        "keyfile": getattr(settings, "CELERY_SSL_KEYFILE", ""),
+        "certfile": getattr(settings, "CELERY_SSL_CERTFILE", ""),
+        "ca_certs": getattr(settings, "CELERY_SSL_CA_CERTS", ""),
         "cert_reqs": ssl.CERT_REQUIRED,
     }
 

@@ -15,14 +15,14 @@ scrape_configs:
   # Django Application Metrics
   - job_name: 'paycore-django'
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ['host.docker.internal:8000']
     metrics_path: /metrics
     scrape_interval: 10s
 
   # Celery Worker Metrics (via custom endpoint)
   - job_name: 'paycore-celery'
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ['host.docker.internal:8000']
     metrics_path: /health/celery/
     scrape_interval: 15s
 

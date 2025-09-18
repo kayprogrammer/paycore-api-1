@@ -40,7 +40,7 @@ TOKEN_EXAMPLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIi
 
 class TokenSchema(BaseSchema):
     token: str = Field(
-        ..., example=TOKEN_EXAMPLE
+        None, example=TOKEN_EXAMPLE
     )  # use for token refresh and google login (id_token)
 
 

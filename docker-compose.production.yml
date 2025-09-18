@@ -177,7 +177,8 @@ services:
   # Prometheus (Metrics Collection)
   prometheus:
     image: prom/prometheus:latest
-    network_mode: host
+    ports:
+      - "9091:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro

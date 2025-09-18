@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from ninja import Router
 from ninja.throttling import AnonRateThrottle
 from apps.accounts.auth import AuthUser, Authentication
@@ -231,7 +232,7 @@ async def login_initiate(request, data: LoginUserSchema):
     response={200: TokensResponseSchema},
     throttle=AnonRateThrottle("3/15m"),
 )
-async def login_complete(request, data: LoginMfaSchema):
+async def login_complete(request, data: LoginMfaSchema, response: HttpResponse):
     email = data.email
     otp_code = data.otp
 
@@ -270,20 +271,15 @@ async def login_complete(request, data: LoginMfaSchema):
     # Create secure tokens
     access_token, refresh_token = await Authentication.create_tokens_for_user(user)
 
-    # Prepare response
-    response_data = {"access": access_token, "refresh": refresh_token}
-    response = CustomResponse.success(
-        message="Login successful",
-        data=response_data,
-        status_code=200,
-    )
-
     # Set HTTP-only cookie for web clients
     if Authentication.is_web_client(request):
-        response = Authentication.set_refresh_token_cookie(response, refresh_token)
-        response.data["data"]["refresh"] = "Set as HTTP-only cookie"
+        Authentication.set_refresh_token_cookie(response, refresh_token)
+        refresh_token = "Set as HTTP-only cookie"
 
-    return response
+    return CustomResponse.success(
+        message="Login successful",
+        data={"access": access_token, "refresh": refresh_token},
+    )
 
 
 @auth_router.post(
@@ -296,7 +292,9 @@ async def login_complete(request, data: LoginMfaSchema):
     """,
     response={200: TokensResponseSchema},
 )
-async def refresh_tokens(request, data: TokenSchema = None):
+async def refresh_tokens(
+    request, data: TokenSchema = None, response: HttpResponse = None
+):
     # Get refresh token from cookie (web) or request body (mobile)
     refresh_token = None
 
@@ -325,18 +323,15 @@ async def refresh_tokens(request, data: TokenSchema = None):
             status_code=401,
         )
 
-    # Prepare response
-    response = CustomResponse.success(
+    # Set HTTP-only cookie for web clients
+    if Authentication.is_web_client(request):
+        Authentication.set_refresh_token_cookie(response, new_refresh)
+        new_refresh = "Set as HTTP-only cookie"
+
+    return CustomResponse.success(
         message="Tokens refreshed successfully",
         data={"access": new_access, "refresh": new_refresh},
-        status_code=200,
     )
-
-    # Set new HTTP-only cookie for web clients
-    if Authentication.is_web_client(request):
-        response = Authentication.set_refresh_token_cookie(response, new_refresh)
-        response.data["data"]["refresh"] = "Set as HTTP-only cookie"
-    return response
 
 
 @auth_router.post(
@@ -350,7 +345,7 @@ async def refresh_tokens(request, data: TokenSchema = None):
     response={200: TokensResponseSchema},
     throttle=AnonRateThrottle("10/5m"),
 )
-async def google_login(request, data: TokenSchema):
+async def google_login(request, data: TokenSchema, response: HttpResponse):
     token = data.token
 
     # Validate Google ID token
@@ -366,19 +361,15 @@ async def google_login(request, data: TokenSchema):
     # Create secure tokens using our enhanced system
     access_token, refresh_token = await Authentication.create_tokens_for_user(user)
 
-    # Prepare response
-    response = CustomResponse.success(
-        message="Google login successful",
-        data={"access": access_token, "refresh": refresh_token},
-        status_code=200,
-    )
-
     # Set HTTP-only cookie for web clients
     if Authentication.is_web_client(request):
-        response = Authentication.set_refresh_token_cookie(response, refresh_token)
-        response.data["data"]["refresh"] = "Set as HTTP-only cookie"
+        Authentication.set_refresh_token_cookie(response, refresh_token)
+        refresh_token = "Set as HTTP-only cookie"
 
-    return response
+    return CustomResponse.success(
+        message="Google login successful",
+        data={"access": access_token, "refresh": refresh_token},
+    )
 
 
 @auth_router.post(
@@ -391,17 +382,12 @@ async def google_login(request, data: TokenSchema):
     response=ResponseSchema,
     auth=AuthUser(),
 )
-async def logout(request):
+async def logout(request, response: HttpResponse):
     user = request.auth
-
-    # Invalidate all user tokens (single session model)
     await Authentication.invalidate_user_tokens(user)
-
-    # Prepare response
-    response = CustomResponse.success(message="Logout successful")
 
     # Clear HTTP-only cookie for web clients
     if Authentication.is_web_client(request):
-        response = Authentication.clear_refresh_token_cookie(response)
+        Authentication.clear_refresh_token_cookie(response)
 
-    return response
+    return CustomResponse.success(message="Logout successful")
