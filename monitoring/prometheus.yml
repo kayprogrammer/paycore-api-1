@@ -1,0 +1,54 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Django Application Metrics
+  - job_name: 'paycore-django'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Celery Worker Metrics (via custom endpoint)
+  - job_name: 'paycore-celery'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: /health/celery/
+    scrape_interval: 15s
+
+  # RabbitMQ Metrics
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Redis Metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+    scrape_interval: 15s
+
+  # System Metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Flower Metrics (if available)
+  - job_name: 'flower'
+    static_configs:
+      - targets: ['flower:5555']
+    metrics_path: /api/workers
+    scrape_interval: 30s
+    scrape_timeout: 10s

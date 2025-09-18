@@ -1,0 +1,144 @@
+groups:
+  - name: paycore.alerts
+    rules:
+      # High-level service alerts
+      - alert: PaycoreServiceDown
+        expr: up{job="paycore-django"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: paycore
+        annotations:
+          summary: "Paycore API service is down"
+          description: "The Paycore Django application has been down for more than 30 seconds."
+
+      # Database connection alerts
+      - alert: DatabaseConnectionFailure
+        expr: django_db_execute_total{status="error"} > 5
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Database connection issues detected"
+          description: "High number of database errors detected in the last minute."
+
+      # Celery worker alerts
+      - alert: CeleryWorkersDown
+        expr: up{job="paycore-celery"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: celery
+        annotations:
+          summary: "Celery workers are down"
+          description: "No Celery workers are responding."
+
+      - alert: HighTaskFailureRate
+        expr: rate(celery_tasks_total{status="failure"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "High Celery task failure rate"
+          description: "Celery task failure rate is above 10% for the last 5 minutes."
+
+      # Email queue specific alerts
+      - alert: EmailQueueBacklog
+        expr: celery_active_tasks{queue="emails"} > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: email
+        annotations:
+          summary: "High email queue backlog"
+          description: "Email queue has more than 50 active tasks for over 5 minutes."
+
+      # Payment processing alerts
+      - alert: PaymentTaskFailures
+        expr: rate(celery_tasks_total{task_name=~".*payment.*", status="failure"}[1m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: payments
+        annotations:
+          summary: "Payment task failures detected"
+          description: "Payment-related tasks are failing."
+
+      # Response time alerts
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(django_http_requests_latency_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High API response time"
+          description: "95th percentile response time is above 2 seconds."
+
+      # Memory and resource alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for more than 5 minutes."
+
+      # RabbitMQ alerts
+      - alert: RabbitMQDown
+        expr: up{job="rabbitmq"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ is down"
+          description: "RabbitMQ message broker is not responding."
+
+      - alert: RabbitMQHighQueueDepth
+        expr: rabbitmq_queue_messages{queue=~"emails|payments"} > 100
+        for: 3m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "High RabbitMQ queue depth"
+          description: "Critical queue {{ $labels.queue }} has more than 100 messages."
+
+      # Redis alerts
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis server is not responding."
+
+  - name: security.alerts
+    rules:
+      # Security-related alerts
+      - alert: HighFailedLoginAttempts
+        expr: rate(django_http_requests_total{status="401", view_name=~".*login.*"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          security: authentication
+        annotations:
+          summary: "High number of failed login attempts"
+          description: "More than 10 failed login attempts per second in the last 5 minutes."
+
+      - alert: UnusualAPIAccess
+        expr: rate(django_http_requests_total[5m]) > 100
+        for: 3m
+        labels:
+          severity: warning
+          security: rate_limiting
+        annotations:
+          summary: "Unusual API access pattern"
+          description: "Client {{ $labels.client_ip }} is making more than 100 requests per second."

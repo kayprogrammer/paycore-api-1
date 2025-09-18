@@ -55,3 +55,137 @@ req: # Install requirements
 ureq: # Update requirements
 	pip freeze > requirements.txt
 
+# Celery Management Commands
+celery: # Start Celery worker
+	celery -A paycore worker --loglevel=info --concurrency=4
+
+celery-emails: # Start email queue worker
+	celery -A paycore worker -Q emails --loglevel=info --concurrency=4
+
+celery-payments: # Start payments queue worker  
+	celery -A paycore worker -Q payments --loglevel=info --concurrency=2
+
+celery-beat: # Start Celery Beat scheduler
+	celery -A paycore beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+flower: # Start Flower monitoring
+	celery -A paycore flower --port=5555
+
+flower-secure: # Start Flower with authentication
+	python manage.py start_flower --basic-auth=admin:paycore123
+
+# Health Checks
+health: # Check system health
+	@echo "Checking system health..."
+	@curl -s http://localhost:8000/health/system/ | python -m json.tool || echo "Web service not available"
+
+health-celery: # Check Celery health
+	@curl -s http://localhost:8000/health/celery/ | python -m json.tool || echo "Celery not available"
+
+# Production Docker Commands
+prod-up: # Start production environment
+	docker-compose -f docker-compose.production.yml up -d --build
+
+prod-down: # Stop production environment
+	docker-compose -f docker-compose.production.yml down
+
+prod-logs: # View production logs
+	docker-compose -f docker-compose.production.yml logs -f
+
+celery-logs: # View Celery logs
+	docker-compose logs -f celery-emails celery-payments celery-general
+
+# Task Management
+purge-tasks: # Purge all queued tasks
+	celery -A paycore purge -f
+
+inspect-active: # Inspect active tasks
+	celery -A paycore inspect active
+
+inspect-stats: # Get worker statistics
+	celery -A paycore inspect stats
+
+# Infrastructure Commands
+infrastructure-up: # Start RabbitMQ + Redis only
+	docker run -d --name paycore-rabbitmq -p 5672:5672 -p 15672:15672 -e RABBITMQ_DEFAULT_USER=guest -e RABBITMQ_DEFAULT_PASS=guest rabbitmq:3-management || echo "RabbitMQ already running"
+	docker run -d --name paycore-redis -p 6379:6379 redis:7-alpine || echo "Redis already running"
+
+infrastructure-down: # Stop infrastructure
+	docker stop paycore-rabbitmq paycore-redis || echo "Containers not found"
+	docker rm paycore-rabbitmq paycore-redis || echo "Containers not found"
+
+# Setup Commands
+
+setup-celery: # Run Celery migrations
+	python manage.py migrate django_celery_beat
+	python manage.py migrate django_celery_results
+
+# Testing Commands  
+test-metrics: # Test metrics endpoint
+	@echo "Testing Prometheus metrics..."
+	curl -s http://localhost:8000/metrics/ | head -10 || echo "Django not running"
+
+test-health: # Test health endpoints
+	@echo "Testing system health..."
+	curl -s http://localhost:8000/health/system/ | python -m json.tool || echo "Django not running"
+	@echo ""
+	@echo "Testing Celery health..."
+	curl -s http://localhost:8000/health/celery/ | python -m json.tool || echo "Django not running"
+
+test-email-task: # Test email task queueing
+	python manage.py shell -c "from apps.accounts.tasks import EmailTasks; task = EmailTasks.send_otp_email.delay(1, 'test'); print(f'Task queued: {task.id}')"
+
+# Start Services Commands
+start-celery-workers: # Start all Celery workers (use separate terminals)
+	@echo "Start each command in separate terminals:"
+	@echo "Terminal 1: make celery-emails"  
+	@echo "Terminal 2: make celery"
+	@echo "Terminal 3: make celery-beat"
+
+# Monitoring Commands
+monitoring-up: # Start full monitoring stack
+	@echo "Starting monitoring stack (this may take a while on first run)..."
+	docker-compose -f docker-compose.production.yml pull prometheus grafana alertmanager node-exporter redis-exporter || echo "Pull failed, trying to start anyway..."
+	docker-compose -f docker-compose.production.yml up -d prometheus grafana alertmanager node-exporter redis-exporter
+
+monitoring-up-local: # Start monitoring with locally available images only
+	docker-compose -f docker-compose.production.yml up -d --no-deps prometheus grafana alertmanager node-exporter redis-exporter
+
+monitoring-only: # Start monitoring without Redis (use when Redis is already running locally)
+	docker-compose -f docker-compose.production.yml up -d prometheus grafana alertmanager node-exporter redis-exporter
+
+monitoring-down: # Stop monitoring stack
+	docker-compose -f docker-compose.production.yml stop prometheus grafana alertmanager node-exporter redis-exporter
+
+monitoring-check: # Check monitoring configuration files
+	@echo "Checking monitoring configuration..."
+	@ls -la monitoring/ 2>/dev/null || echo "❌ monitoring/ directory missing"
+	@ls -la monitoring/prometheus.yml 2>/dev/null || echo "❌ prometheus.yml missing"
+	@ls -la monitoring/alert_rules.yml 2>/dev/null || echo "❌ alert_rules.yml missing"
+	@ls -la monitoring/alertmanager.yml 2>/dev/null || echo "❌ alertmanager.yml missing"
+
+show-dashboards: # Show monitoring URLs
+	@echo "📊 Monitoring Dashboards:"
+	@echo "  Grafana:      http://localhost:3000 (admin/paycore123)"
+	@echo "  Prometheus:   http://localhost:9090"
+	@echo "  AlertManager: http://localhost:9093"
+	@echo "  Flower:       http://localhost:5555 (admin/paycore123)" 
+	@echo "  RabbitMQ:     http://localhost:15672 (guest/guest)"
+
+# Quick Start for Development with Monitoring
+quick-start: req mig build monitoring-up
+	@echo "🚀 Paycore API with Full Monitoring Stack!"
+	@echo ""
+	@echo "📊 Services:"
+	@echo "  Web API:      http://localhost:8000"
+	@echo "  Flower:       http://localhost:5555" 
+	@echo "  RabbitMQ:     http://localhost:15672"
+	@echo "  Grafana:      http://localhost:3000"
+	@echo "  Prometheus:   http://localhost:9090"
+	@echo "  AlertManager: http://localhost:9093"
+	@echo ""
+	@echo "🔧 Credentials:"
+	@echo "  RabbitMQ:     guest / guest"
+	@echo "  Flower:       admin / paycore123"
+	@echo "  Grafana:      admin / paycore123"
+

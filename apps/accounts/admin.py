@@ -22,7 +22,6 @@ class UserAdmin(BaseUserAdmin):
         "first_name",
         "last_name",
         "email",
-        "phone",
         "is_staff",
         "is_active",
     ]
@@ -31,7 +30,6 @@ class UserAdmin(BaseUserAdmin):
         "first_name",
         "last_name",
         "email",
-        "phone",
         "is_staff",
         "is_active",
     ]
@@ -46,7 +44,6 @@ class UserAdmin(BaseUserAdmin):
                 "fields": (
                     "first_name",
                     "last_name",
-                    "phone",
                     "bio",
                     "dob",
                     "avatar",
@@ -80,7 +77,6 @@ class UserAdmin(BaseUserAdmin):
                     "first_name",
                     "last_name",
                     "email",
-                    "phone",
                     "password1",
                     "password2",
                     "is_staff",

@@ -33,11 +33,15 @@ THIRD_PARTY_APPS = [
     "cloudinary",
     "cloudinary_storage",
     "ninja",
+    "django_celery_beat",
+    "django_celery_results",
+    "django_prometheus",
 ]
 
 LOCAL_APPS = [
     "apps.common",
     "apps.accounts",
+    "apps.profiles",
     "apps.wallets",
     "apps.transactions",
     "apps.payments",
@@ -53,9 +57,35 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 AUTH_USER_MODEL = "accounts.User"
 
+# Celery Configuration
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
+CELERY_RESULT_EXPIRES = 3600  # 1 hour
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+# Celery Broker and Backend URLs (will be overridden by environment variables)
+CELERY_BROKER_URL = config(
+    "CELERY_BROKER_URL", default="amqp://guest:guest@localhost:5672//"
+)
+CELERY_RESULT_BACKEND = config(
+    "CELERY_RESULT_BACKEND", default="redis://localhost:6379/0"
+)
+
+# Django Celery Beat (for scheduled tasks)
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# Django Celery Results (for result storage in database)
+CELERY_RESULT_BACKEND_DB_SHORT_LIVED_SESSIONS = True
+
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.middlewares.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -65,6 +95,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "ninja.compatibility.files.fix_request_files_middleware",
     "apps.common.middlewares.ClientTypeMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "paycore.urls"
@@ -99,6 +130,16 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
+    }
+}
+
+# Cache configuration for rate limiting
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+        "TIMEOUT": 300,
+        "OPTIONS": {"MAX_ENTRIES": 1000},
     }
 }
 
@@ -177,6 +218,68 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
 
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET")
+
+# Celery details
+CELERY_BROKER_URL = config("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND")
+
+# Structured Logging - No file logging, all to stdout for container environments
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "format": '{"level": "%(levelname)s", "timestamp": "%(asctime)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s"}',
+        },
+        "simple": {
+            "format": "%(levelname)s %(asctime)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stdout",
+        },
+        "error_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "level": "ERROR",
+            "stream": "ext://sys.stderr",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.accounts.tasks": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "celery": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "celery.task": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.common.monitoring": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+    "root": {
+        "handlers": ["console", "error_console"],
+        "level": "INFO",
+    },
+}
 
 
 JAZZMIN_SETTINGS = {

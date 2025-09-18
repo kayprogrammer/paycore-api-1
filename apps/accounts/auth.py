@@ -7,50 +7,154 @@ from apps.common.exceptions import ErrorCode, RequestError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from ninja.security import HttpBearer
-import jwt, random, string
+import jwt, secrets
 
 ALGORITHM = "HS256"
 
 
 class Authentication:
-    # generate random string
+    # generate cryptographically secure random string
+    @staticmethod
     def get_random(length: int):
-        return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+        return secrets.token_urlsafe(length)
 
-    # generate access token based and encode user's id
-    def create_access_token(user_id):
+    # generate access token and encode user's id with additional security claims
+    @staticmethod
+    def create_access_token(user_id, jti=None):
+        if not jti:
+            jti = secrets.token_urlsafe(16)
         expire = datetime.now(UTC) + timedelta(
             minutes=int(settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         )
-        to_encode = {"exp": expire, "user_id": str(user_id)}
+        to_encode = {
+            "exp": expire,
+            "iat": datetime.now(UTC),
+            "user_id": str(user_id),
+            "jti": jti,
+            "type": "access",
+        }
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
-    # generate random refresh token
+    # generate cryptographically secure refresh token
+    @staticmethod
     def create_refresh_token():
         expire = datetime.now(UTC) + timedelta(
             minutes=int(settings.REFRESH_TOKEN_EXPIRE_MINUTES)
         )
+        jti = secrets.token_urlsafe(16)
         return jwt.encode(
-            {"exp": expire, "data": Authentication.get_random(10)},
+            {
+                "exp": expire,
+                "iat": datetime.now(UTC),
+                "jti": jti,
+                "type": "refresh",
+                "data": Authentication.get_random(10),
+            },
             settings.SECRET_KEY,
             algorithm=ALGORITHM,
         )
 
-    # decode access token from header
-    def decode_jwt(token: str):
-        try:
-            decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        except:
-            decoded = False
-        return decoded
+    # create token pair and invalidate previous tokens for security
+    @staticmethod
+    async def create_tokens_for_user(user):
+        access_token = Authentication.create_access_token(user.id)
+        refresh_token = Authentication.create_refresh_token()
 
+        user.access, user.refresh = access_token, refresh_token
+        await user.asave()
+        return access_token, refresh_token
+
+    # decode and validate JWT token with enhanced security
+    @staticmethod
+    def decode_jwt(token: str, token_type: str = "access"):
+        try:
+            decoded = jwt.decode(
+                token,
+                settings.SECRET_KEY,
+                algorithms=[ALGORITHM],
+                options={
+                    "verify_exp": True,
+                    "verify_iat": True,
+                    "verify_signature": True,
+                },
+            )
+            # Validate token type
+            if decoded.get("type") != token_type:
+                return None
+            return decoded
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
+        except Exception:
+            return None
+
+    @staticmethod
     async def retrieve_user_from_token(token: str):
-        decoded = Authentication.decode_jwt(token)
+        decoded = Authentication.decode_jwt(token, "access")
         if not decoded:
             return None
-        user = await User.objects.aget_or_none(id=decoded["user_id"], access=token)
+
+        # Verify token is still valid in user model (prevents token reuse after logout)
+        user = await User.objects.aget_or_none(
+            id=decoded["user_id"], access=token, is_active=True
+        )
         return user
+
+    # rotate refresh token for enhanced security
+    @staticmethod
+    async def rotate_refresh_token(refresh_token: str):
+        decoded = Authentication.decode_jwt(refresh_token, "refresh")
+        if not decoded:
+            return None, None, None
+
+        user = await User.objects.aget_or_none(refresh=refresh_token, is_active=True)
+        if not user:
+            return None, None, None
+
+        # Create new token pair
+        new_access, new_refresh = await Authentication.create_tokens_for_user(user)
+        return user, new_access, new_refresh
+
+    # invalidate user tokens (for logout)
+    @staticmethod
+    async def invalidate_user_tokens(user):
+        user.access, user.refresh = None, None
+        await user.asave()
+
+    # detect client type for proper token handling
+    @staticmethod
+    def is_web_client(request):
+        client_type = getattr(request, "client_type", None)
+
+        # Check if client explicitly specified web
+        if client_type and client_type.lower() == "web":
+            return True
+        return False
+
+    # set secure HTTP-only cookie for web clients
+    @staticmethod
+    def set_refresh_token_cookie(response, refresh_token, max_age=None):
+        if not max_age:
+            max_age = int(settings.REFRESH_TOKEN_EXPIRE_MINUTES) * 60
+
+        response.set_cookie(
+            "refresh_token",
+            refresh_token,
+            max_age=max_age,
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite="Strict",  # CSRF protection
+            domain=None,
+        )
+        return response
+
+    # clear refresh token cookie
+    @staticmethod
+    def clear_refresh_token_cookie(response):
+        response.delete_cookie("refresh_token")
+        return response
 
     def validate_google_token(auth_token):
         """

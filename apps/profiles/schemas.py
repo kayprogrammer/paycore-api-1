@@ -1,0 +1,32 @@
+from datetime import date
+from ninja import Field, ModelSchema
+from pydantic import field_validator
+from apps.accounts.models import User
+from apps.common.schemas import BaseSchema, ResponseSchema
+
+
+class UserUpdateSchema(BaseSchema):
+    first_name: str = Field(..., example="John", max_length=50)
+    last_name: str = Field(..., example="Doe", max_length=50)
+    dob: date = Field(..., example="2000-12-12")
+    bio: str = Field(
+        ..., example="Senior Backend Engineer | Django Ninja", max_length=200
+    )
+
+    @field_validator("first_name", "last_name")
+    def no_spaces(cls, v: str):
+        if " " in v:
+            raise ValueError("No spacing allowed")
+        return v
+
+
+class UserSchema(ModelSchema):
+    avatar_url: str | None
+
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "bio", "dob"]
+
+
+class UserResponseSchema(ResponseSchema):
+    data: UserSchema

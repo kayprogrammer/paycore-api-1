@@ -1,6 +1,7 @@
 from ninja import NinjaAPI, Schema
 from ninja.responses import Response
 from ninja.errors import ValidationError, AuthenticationError
+from ninja.throttling import AnonRateThrottle, AuthRateThrottle
 from apps.accounts.auth import AuthUser
 from apps.common.exceptions import (
     ErrorCode,
@@ -9,7 +10,10 @@ from apps.common.exceptions import (
     validation_errors,
 )
 
-from apps.accounts.views import auth_router, profiles_router
+from apps.accounts.views import auth_router
+from apps.profiles.views import profiles_router
+from apps.common.health_checks import celery_health_check, system_health_check
+from django.urls import path
 
 api = NinjaAPI(
     title="Paycore API",
@@ -18,6 +22,12 @@ api = NinjaAPI(
     """,
     version="1.0.0",
     docs_url="/",
+    throttle=[
+        # Anonymous users: 100 requests per minute
+        AnonRateThrottle("100/m"),
+        # Authenticated users: 1000 requests per minute
+        AuthRateThrottle("1000/m"),
+    ],
 )
 
 # Routes Registration
@@ -32,6 +42,13 @@ class HealthCheckResponse(Schema):
 @api.get("/api/v1/healthcheck/", response=HealthCheckResponse, tags=["HealthCheck"])
 async def healthcheck(request):
     return {"message": "pong"}
+
+
+# Add health check endpoints outside of NinjaAPI for direct access
+health_urls = [
+    path("health/celery/", celery_health_check, name="celery-health"),
+    path("health/system/", system_health_check, name="system-health"),
+]
 
 
 @api.exception_handler(RequestError)

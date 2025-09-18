@@ -1,3 +1,8 @@
 from .base import *
 
 DEBUG = False
+
+CELERY_BROKER_USE_SSL = True
+CELERY_SSL_KEYFILE = ""
+CELERY_SSL_CERTFILE = ""
+CELERY_SSL_CA_CERTS = ""

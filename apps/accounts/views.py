@@ -1,23 +1,24 @@
-from ninja import File, Router, UploadedFile, Form
+from ninja import Router
+from ninja.throttling import AnonRateThrottle
 from apps.accounts.auth import AuthUser, Authentication
-from apps.accounts.emails import EmailUtil
 from apps.accounts.models import User
+from apps.accounts.tasks import (
+    EmailTasks,
+)
 from apps.accounts.schemas import (
     EmailSchema,
     LoginUserSchema,
+    LoginMfaSchema,
     RegisterResponseSchema,
     RegisterUserSchema,
     SetNewPasswordSchema,
     TokenSchema,
     TokensResponseSchema,
-    UserResponseSchema,
-    UserUpdateSchema,
     VerifyOtpSchema,
 )
 from apps.common.exceptions import ErrorCode, RequestError, ValidationError
 from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
-from apps.common.utils import set_dict_attr
 
 auth_router = Router(tags=["Auth"])
 
@@ -37,11 +38,13 @@ async def register(request, data: RegisterUserSchema):
     # Create user
     user = await User.objects.acreate_user(**data.model_dump())
 
-    # Send verification email
-    await EmailUtil.send_otp(user, "account verification")
+    # Send verification email asynchronously
+    task = EmailTasks.send_otp_email.delay(user.id, "account verification")
 
     return CustomResponse.success(
-        message="Registration successful", data={"email": data.email}, status_code=201
+        message="Registration successful",
+        data={"email": data.email, "task_id": task.id},
+        status_code=201,
     )
 
 
@@ -82,8 +85,8 @@ async def verify_email(request, data: VerifyOtpSchema):
     user.otp_code, user.otp_expires_at = None, None
     await user.asave()
 
-    # Send welcome email
-    EmailUtil.welcome_email(user)
+    # Send welcome email asynchronously
+    EmailTasks.send_welcome_email.delay(user.id)
     return CustomResponse.success(message="Account verification successful")
 
 
@@ -94,6 +97,7 @@ async def verify_email(request, data: VerifyOtpSchema):
         This endpoint resends new otp to the user's email
     """,
     response=ResponseSchema,
+    throttle=AnonRateThrottle("3/10m"),
 )
 async def resend_verification_email(request, data: EmailSchema):
     email = data.email
@@ -107,9 +111,11 @@ async def resend_verification_email(request, data: EmailSchema):
     if user.is_email_verified:
         return CustomResponse.success(message="Email already verified")
 
-    # Send verification email
-    await EmailUtil.send_otp(user, "account verification")
-    return CustomResponse.success(message="Verification email sent")
+    # Send verification email asynchronously
+    task = EmailTasks.send_otp_email.delay(user.id, "account verification")
+    return CustomResponse.success(
+        message="Verification email sent", data={"task_id": task.id}
+    )
 
 
 @auth_router.post(
@@ -119,6 +125,7 @@ async def resend_verification_email(request, data: EmailSchema):
         This endpoint sends new password reset otp to the user's email
     """,
     response=ResponseSchema,
+    throttle=AnonRateThrottle("3/10m"),
 )
 async def send_password_reset_otp(request, data: EmailSchema):
     email = data.email
@@ -130,9 +137,11 @@ async def send_password_reset_otp(request, data: EmailSchema):
             status_code=404,
         )
 
-    # Send password reset email
-    await EmailUtil.send_otp(user, "password reset")
-    return CustomResponse.success(message="Password otp sent")
+    # Send password reset email asynchronously
+    task = EmailTasks.send_otp_email.delay(user.id, "password reset")
+    return CustomResponse.success(
+        message="Password otp sent", data={"task_id": task.id}
+    )
 
 
 @auth_router.post(
@@ -140,6 +149,7 @@ async def send_password_reset_otp(request, data: EmailSchema):
     summary="Set New Password",
     description="This endpoint verifies the password reset otp",
     response=ResponseSchema,
+    throttle=AnonRateThrottle("3/15m"),
 )
 async def set_new_password(request, data: SetNewPasswordSchema):
     email = data.email
@@ -169,179 +179,229 @@ async def set_new_password(request, data: SetNewPasswordSchema):
     user.set_password(password)
     await user.asave()
 
-    # Send password reset success email
-    EmailUtil.password_reset_confirmation(user)
+    # Send password reset success email asynchronously
+    EmailTasks.send_password_reset_confirmation.delay(user.id)
     return CustomResponse.success(message="Password reset successful")
 
 
-# @auth_router.post(
-#     "/login",
-#     summary="Login a user",
-#     description="""
-#         This endpoint generates new access and refresh tokens for authentication
-#     """,
-#     response={201: TokensResponseSchema},
-# )
-# async def login(request, data: LoginUserSchema):
-#     email = data.email
-#     password = data.password
-
-#     user = await User.objects.aget_or_none(email=email)
-#     if not user or not user.check_password(password):
-#         raise RequestError(
-#             err_code=ErrorCode.INVALID_CREDENTIALS,
-#             err_msg="Invalid credentials",
-#             status_code=401,
-#         )
-
-#     if not user.is_email_verified:
-#         raise RequestError(
-#             err_code=ErrorCode.UNVERIFIED_USER,
-#             err_msg="Verify your email first",
-#             status_code=401,
-#         )
-
-#     # Create tokens and store in jwt model
-#     access = Authentication.create_access_token(user.id)
-#     refresh = Authentication.create_refresh_token()
-#     await Jwt.objects.acreate(user=user, access=access, refresh=refresh)
-
-#     return CustomResponse.success(
-#         message="Login successful",
-#         data={"access": access, "refresh": refresh},
-#         status_code=201,
-#     )
-
-
-# @auth_router.post(
-#     "/refresh",
-#     summary="Refresh tokens",
-#     description="""
-#         This endpoint refresh tokens by generating new access and refresh tokens for a user
-#     """,
-#     response={201: TokensResponseSchema},
-# )
-# async def refresh(request, data: TokenSchema):
-#     token = data.token
-#     jwt = await Jwt.objects.aget_or_none(refresh=token)
-
-#     if not jwt or not Authentication.decode_jwt(token):
-#         raise RequestError(
-#             err_code=ErrorCode.INVALID_TOKEN,
-#             err_msg="Refresh token is invalid or expired",
-#             status_code=401,
-#         )
-
-#     user = await User.objects.aget(id=jwt.user_id)
-#     access = Authentication.create_access_token(user.id)
-#     refresh = Authentication.create_refresh_token()
-
-#     jwt.access = access
-#     jwt.refresh = refresh
-#     await jwt.asave()
-
-#     return CustomResponse.success(
-#         message="Tokens refresh successful",
-#         data={"access": access, "refresh": refresh},
-#         status_code=201,
-#     )
-
-
-# @auth_router.post(
-#     "/google-login",
-#     summary="Google Auth",
-#     description="""
-#         This endpoint authenticates a user by generating new access and refresh tokens for a user based on their google id token
-#         If user doesn't exist in our platform, we'll create and authenticate, else, we'll just authenticate
-#     """,
-#     response={201: TokensResponseSchema},
-# )
-# async def google_login(request, data: TokenSchema):
-#     token = data.token
-#     user_data, err_code, err_msg = Authentication.validate_google_token(token)
-#     if not user_data:
-#         raise RequestError(err_code, err_msg, 401)
-#     user = await Authentication.store_google_user(
-#         user_data["email"], user_data["name"], user_data["picture"]
-#     )
-
-#     access = Authentication.create_access_token(user.id)
-#     refresh = Authentication.create_refresh_token()
-#     await Jwt.objects.acreate(user=user, access=access, refresh=refresh)
-
-#     return CustomResponse.success(
-#         message="Tokens created successfully",
-#         data={"access": access, "refresh": refresh},
-#         status_code=201,
-#     )
-
-
-# @auth_router.get(
-#     "/logout",
-#     summary="Logout a user",
-#     description="""
-#         This endpoint logs a user out from our application by invalidating the token from our backend
-#     """,
-#     response=ResponseSchema,
-#     auth=AuthUser(),
-# )
-# async def logout(request):
-#     user = request.auth
-#     auth_header = request.META.get("HTTP_AUTHORIZATION") or request.META.get(
-#         "HTTP_Authorization"
-#     )
-#     access_token = auth_header[7:] if auth_header else None
-#     await Jwt.objects.filter(user=user, access=access_token).adelete()
-#     return CustomResponse.success(message="Logout successful")
-
-
-# @auth_router.get(
-#     "/logout-all",
-#     summary="Logout All",
-#     description="""
-#         This endpoint logs a user out from all devices. It invalidates all of that user's tokens from our app
-#     """,
-#     response=ResponseSchema,
-#     auth=AuthUser(),
-# )
-# async def logout_all(request):
-#     user = request.auth
-#     await Jwt.objects.filter(user=user).adelete()
-#     return CustomResponse.success(message="Logout successful")
-
-
-# PROFILES
-profiles_router = Router(tags=["Profiles"])
-
-
-@profiles_router.get(
-    "",
-    summary="Get Profile",
+@auth_router.post(
+    "/login",
+    summary="Initiate secure login",
     description="""
-        This endpoint returns the profile of a user out from all devices.
+        Step 1: Verify credentials and send OTP for MFA.
+        This endpoint validates email/password and sends OTP code.
     """,
-    response=UserResponseSchema,
-    auth=AuthUser(),
+    response=ResponseSchema,
+    throttle=AnonRateThrottle("5/15m"),
 )
-async def get_user(request):
-    user = request.auth
-    return CustomResponse.success(message="Profile retrieved successfully", data=user)
+async def login_initiate(request, data: LoginUserSchema):
+    email = data.email
+    password = data.password
+
+    user = await User.objects.aget_or_none(email=email)
+    if not user or not user.check_password(password):
+        raise RequestError(
+            err_code=ErrorCode.INVALID_CREDENTIALS,
+            err_msg="Invalid credentials",
+            status_code=401,
+        )
+
+    if not user.is_email_verified:
+        raise RequestError(
+            err_code=ErrorCode.UNVERIFIED_USER,
+            err_msg="Verify your email first",
+            status_code=401,
+        )
+
+    # Send MFA OTP asynchronously
+    task = EmailTasks.send_otp_email.delay(user.id, "login verification")
+    return CustomResponse.success(
+        message="Login OTP sent to your email", data={"task_id": task.id}
+    )
 
 
-@profiles_router.put(
-    "",
-    summary="Update Profile",
+@auth_router.post(
+    "/login/verify",
+    summary="Complete secure login with MFA",
     description="""
-        This endpoint updates the profile of a user.
+        Step 2: Verify OTP and receive authentication tokens.
+        This endpoint validates the OTP and issues access/refresh tokens.
+        Web clients receive refresh token as HTTP-only cookie.
     """,
-    response=UserResponseSchema,
-    auth=AuthUser(),
+    response={200: TokensResponseSchema},
+    throttle=AnonRateThrottle("3/15m"),
 )
-async def update_user(
-    request, data: Form[UserUpdateSchema], avatar: File[UploadedFile] = None
-):
-    user = request.auth
-    user = set_dict_attr(user, data.model_dump())
-    user.avatar = avatar
+async def login_complete(request, data: LoginMfaSchema):
+    email = data.email
+    otp_code = data.otp
+
+    user = await User.objects.aget_or_none(email=email)
+    if not user:
+        raise RequestError(
+            err_code=ErrorCode.INCORRECT_EMAIL,
+            err_msg="Invalid credentials",
+            status_code=401,
+        )
+
+    if not user.is_email_verified:
+        raise RequestError(
+            err_code=ErrorCode.UNVERIFIED_USER,
+            err_msg="Verify your email first",
+            status_code=401,
+        )
+
+    if user.otp_code != otp_code:
+        raise RequestError(
+            err_code=ErrorCode.INCORRECT_OTP,
+            err_msg="Invalid OTP code",
+            status_code=401,
+        )
+
+    if user.is_otp_expired():
+        raise RequestError(
+            err_code=ErrorCode.EXPIRED_OTP,
+            err_msg="OTP has expired",
+            status_code=410,
+        )
+
+    user.otp_code, user.otp_expires_at = None, None
     await user.asave()
-    return CustomResponse.success(message="Profile updated successfully", data=user)
+
+    # Create secure tokens
+    access_token, refresh_token = await Authentication.create_tokens_for_user(user)
+
+    # Prepare response
+    response_data = {"access": access_token, "refresh": refresh_token}
+    response = CustomResponse.success(
+        message="Login successful",
+        data=response_data,
+        status_code=200,
+    )
+
+    # Set HTTP-only cookie for web clients
+    if Authentication.is_web_client(request):
+        response = Authentication.set_refresh_token_cookie(response, refresh_token)
+        response.data["data"]["refresh"] = "Set as HTTP-only cookie"
+
+    return response
+
+
+@auth_router.post(
+    "/refresh",
+    summary="Refresh authentication tokens",
+    description="""
+        Generate new access and refresh tokens using a valid refresh token.
+        Supports both HTTP-only cookies (web) and request body (mobile).
+        Implements automatic token rotation for enhanced security.
+    """,
+    response={200: TokensResponseSchema},
+)
+async def refresh_tokens(request, data: TokenSchema = None):
+    # Get refresh token from cookie (web) or request body (mobile)
+    refresh_token = None
+
+    # Try cookie first (web clients)
+    if hasattr(request, "COOKIES") and "refresh_token" in request.COOKIES:
+        refresh_token = request.COOKIES["refresh_token"]
+    # Fall back to request body (mobile clients)
+    elif data and data.token:
+        refresh_token = data.token
+
+    if not refresh_token:
+        raise RequestError(
+            err_code=ErrorCode.INVALID_TOKEN,
+            err_msg="Refresh token not provided",
+            status_code=401,
+        )
+
+    user, new_access, new_refresh = await Authentication.rotate_refresh_token(
+        refresh_token
+    )
+
+    if not user:
+        raise RequestError(
+            err_code=ErrorCode.INVALID_TOKEN,
+            err_msg="Refresh token is invalid or expired",
+            status_code=401,
+        )
+
+    # Prepare response
+    response = CustomResponse.success(
+        message="Tokens refreshed successfully",
+        data={"access": new_access, "refresh": new_refresh},
+        status_code=200,
+    )
+
+    # Set new HTTP-only cookie for web clients
+    if Authentication.is_web_client(request):
+        response = Authentication.set_refresh_token_cookie(response, new_refresh)
+        response.data["data"]["refresh"] = "Set as HTTP-only cookie"
+    return response
+
+
+@auth_router.post(
+    "/google-login",
+    summary="Google OAuth Authentication",
+    description="""
+        Secure Google OAuth login with automatic user creation.
+        Validates Google ID token and creates/authenticates user.
+        Web clients receive refresh token as HTTP-only cookie.
+    """,
+    response={200: TokensResponseSchema},
+    throttle=AnonRateThrottle("10/5m"),
+)
+async def google_login(request, data: TokenSchema):
+    token = data.token
+
+    # Validate Google ID token
+    user_data, err_code, err_msg = Authentication.validate_google_token(token)
+    if not user_data:
+        raise RequestError(err_code, err_msg, 401)
+
+    # Create or retrieve Google user
+    user = await Authentication.store_google_user(
+        user_data["email"], user_data["name"], user_data.get("picture")
+    )
+
+    # Create secure tokens using our enhanced system
+    access_token, refresh_token = await Authentication.create_tokens_for_user(user)
+
+    # Prepare response
+    response = CustomResponse.success(
+        message="Google login successful",
+        data={"access": access_token, "refresh": refresh_token},
+        status_code=200,
+    )
+
+    # Set HTTP-only cookie for web clients
+    if Authentication.is_web_client(request):
+        response = Authentication.set_refresh_token_cookie(response, refresh_token)
+        response.data["data"]["refresh"] = "Set as HTTP-only cookie"
+
+    return response
+
+
+@auth_router.post(
+    "/logout",
+    summary="Logout current session",
+    description="""
+        Securely logout from the current session by invalidating all user tokens.
+        Clears HTTP-only cookies for web clients.
+    """,
+    response=ResponseSchema,
+    auth=AuthUser(),
+)
+async def logout(request):
+    user = request.auth
+
+    # Invalidate all user tokens (single session model)
+    await Authentication.invalidate_user_tokens(user)
+
+    # Prepare response
+    response = CustomResponse.success(message="Logout successful")
+
+    # Clear HTTP-only cookie for web clients
+    if Authentication.is_web_client(request):
+        response = Authentication.clear_refresh_token_cookie(response)
+
+    return response

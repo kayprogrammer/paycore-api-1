@@ -10,7 +10,6 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(verbose_name=(_("Email address")), unique=True)
-    phone = models.CharField(max_length=20, unique=True)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     social_avatar = models.CharField(max_length=1000, null=True, blank=True)
     is_email_verified = models.BooleanField(default=False)
@@ -20,8 +19,8 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     dob = models.DateField(verbose_name=(_("Date of Birth")), null=True, blank=True)
     otp_code = models.IntegerField(null=True)
     otp_expires_at = models.DateTimeField(null=True)
-    access = models.TextField(editable=False)
-    refresh = models.TextField(editable=False)
+    access = models.TextField(editable=False, null=True)
+    refresh = models.TextField(editable=False, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]

@@ -30,7 +30,7 @@ class EmailUtil:
             message = render_to_string(template_name, context)
             email_message = EmailMessage(subject=subject, body=message, to=[recipient])
             email_message.content_subtype = "html"
-            EmailThread(email_message).start()
+            email_message.send()  # Use EmailThread(email_message).start() if you don't want to use celery
         except Exception as e:
             logger.error(f"Email sending failed for {recipient}: {e}", exc_info=True)
 
