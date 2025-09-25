@@ -372,3 +372,9 @@ JAZZMIN_SETTINGS = {
     },
     # "related_modal_active": True # Won't work in some browsers
 }
+# KYC Settings
+KYC_PROVIDER = config("KYC_PROVIDER", default="onfido")
+
+ONFIDO_BASE_URL = config("ONFIDO_BASE_URL", default="https://api.eu.onfido.com/v3.6")
+ONFIDO_API_KEY = config("ONFIDO_API_KEY")
+ONFIDO_WEBHOOK_TOKEN = config("ONFIDO_WEBHOOK_TOKEN")

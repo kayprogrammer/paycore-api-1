@@ -24,6 +24,11 @@ class ErrorCode:
     INVALID_QUERY_PARAM = "invalid_query_param"
     RATE_LIMITED = "rate_limited"
 
+    # kyc specific
+    KYC_ALREADY_SUBMITTED = "kyc_already_submitted"
+    KYC_NOT_FOUND = "kyc_not_found"
+    KYC_INVALID_STATUS = "kyc_invalid_status"
+
 
 class RequestError(Exception):
     default_detail = "An error occured"
