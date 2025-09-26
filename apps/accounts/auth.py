@@ -205,3 +205,15 @@ class AuthUser(HttpBearer):
                 status_code=401,
             )
         return user
+
+
+class AuthAdmin(AuthUser):
+    async def authenticate(self, request, token):
+        user = await super().authenticate(request, token)
+        if not user.is_staff:
+            raise RequestError(
+                err_code=ErrorCode.UNAUTHORIZED_USER,
+                err_msg="Only admins are authorized to access this resource",
+                status_code=403,
+            )
+        return user

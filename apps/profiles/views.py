@@ -1,4 +1,6 @@
+from uuid import UUID
 from ninja import File, Form, Query, Router, UploadedFile
+from apps.accounts.auth import AuthAdmin
 from apps.common.exceptions import (
     ErrorCode,
     NotFoundError,
@@ -10,6 +12,7 @@ from apps.common.utils import set_dict_attr
 from apps.profiles.schemas import (
     CountryFilterSchema,
     CountryListResponseSchema,
+    KycFilterSchema,
     UserResponseSchema,
     UserUpdateSchema,
     KYCSubmissionSchema,
@@ -18,8 +21,10 @@ from apps.profiles.schemas import (
     KYCListResponseSchema,
 )
 from apps.profiles.models import KYC, Country, KYCStatus
-from apps.profiles.services import KYCValidationService
 from asgiref.sync import sync_to_async
+from django.utils import timezone
+
+from apps.profiles.tasks import KYCTasks
 
 profiles_router = Router(tags=["Profiles"])
 
@@ -88,8 +93,8 @@ async def submit_kyc(
     selfie_file: File[UploadedFile] = None,
 ):
     user = request.auth
-    user_kyc = await KYC.objects.select_related("country").aget_or_none(user=user)
-    if user_kyc:
+    user_kyc = await KYC.objects.select_related("user", "country").aget_or_none(user=user)
+    if user_kyc and user_kyc.status != KYCStatus.RESUBMIT_REQUIRED:
         raise RequestError(
             err_code=ErrorCode.KYC_ALREADY_SUBMITTED,
             err_msg="KYC already submitted. Contact support for updates.",
@@ -100,50 +105,41 @@ async def submit_kyc(
         raise ValidationError("country_id", "Invalid country selected")
 
     try:
-        # Create KYC record
         kyc_data = data.model_dump()
         kyc_data.pop(
             "country_id"
-        )  # Remove country_id since we'll set the country object
-
-        kyc = await KYC.objects.acreate(
-            user=user,
-            country=country,
-            document_file=document_file,
-            document_back_file=document_back_file,
-            selfie_file=selfie_file,
-            **kyc_data,
         )
-
-        # Submit to third-party verification service
-        validation_service = KYCValidationService()
-        document_files = {
-            "document_file": document_file,
-        }
-        if document_back_file:
-            document_files["document_back_file"] = document_back_file
-        if selfie_file:
-            document_files["selfie_file"] = selfie_file
-
-        # Submit for automated verification
-        submission_success = validation_service.submit_kyc_for_verification(
-            kyc, document_files
-        )
-
-        if not submission_success:
-            # If automated submission fails, keep as pending for manual review
-            return CustomResponse.success(
-                message="KYC submitted successfully. Processing may take longer than usual.",
-                data=kyc,
+        if user_kyc:
+            user_kyc = set_dict_attr(user_kyc, kyc_data)
+            user_kyc.country = country
+            if document_file:
+                user_kyc.document_file = document_file
+            if document_back_file:
+                user_kyc.document_back_file = document_back_file
+            if selfie_file:
+                user_kyc.selfie_file = selfie_file
+            user_kyc.status = KYCStatus.PENDING
+            await user_kyc.asave()
+            kyc = user_kyc
+        else:
+            kyc = await KYC.objects.acreate(
+                user=user,
+                country=country,
+                document_file=document_file,
+                document_back_file=document_back_file,
+                selfie_file=selfie_file,
+                **kyc_data,
             )
 
+        # Submit to background task for verification
+        KYCTasks.process_kyc_verification.delay(str(kyc.id))
         return CustomResponse.success(
-            message="KYC submitted successfully and sent for verification.", data=kyc
+            message="KYC submitted successfully and queued for verification.", data=kyc
         )
 
     except Exception as e:
         return CustomResponse.error(
-            message=f"Failed to submit KYC: Please Contact support", status_code=500
+            message=f"Failed to submit KYC: Please Contact support", err_code=ErrorCode.SERVER_ERROR, status_code=500
         )
 
 
@@ -165,89 +161,42 @@ async def get_kyc_status(request):
 
 
 # ADMIN/MANUAL REVIEW ENDPOINTS
-
-
-@profiles_router.put(
-    "/kyc/{kyc_id}/approve",
-    summary="Approve KYC (Admin)",
-    description="""
-        Admin endpoint to manually approve a KYC submission.
-    """,
-    response=KYCSingleResponseSchema,
-)
-async def approve_kyc(request, kyc_id: int, data: KYCStatusUpdateSchema):
-    # Note: Add proper admin authentication here
-    kyc = await KYC.objects.aget_or_none(id=kyc_id)
-    if not kyc:
-        raise NotFoundError("KYC submission not found")
-
-    validation_service = KYCValidationService()
-    await sync_to_async(validation_service.approve_kyc)(kyc, data.notes or "")
-
-    return CustomResponse.success(message="KYC approved successfully", data=kyc)
-
-
-@profiles_router.put(
-    "/kyc/{kyc_id}/reject",
-    summary="Reject KYC (Admin)",
-    description="""
-        Admin endpoint to manually reject a KYC submission.
-    """,
-    response=KYCSingleResponseSchema,
-)
-async def reject_kyc(request, kyc_id: int, data: KYCStatusUpdateSchema):
-    # Note: Add proper admin authentication here
-    if not data.rejection_reason:
-        raise ValidationError("rejection_reason", "Rejection reason is required")
-
-    kyc = await KYC.objects.aget_or_none(id=kyc_id)
-    if not kyc:
-        raise NotFoundError("KYC submission not found")
-
-    validation_service = KYCValidationService()
-    await sync_to_async(validation_service.reject_kyc)(kyc, data.rejection_reason)
-
-    return CustomResponse.success(message="KYC rejected successfully", data=kyc)
-
-
 @profiles_router.put(
     "/kyc/{kyc_id}/manual-review",
     summary="Mark for Manual Review (Admin)",
     description="""
-        Admin endpoint to mark a KYC submission for manual review.
+        Admin endpoint to review a KYC submission.
     """,
     response=KYCSingleResponseSchema,
+    auth=AuthAdmin()
 )
-async def mark_manual_review(request, kyc_id: int, data: KYCStatusUpdateSchema):
-    # Note: Add proper admin authentication here
-    kyc = await KYC.objects.aget_or_none(id=kyc_id)
+async def review_kyc(request, kyc_id: UUID, data: KYCStatusUpdateSchema):
+    kyc = await KYC.objects.select_related("user", "country").aget_or_none(id=kyc_id)
     if not kyc:
         raise NotFoundError("KYC submission not found")
 
-    validation_service = KYCValidationService()
-    await sync_to_async(validation_service.manual_review_required)(
-        kyc, data.notes or "Manual review requested"
-    )
-
-    return CustomResponse.success(message="KYC marked for manual review", data=kyc)
+    kyc = set_dict_attr(kyc, data.model_dump(exclude_unset=True))
+    kyc.reviewed_by = request.auth
+    kyc.reviewed_at = timezone.now()
+    await kyc.asave()
+    return CustomResponse.success(message="KYC reviewd successfully", data=kyc)
 
 
 @profiles_router.get(
-    "/kyc/pending-review",
-    summary="List Pending KYC Reviews (Admin)",
+    "/kyc/list",
+    summary="List KYC Submissions (Admin)",
     description="""
-        Admin endpoint to list all KYC submissions pending manual review.
+        Admin endpoint to list all KYC submissions.
     """,
     response=KYCListResponseSchema,
+    auth=AuthAdmin()
 )
-async def list_pending_kyc(request):
-    # Note: Add proper admin authentication here
-    pending_kycs = await sync_to_async(list)(
-        KYC.objects.select_related("country", "user")
-        .filter(status__in=[KYCStatus.PENDING, KYCStatus.UNDER_REVIEW])
-        .order_by("-created_at")
+async def list_kyc_submissions(request, filters: KycFilterSchema = Query(...)):
+    kycs = KYC.objects.select_related("country", "user")
+    filtered_kycs = filters.filter(kycs)
+    kyc_list = await sync_to_async(list)(
+        filtered_kycs.order_by("-created_at")
     )
-
     return CustomResponse.success(
-        message="Pending KYC reviews retrieved successfully", data=pending_kycs
+        message="KYC submissions retrieved successfully", data=kyc_list
     )

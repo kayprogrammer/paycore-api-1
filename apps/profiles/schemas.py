@@ -113,7 +113,9 @@ class KYCStatusUpdateSchema(BaseSchema):
     notes: Optional[str] = Field(None, example="All documents verified successfully")
     rejection_reason: Optional[str] = Field(None, example="Document expired")
 
-
+class KycFilterSchema(FilterSchema):
+    status: Optional[KYCStatus] = Field(None, q="status")
+    
 class KYCListResponseSchema(ResponseSchema):
     data: List[KYCDetailSchema]
 

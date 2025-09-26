@@ -1,7 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+import random
 from typing import Dict, Any, Optional
+import uuid
 from django.conf import settings
 from django.utils import timezone
 import requests
@@ -36,16 +37,11 @@ class MockKYCProvider(KYCProviderInterface):
     """Mock KYC provider for development and testing"""
 
     def __init__(self):
-        # No actual API calls made - this is purely for local simulation
         pass
 
     def submit_verification(
         self, kyc: KYC, document_files: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Mock verification submission"""
-        import uuid
-        import random
-
         # Simulate processing delay
         reference_id = f"mock_check_{uuid.uuid4().hex[:12]}"
 
@@ -73,7 +69,6 @@ class MockKYCProvider(KYCProviderInterface):
         }
 
     def get_verification_status(self, provider_reference_id: str) -> Dict[str, Any]:
-        """Mock status check"""
         # Simulate different outcomes based on reference ID
         if "test" in provider_reference_id:
             return {
@@ -98,7 +93,6 @@ class MockKYCProvider(KYCProviderInterface):
             }
 
     def map_provider_status(self, provider_status: str) -> KYCStatus:
-        """Map mock status to KYCStatus"""
         status_mapping = {
             "in_progress": KYCStatus.UNDER_REVIEW,
             "complete": KYCStatus.APPROVED,
@@ -125,7 +119,6 @@ class OnfidoProvider(KYCProviderInterface):
     def submit_verification(
         self, kyc: KYC, document_files: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Submit verification to Onfido"""
         try:
             # Create applicant
             applicant_data = {
@@ -190,7 +183,6 @@ class OnfidoProvider(KYCProviderInterface):
             raise
 
     def _upload_document(self, applicant_id: str, file_data: Any, side: str):
-        """Upload document to Onfido"""
         files = {
             "file": file_data,
             "type": "passport",  # This should be dynamic based on document type
@@ -207,7 +199,6 @@ class OnfidoProvider(KYCProviderInterface):
         return response.json()
 
     def _upload_selfie(self, applicant_id: str, file_data: Any):
-        """Upload selfie to Onfido"""
         files = {"file": file_data, "advanced_validation": "true"}
 
         response = requests.post(
@@ -220,7 +211,6 @@ class OnfidoProvider(KYCProviderInterface):
         return response.json()
 
     def get_verification_status(self, provider_reference_id: str) -> Dict[str, Any]:
-        """Get verification status from Onfido"""
         response = requests.get(
             f"{self.base_url}/checks/{provider_reference_id}",
             headers=self._get_headers(),
@@ -229,7 +219,6 @@ class OnfidoProvider(KYCProviderInterface):
         return response.json()
 
     def map_provider_status(self, provider_status: str) -> KYCStatus:
-        """Map Onfido status to our KYCStatus"""
         status_mapping = {
             "in_progress": KYCStatus.UNDER_REVIEW,
             "awaiting_applicant": KYCStatus.RESUBMIT_REQUIRED,
@@ -242,14 +231,11 @@ class OnfidoProvider(KYCProviderInterface):
 
 
 class KYCValidationService:
-    """Main service for handling KYC validation workflows"""
-
     def __init__(self, provider: Optional[KYCProviderInterface] = None):
         self.provider = provider or self._get_default_provider()
 
     def _get_default_provider(self) -> KYCProviderInterface:
-        """Get the configured KYC provider"""
-        provider_name = getattr(settings, "KYC_PROVIDER", "mock")
+        provider_name = settings.KYC_PROVIDER
 
         if provider_name == "onfido":
             return OnfidoProvider()
@@ -263,19 +249,15 @@ class KYCValidationService:
     ) -> bool:
         """Submit KYC to third-party provider for verification"""
         try:
-            # Update status to under review
             kyc.status = KYCStatus.UNDER_REVIEW
             kyc.verification_method = VerificationMethod.AUTOMATED
             kyc.provider_name = settings.KYC_PROVIDER
 
-            # Submit to provider
             result = self.provider.submit_verification(kyc, document_files)
 
-            # Update KYC with provider response
             kyc.provider_reference_id = result["provider_reference_id"]
             kyc.provider_status = result["status"]
 
-            # Set risk level based on initial assessment
             kyc.risk_level = self._assess_risk_level(kyc, result)
 
             kyc.save()
@@ -293,7 +275,6 @@ class KYCValidationService:
             return False
 
     def process_webhook_update(self, webhook_data: Dict[str, Any]) -> bool:
-        """Process webhook update from KYC provider"""
         try:
             provider_reference_id = webhook_data.get("object", {}).get("id")
             if not provider_reference_id:
@@ -305,24 +286,19 @@ class KYCValidationService:
                 logger.error(f"No KYC found for reference ID {provider_reference_id}")
                 return False
 
-            # Get latest status from provider
             status_data = self.provider.get_verification_status(provider_reference_id)
 
-            # Update KYC status
             old_status = kyc.status
             kyc.provider_status = status_data.get("status")
             kyc.status = self.provider.map_provider_status(kyc.provider_status)
             kyc.webhook_verified_at = timezone.now()
 
-            # Update risk assessment if completed
             if kyc.status in [KYCStatus.APPROVED, KYCStatus.REJECTED]:
                 kyc.reviewed_at = timezone.now()
                 kyc.risk_level = self._assess_final_risk_level(kyc, status_data)
 
-                # Set AML check based on provider results
                 kyc.aml_check_passed = status_data.get("result") == "clear"
 
-                # Extract fraud score if available
                 if "fraud_score" in status_data:
                     kyc.fraud_score = status_data["fraud_score"]
 
@@ -336,7 +312,6 @@ class KYCValidationService:
             return False
 
     def manual_review_required(self, kyc: KYC, reason: str) -> None:
-        """Mark KYC for manual review"""
         kyc.status = KYCStatus.UNDER_REVIEW
         kyc.verification_method = VerificationMethod.MANUAL
         kyc.notes = f"Manual review required: {reason}"
@@ -346,7 +321,6 @@ class KYCValidationService:
         logger.info(f"KYC {kyc.id} marked for manual review: {reason}")
 
     def approve_kyc(self, kyc: KYC, reviewer_notes: str = "") -> None:
-        """Manually approve KYC"""
         kyc.status = KYCStatus.APPROVED
         kyc.reviewed_at = timezone.now()
         kyc.notes = reviewer_notes
@@ -356,7 +330,6 @@ class KYCValidationService:
         logger.info(f"KYC {kyc.id} manually approved")
 
     def reject_kyc(self, kyc: KYC, rejection_reason: str) -> None:
-        """Reject KYC with reason"""
         kyc.status = KYCStatus.REJECTED
         kyc.reviewed_at = timezone.now()
         kyc.rejection_reason = rejection_reason
@@ -368,7 +341,6 @@ class KYCValidationService:
     def _assess_risk_level(
         self, kyc: KYC, provider_result: Dict[str, Any]
     ) -> RiskLevel:
-        """Assess initial risk level based on KYC data and provider response"""
         risk_factors = 0
 
         # Age-based risk
@@ -393,7 +365,6 @@ class KYCValidationService:
     def _assess_final_risk_level(
         self, kyc: KYC, status_data: Dict[str, Any]
     ) -> RiskLevel:
-        """Final risk assessment after provider verification"""
         risk_factors = 0
 
         # Provider result assessment
