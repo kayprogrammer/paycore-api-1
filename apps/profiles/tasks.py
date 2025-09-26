@@ -1,7 +1,3 @@
-"""
-KYC verification Celery tasks for profiles app
-"""
-
 import logging
 from celery import shared_task
 from typing import Dict, Any
@@ -12,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class KYCTasks:
-    """Clean class-based KYC tasks"""
-
     @staticmethod
     @shared_task(
         bind=True,
@@ -23,12 +17,6 @@ class KYCTasks:
         queue="kyc",
     )
     def process_kyc_verification(self, kyc_id: str):
-        """
-        Process KYC verification in background
-        
-        Args:
-            kyc_id: UUID string of the KYC record
-        """
         try:
             kyc = KYC.objects.get_or_none(id=kyc_id)
             if not kyc:
@@ -71,8 +59,6 @@ class KYCTasks:
 
 
 class KYCWebhookTasks:
-    """KYC webhook processing tasks"""
-
     @staticmethod
     @shared_task(
         bind=True,
@@ -82,12 +68,6 @@ class KYCWebhookTasks:
         queue="webhooks",
     )
     def process_kyc_webhook(self, webhook_data: Dict[str, Any]):
-        """
-        Process KYC verification webhook updates
-        
-        Args:
-            webhook_data: Webhook payload from KYC provider
-        """
         try:
             validation_service = KYCValidationService()
             

@@ -206,6 +206,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ACCESS_TOKEN_EXPIRE_MINUTES = config("ACCESS_TOKEN_EXPIRE_MINUTES")
 REFRESH_TOKEN_EXPIRE_MINUTES = config("REFRESH_TOKEN_EXPIRE_MINUTES")
+TRUST_TOKEN_EXPIRE_DAYS = int(config("TRUST_TOKEN_EXPIRE_DAYS", 30))
 
 # Email Settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

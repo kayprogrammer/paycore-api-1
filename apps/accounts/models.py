@@ -19,6 +19,9 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     dob = models.DateField(verbose_name=(_("Date of Birth")), null=True, blank=True)
     otp_code = models.IntegerField(null=True)
     otp_expires_at = models.DateTimeField(null=True)
+    trust_token = models.CharField(max_length=255, null=True, blank=True)
+    trust_token_expires_at = models.DateTimeField(null=True, blank=True)
+    biometrics_enabled = models.BooleanField(default=False)
     access = models.TextField(editable=False, null=True)
     refresh = models.TextField(editable=False, null=True)
 
@@ -50,3 +53,6 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
             now = timezone.now()
             return now > self.otp_expires_at
         return True
+
+    def is_trust_token_expired(self):
+        return self.trust_token_expires_at and timezone.now() > self.trust_token_expires_at

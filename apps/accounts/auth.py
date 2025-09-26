@@ -123,6 +123,80 @@ class Authentication:
         user.access, user.refresh = None, None
         await user.asave()
 
+    # generate trust token for biometrics authentication
+    @staticmethod
+    async def create_trust_token(user, device_id):
+        expire = datetime.now(UTC) + timedelta(
+            days=settings.TRUST_TOKEN_EXPIRE_DAYS
+        )
+        jti = secrets.token_urlsafe(32)
+        trust_data = {
+            "exp": expire,
+            "iat": datetime.now(UTC),
+            "user_id": str(user.id),
+            "device_id": device_id,
+            "jti": jti,
+            "type": "trust",
+        }
+        trust_token = jwt.encode(trust_data, settings.SECRET_KEY, algorithm=ALGORITHM)
+        
+        user.trust_token = trust_token
+        user.trust_token_expires_at = expire
+        user.biometrics_enabled = True
+        await user.asave()
+        
+        return trust_token, expire
+
+    # validate trust token for biometrics login
+    @staticmethod
+    async def validate_trust_token(email, trust_token, device_id):
+        try:
+            decoded = jwt.decode(
+                trust_token,
+                settings.SECRET_KEY,
+                algorithms=[ALGORITHM],
+                options={
+                    "verify_exp": True,
+                    "verify_iat": True,
+                    "verify_signature": True,
+                },
+            )
+            
+            if decoded.get("type") != "trust":
+                return None, "Invalid trust token type"
+                
+            if decoded.get("device_id") != device_id:
+                return None, "Device ID mismatch"
+                
+            user = await User.objects.aget_or_none(
+                email=email,
+                id=decoded["user_id"],
+                trust_token=trust_token,
+                biometrics_enabled=True,
+                is_active=True
+            )
+            
+            if not user:
+                return None, "Invalid trust token or user not found"
+                
+            if user.is_trust_token_expired():
+                return None, "Trust token has expired"
+                
+            return user, None
+            
+        except jwt.ExpiredSignatureError:
+            return None, "Trust token has expired"
+        except jwt.InvalidTokenError:
+            return None, "Invalid trust token"
+        except Exception:
+            return None, "Trust token validation failed"
+
+    # revoke trust token (disable biometrics)
+    @staticmethod
+    async def revoke_trust_token(user):
+        user.trust_token, user.trust_token_expires_at, user.biometrics_enabled = None, None, False
+        await user.asave()
+
     # detect client type for proper token handling
     @staticmethod
     def is_web_client(request):

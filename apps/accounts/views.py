@@ -7,6 +7,9 @@ from apps.accounts.tasks import (
     EmailTasks,
 )
 from apps.accounts.schemas import (
+    BiometricsEnableSchema,
+    BiometricsLoginSchema,
+    BiometricsResponseSchema,
     EmailSchema,
     LoginUserSchema,
     LoginMfaSchema,
@@ -391,3 +394,104 @@ async def logout(request, response: HttpResponse):
         Authentication.clear_refresh_token_cookie(response)
 
     return CustomResponse.success(message="Logout successful")
+
+
+@auth_router.post(
+    "/biometrics/enable",
+    summary="Enable biometrics authentication",
+    description="""
+        Enable biometrics login for the authenticated user.
+        Creates a trust token that can be used for biometric authentication.
+    """,
+    response={200: BiometricsResponseSchema},
+    auth=AuthUser(),
+)
+async def enable_biometrics(request, data: BiometricsEnableSchema):
+    user = request.auth
+    
+    if user.biometrics_enabled:
+        raise RequestError(
+            err_code=ErrorCode.NOT_ALLOWED,
+            err_msg="Biometrics already enabled for this account",
+            status_code=400,
+        )
+    
+    # Create trust token
+    trust_token, expires_at = await Authentication.create_trust_token(
+        user, data.device_id
+    )
+    
+    return CustomResponse.success(
+        message="Biometrics authentication enabled successfully",
+        data={
+            "trust_token": trust_token,
+            "expires_at": expires_at.isoformat(),
+        },
+    )
+
+
+@auth_router.post(
+    "/biometrics/login",
+    summary="Login with biometrics",
+    description="""
+        Authenticate using biometrics trust token.
+        Returns access and refresh tokens upon successful validation.
+    """,
+    response={200: TokensResponseSchema},
+    throttle=AnonRateThrottle("5/15m"),
+)
+async def biometrics_login(request, data: BiometricsLoginSchema, response: HttpResponse):
+    email = data.email
+    trust_token = data.trust_token
+    device_id = data.device_id
+    
+    # Validate trust token
+    user, error_msg = await Authentication.validate_trust_token(
+        email, trust_token, device_id
+    )
+    
+    if not user:
+        raise RequestError(
+            err_code=ErrorCode.INVALID_TOKEN,
+            err_msg=error_msg or "Invalid biometrics credentials",
+            status_code=401,
+        )
+    
+    # Create access and refresh tokens
+    access_token, refresh_token = await Authentication.create_tokens_for_user(user)
+    
+    # Set HTTP-only cookie for web clients
+    if Authentication.is_web_client(request):
+        Authentication.set_refresh_token_cookie(response, refresh_token)
+        refresh_token = "Set as HTTP-only cookie"
+    
+    return CustomResponse.success(
+        message="Biometrics login successful",
+        data={"access": access_token, "refresh": refresh_token},
+    )
+
+
+@auth_router.post(
+    "/biometrics/disable",
+    summary="Disable biometrics authentication",
+    description="""
+        Disable biometrics login and revoke the trust token.
+        User will need to re-enable biometrics to use this feature again.
+    """,
+    response=ResponseSchema,
+    auth=AuthUser(),
+)
+async def disable_biometrics(request):
+    user = request.auth
+    
+    if not user.biometrics_enabled:
+        raise RequestError(
+            err_code=ErrorCode.NOT_ALLOWED,
+            err_msg="Biometrics not enabled for this account",
+            status_code=400,
+        )
+    
+    # Revoke trust token and disable biometrics
+    await Authentication.revoke_trust_token(user)
+    
+    return CustomResponse.success(message="Biometrics authentication disabled successfully")

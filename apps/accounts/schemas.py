@@ -56,3 +56,24 @@ class TokensResponseDataSchema(BaseSchema):
 
 class TokensResponseSchema(ResponseSchema):
     data: TokensResponseDataSchema
+
+
+# BIOMETRICS SCHEMAS
+class BiometricsEnableSchema(BaseSchema):
+    device_id: str = Field(..., example="device_12345")
+    device_info: str = Field(None, example="iPhone 13 Pro Max")
+
+
+class BiometricsLoginSchema(BaseSchema):
+    email: EmailStr = Field(..., example="johndoe@example.com")
+    trust_token: str = Field(..., example="trust_token_abc123")
+    device_id: str = Field(..., example="device_12345")
+
+
+class BiometricsResponseDataSchema(BaseSchema):
+    trust_token: str = Field(..., example="trust_token_abc123")
+    expires_at: str = Field(..., example="2024-02-01T12:00:00Z")
+
+
+class BiometricsResponseSchema(ResponseSchema):
+    data: BiometricsResponseDataSchema
