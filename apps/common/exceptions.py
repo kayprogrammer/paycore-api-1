@@ -29,6 +29,8 @@ class ErrorCode:
     KYC_NOT_FOUND = "kyc_not_found"
     KYC_INVALID_STATUS = "kyc_invalid_status"
 
+    MISMATCH = "mismatch"
+
 
 class RequestError(Exception):
     default_detail = "An error occured"

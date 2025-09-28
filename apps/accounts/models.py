@@ -55,4 +55,6 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
         return True
 
     def is_trust_token_expired(self):
-        return self.trust_token_expires_at and timezone.now() > self.trust_token_expires_at
+        return (
+            self.trust_token_expires_at and timezone.now() > self.trust_token_expires_at
+        )

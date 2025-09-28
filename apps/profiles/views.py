@@ -93,7 +93,9 @@ async def submit_kyc(
     selfie_file: File[UploadedFile] = None,
 ):
     user = request.auth
-    user_kyc = await KYC.objects.select_related("user", "country").aget_or_none(user=user)
+    user_kyc = await KYC.objects.select_related("user", "country").aget_or_none(
+        user=user
+    )
     if user_kyc and user_kyc.status != KYCStatus.RESUBMIT_REQUIRED:
         raise RequestError(
             err_code=ErrorCode.KYC_ALREADY_SUBMITTED,
@@ -106,9 +108,7 @@ async def submit_kyc(
 
     try:
         kyc_data = data.model_dump()
-        kyc_data.pop(
-            "country_id"
-        )
+        kyc_data.pop("country_id")
         if user_kyc:
             user_kyc = set_dict_attr(user_kyc, kyc_data)
             user_kyc.country = country
@@ -139,7 +139,9 @@ async def submit_kyc(
 
     except Exception as e:
         return CustomResponse.error(
-            message=f"Failed to submit KYC: Please Contact support", err_code=ErrorCode.SERVER_ERROR, status_code=500
+            message=f"Failed to submit KYC: Please Contact support",
+            err_code=ErrorCode.SERVER_ERROR,
+            status_code=500,
         )
 
 
@@ -168,7 +170,7 @@ async def get_kyc_status(request):
         Admin endpoint to review a KYC submission.
     """,
     response=KYCSingleResponseSchema,
-    auth=AuthAdmin()
+    auth=AuthAdmin(),
 )
 async def review_kyc(request, kyc_id: UUID, data: KYCStatusUpdateSchema):
     kyc = await KYC.objects.select_related("user", "country").aget_or_none(id=kyc_id)
@@ -189,14 +191,12 @@ async def review_kyc(request, kyc_id: UUID, data: KYCStatusUpdateSchema):
         Admin endpoint to list all KYC submissions.
     """,
     response=KYCListResponseSchema,
-    auth=AuthAdmin()
+    auth=AuthAdmin(),
 )
 async def list_kyc_submissions(request, filters: KycFilterSchema = Query(...)):
     kycs = KYC.objects.select_related("country", "user")
     filtered_kycs = filters.filter(kycs)
-    kyc_list = await sync_to_async(list)(
-        filtered_kycs.order_by("-created_at")
-    )
+    kyc_list = await sync_to_async(list)(filtered_kycs.order_by("-created_at"))
     return CustomResponse.success(
         message="KYC submissions retrieved successfully", data=kyc_list
     )
