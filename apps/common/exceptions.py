@@ -30,6 +30,7 @@ class ErrorCode:
     KYC_INVALID_STATUS = "kyc_invalid_status"
 
     MISMATCH = "mismatch"
+    VALIDATION_ERROR = "validation_error"
 
 
 class RequestError(Exception):

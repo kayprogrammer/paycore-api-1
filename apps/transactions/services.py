@@ -16,6 +16,8 @@ from apps.transactions.models import (
 )
 from asgiref.sync import sync_to_async
 
+from apps.wallets.models import Wallet
+
 
 class TransactionService:
     """Service for managing transaction creation and lifecycle"""
@@ -27,8 +29,8 @@ class TransactionService:
         direction: TransactionDirection,
         from_user: Optional[User] = None,
         to_user: Optional[User] = None,
-        from_wallet_id: Optional[UUID] = None,
-        to_wallet_id: Optional[UUID] = None,
+        from_wallet: Optional[Wallet] = None,
+        to_wallet: Optional[Wallet] = None,
         description: Optional[str] = None,
         reference: Optional[str] = None,
         external_reference: Optional[str] = None,
@@ -45,7 +47,7 @@ class TransactionService:
         net_amount = amount - fee_amount
 
         transaction_data = {
-            "type": transaction_type,
+            "transaction_type": transaction_type,
             "status": TransactionStatus.PENDING,
             "direction": direction,
             "amount": amount,
@@ -53,8 +55,8 @@ class TransactionService:
             "net_amount": net_amount,
             "from_user": from_user,
             "to_user": to_user,
-            "from_wallet": from_wallet_id,
-            "to_wallet": to_wallet_id,
+            "from_wallet": from_wallet,
+            "to_wallet": to_wallet,
             "description": description,
             "reference": reference,
             "external_reference": external_reference,
@@ -85,8 +87,8 @@ class TransactionService:
     async def create_wallet_transfer_transaction(
         from_user: User,
         to_user: User,
-        from_wallet_id: UUID,
-        to_wallet_id: UUID,
+        from_wallet: Wallet,
+        to_wallet: Wallet,
         amount: Decimal,
         from_balance_before: Decimal,
         from_balance_after: Decimal,
@@ -109,8 +111,8 @@ class TransactionService:
             ),
             from_user=from_user,
             to_user=to_user,
-            from_wallet_id=from_wallet_id,
-            to_wallet_id=to_wallet_id,
+            from_wallet=from_wallet,
+            to_wallet=to_wallet,
             description=description or "Wallet transfer",
             reference=reference,
             fee_amount=fee_amount,
@@ -124,7 +126,7 @@ class TransactionService:
     @staticmethod
     async def create_hold_transaction(
         user: User,
-        wallet_id,  # Can be UUID or Wallet object
+        wallet: Wallet,  # Can be UUID or Wallet object
         amount: Decimal,
         balance_before: Decimal,
         balance_after: Decimal,
@@ -134,20 +136,12 @@ class TransactionService:
     ) -> Transaction:
         """Create transaction record for funds hold"""
 
-        # Handle both UUID and Wallet object inputs
-        if hasattr(wallet_id, "wallet_id"):
-            wallet_obj = wallet_id
-            wallet_uuid = wallet_obj.wallet_id
-        else:
-            wallet_obj = wallet_id
-            wallet_uuid = wallet_id
-
         transaction = await TransactionService.create_transaction(
             transaction_type=TransactionType.HOLD,
             amount=amount,
             direction=TransactionDirection.INTERNAL,
             from_user=user,
-            from_wallet_id=wallet_obj,
+            from_wallet=wallet,
             description="Funds hold",
             reference=reference,
             metadata=metadata,
@@ -158,7 +152,7 @@ class TransactionService:
         # Create transaction hold record
         await TransactionHold.objects.acreate(
             transaction=transaction,
-            wallet_id=wallet_uuid,
+            wallet=wallet,
             amount_held=amount,
             expires_at=expires_at,
         )
@@ -168,7 +162,7 @@ class TransactionService:
     @staticmethod
     async def create_release_transaction(
         user: User,
-        wallet_id,  # Can be UUID or Wallet object
+        wallet: Wallet,
         amount: Decimal,
         balance_before: Decimal,
         balance_after: Decimal,
@@ -178,18 +172,12 @@ class TransactionService:
     ) -> Transaction:
         """Create transaction record for funds release"""
 
-        # Handle both UUID and Wallet object inputs
-        if hasattr(wallet_id, "wallet_id"):
-            wallet_obj = wallet_id
-        else:
-            wallet_obj = wallet_id
-
         return await TransactionService.create_transaction(
             transaction_type=TransactionType.RELEASE,
             amount=amount,
             direction=TransactionDirection.INTERNAL,
             from_user=user,
-            from_wallet_id=wallet_obj,
+            from_wallet=wallet,
             description="Funds release",
             reference=reference,
             metadata=metadata,
@@ -330,7 +318,7 @@ class TransactionService:
         filters = Q(from_wallet_id=wallet_id) | Q(to_wallet_id=wallet_id)
 
         if transaction_type:
-            filters &= Q(type=transaction_type)
+            filters &= Q(transaction_type=transaction_type)
         if status:
             filters &= Q(status=status)
 

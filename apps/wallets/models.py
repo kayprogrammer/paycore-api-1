@@ -115,7 +115,12 @@ class Wallet(BaseModel):
     last_transaction_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = [["user", "currency", "is_default"]]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "currency", "wallet_type", "is_default"],
+                name="unique_default_wallet_per_currency",
+            )
+        ]
         indexes = [
             models.Index(fields=["user", "currency"]),
             models.Index(fields=["wallet_id"]),

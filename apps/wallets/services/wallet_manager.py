@@ -29,7 +29,7 @@ class WalletManager:
         )
         if not currency:
             raise ValidationError(
-                "currency_code" f"Currency {data.currency_code} not found or inactive"
+                "currency_code", f"Currency {data.currency_code} not found or inactive"
             )
 
         # Check if user already has a default wallet for this currency
@@ -42,6 +42,18 @@ class WalletManager:
                 await existing_default.asave()
 
         # Create wallet
+        existing_wallet = await Wallet.objects.aget_or_none(
+            user=user,
+            currency=currency,
+            is_default=data.is_default,
+            wallet_type=data.wallet_type,
+        )
+        if existing_wallet:
+            raise ValidationError(
+                "wallet_type",
+                f"User already has a {data.wallet_type} wallet for {currency.code}",
+            )
+
         wallet = await Wallet.objects.acreate(
             user=user, currency=currency, **data.model_dump(exclude={"currency_code"})
         )
@@ -92,7 +104,7 @@ class WalletManager:
 
         # Remove default from other wallets of same currency
         await Wallet.objects.filter(
-            user=user, currency=wallet.currency, is_default=True
+            user=user, currency_id=wallet.currency_id, is_default=True
         ).aupdate(is_default=False)
 
         # Set this wallet as default
@@ -121,7 +133,7 @@ class WalletManager:
         if not wallet:
             raise NotFoundError("Wallet not found")
 
-        wallet.pin_hash = make_password(pin)
+        wallet.pin_hash = make_password(str(pin))
         wallet.requires_pin = True
         await wallet.asave()
         return wallet
@@ -187,7 +199,7 @@ class WalletManager:
         # Check if it's the last active wallet for this currency
         other_active_wallets = (
             await Wallet.objects.filter(
-                user=user, currency=wallet.currency, status=WalletStatus.ACTIVE
+                user=user, currency_id=wallet.currency_id, status=WalletStatus.ACTIVE
             )
             .exclude(wallet_id=wallet_id)
             .acount()

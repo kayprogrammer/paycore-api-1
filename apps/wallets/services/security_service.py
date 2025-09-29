@@ -115,7 +115,7 @@ class WalletSecurityService:
     @staticmethod
     async def enable_wallet_security(
         user: User,
-        wallet_id: str,
+        wallet_id: UUID,
         pin: str = None,
         enable_biometric: bool = False,
     ) -> Dict[str, Any]:
@@ -129,7 +129,7 @@ class WalletSecurityService:
 
         # Set PIN if provided
         if pin:
-            wallet.pin_hash = make_password(pin)
+            wallet.pin_hash = make_password(str(pin))
             wallet.requires_pin = True
             security_features.append("pin")
 
@@ -149,15 +149,19 @@ class WalletSecurityService:
 
         return {
             "wallet_id": wallet.wallet_id,
-            "security_features_enabled": security_features,
             "requires_pin": wallet.requires_pin,
             "requires_biometric": wallet.requires_biometric,
+            "has_pin_set": bool(wallet.pin_hash),
+            "user_biometric_enabled": user.biometrics_enabled,
+            "security_level": WalletSecurityService._calculate_security_level(
+                wallet, user
+            ),
         }
 
     @staticmethod
     async def disable_wallet_security(
         user: User,
-        wallet_id: str,
+        wallet_id: UUID,
         current_pin: str = None,
         disable_pin: bool = False,
         disable_biometric: bool = False,
@@ -193,9 +197,13 @@ class WalletSecurityService:
 
         return {
             "wallet_id": wallet.wallet_id,
-            "security_features_disabled": security_features_disabled,
             "requires_pin": wallet.requires_pin,
             "requires_biometric": wallet.requires_biometric,
+            "has_pin_set": bool(wallet.pin_hash),
+            "user_biometric_enabled": user.biometrics_enabled,
+            "security_level": WalletSecurityService._calculate_security_level(
+                wallet, user
+            ),
         }
 
     @staticmethod
@@ -217,7 +225,7 @@ class WalletSecurityService:
                 "new_pin", "New PIN must be different from current PIN"
             )
 
-        wallet.pin_hash = make_password(new_pin)
+        wallet.pin_hash = make_password(str(new_pin))
         await wallet.asave()
 
         return {"wallet_id": wallet.wallet_id, "message": "PIN changed successfully"}

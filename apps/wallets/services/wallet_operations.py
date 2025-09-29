@@ -100,13 +100,13 @@ class WalletOperations:
     @staticmethod
     @aatomic
     async def transfer_between_wallets(
-        from_user: User, from_wallet_id: str, data: TransferSchema
+        from_user: User, from_wallet_id: uuid.UUID, data: TransferSchema
     ) -> Dict[str, Any]:
         """Transfer funds between wallets"""
 
-        from_wallet = await Wallet.objects.select_related("currency").aget_or_none(
-            wallet_id=from_wallet_id, user=from_user
-        )
+        from_wallet = await Wallet.objects.select_related(
+            "user", "currency"
+        ).aget_or_none(wallet_id=from_wallet_id, user=from_user)
         if not from_wallet:
             raise NotFoundError("Source wallet not found")
 
@@ -116,10 +116,17 @@ class WalletOperations:
         if not to_wallet:
             raise ValidationError("to_wallet_id", "Destination wallet not found")
 
-        # Validate currency match
+        # Handle currency conversion if needed
+        converted_amount = data.amount
         if from_wallet.currency != to_wallet.currency:
-            raise RequestError(
-                err_code=ErrorCode.MISMATCH, err_msg="Currency mismatch between wallets"
+            amount_in_usd = Decimal(str(data.amount)) * Decimal(
+                str(from_wallet.currency.exchange_rate_usd)
+            )
+            converted_amount = amount_in_usd / Decimal(
+                str(to_wallet.currency.exchange_rate_usd)
+            )
+            converted_amount = Decimal(
+                str(round(float(converted_amount), to_wallet.currency.decimal_places))
             )
 
         # Validate PIN if required
@@ -144,28 +151,43 @@ class WalletOperations:
             from_wallet, data.amount, "debit", data.reference
         )
 
-        # Credit to destination
+        # Credit to destination (with converted amount if different currency)
         await WalletOperations.update_balance(
-            to_wallet, data.amount, "credit", data.reference
+            to_wallet, converted_amount, "credit", data.reference
         )
 
         # Create transaction record
+        metadata = {
+            "transfer_type": "wallet_to_wallet",
+            "from_currency": from_wallet.currency.code,
+            "to_currency": to_wallet.currency.code,
+            "original_amount": str(data.amount),
+            "converted_amount": str(converted_amount),
+        }
+
+        # Add exchange rate info if currency conversion happened
+        if from_wallet.currency != to_wallet.currency:
+            metadata.update(
+                {
+                    "exchange_rate_applied": str(converted_amount / data.amount),
+                    "from_usd_rate": str(from_wallet.currency.exchange_rate_usd),
+                    "to_usd_rate": str(to_wallet.currency.exchange_rate_usd),
+                }
+            )
+
         transaction_obj = await TransactionService.create_wallet_transfer_transaction(
             from_user=from_user,
             to_user=to_wallet.user,
-            from_wallet_id=from_wallet,
-            to_wallet_id=to_wallet,
-            amount=data.amount,
+            from_wallet=from_wallet,
+            to_wallet=to_wallet,
+            amount=data.amount,  # Store original amount in transaction
             from_balance_before=from_balance_before,
             from_balance_after=from_wallet.balance,
             to_balance_before=to_balance_before,
             to_balance_after=to_wallet.balance,
             description=data.description,
             reference=data.reference,
-            metadata={
-                "transfer_type": "wallet_to_wallet",
-                "currency_code": from_wallet.currency.code,
-            },
+            metadata=metadata,
         )
 
         # Complete the transaction
@@ -173,39 +195,14 @@ class WalletOperations:
         return transaction_obj
 
     @staticmethod
-    async def internal_transfer(
-        user: User, data: InternalTransferSchema
-    ) -> Transaction:
-        """Transfer between user's own wallets"""
-
-        from_wallet = await Wallet.objects.aget_or_none(
-            wallet_id=data.from_wallet_id, user=user
-        )
-        to_wallet = await Wallet.objects.aget_or_none(
-            wallet_id=data.to_wallet_id, user=user
-        )
-
-        if not from_wallet or not to_wallet:
-            raise NotFoundError("One or both wallets not found")
-
-        transfer_data = TransferSchema(
-            to_wallet_id=to_wallet.id,
-            amount=data.amount,
-            description=data.description or "Internal transfer",
-            reference=f"internal_{uuid.uuid4().hex[:8]}",
-        )
-
-        return await WalletOperations.transfer_between_wallets(
-            from_user=user, from_wallet_id=data.from_wallet_id, data=transfer_data
-        )
-
-    @staticmethod
     async def hold_funds(
         user: User, wallet_id: uuid.UUID, data: HoldFundsSchema
     ) -> Dict[str, Any]:
         """Place a hold on wallet funds"""
 
-        wallet = await Wallet.objects.aget_or_none(wallet_id=wallet_id, user=user)
+        wallet = await Wallet.objects.select_related("currency").aget_or_none(
+            wallet_id=wallet_id, user=user
+        )
         if not wallet:
             raise NotFoundError("Wallet not found")
 
@@ -217,7 +214,7 @@ class WalletOperations:
         # Create transaction record
         transaction_obj = await TransactionService.create_hold_transaction(
             user=user,
-            wallet_id=wallet,
+            wallet=wallet,
             amount=data.amount,
             balance_before=balance_before,
             balance_after=wallet.balance,
@@ -243,7 +240,9 @@ class WalletOperations:
     ) -> Dict[str, Any]:
         """Release a hold on wallet funds"""
 
-        wallet = await Wallet.objects.aget_or_none(wallet_id=wallet_id, user=user)
+        wallet = await Wallet.objects.select_related("currency").aget_or_none(
+            wallet_id=wallet_id, user=user
+        )
         if not wallet:
             raise NotFoundError("Wallet not found")
 
@@ -252,7 +251,7 @@ class WalletOperations:
 
         transaction_obj = await TransactionService.create_release_transaction(
             user=user,
-            wallet_id=wallet,
+            wallet=wallet,
             amount=amount,
             balance_before=balance_before,
             balance_after=wallet.balance,

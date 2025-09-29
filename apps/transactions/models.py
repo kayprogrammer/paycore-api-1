@@ -42,7 +42,7 @@ class TransactionDirection(models.TextChoices):
 
 class Transaction(BaseModel):
     transaction_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    type = models.CharField(max_length=20, choices=TransactionType.choices)
+    transaction_type = models.CharField(max_length=20, choices=TransactionType.choices)
     status = models.CharField(
         max_length=20,
         choices=TransactionStatus.choices,
@@ -131,15 +131,15 @@ class Transaction(BaseModel):
             models.Index(fields=["from_user", "created_at"]),
             models.Index(fields=["to_user", "created_at"]),
             models.Index(fields=["status", "created_at"]),
-            models.Index(fields=["type", "created_at"]),
-            models.Index(fields=["from_wallet_id"]),
-            models.Index(fields=["to_wallet_id"]),
+            models.Index(fields=["transaction_type", "created_at"]),
+            models.Index(fields=["from_wallet"]),
+            models.Index(fields=["to_wallet"]),
             models.Index(fields=["reference"]),
         ]
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.type} - {self.amount} ({self.status})"
+        return f"{self.transaction_type} - {self.amount} ({self.status})"
 
     @property
     def currency_code(self):
@@ -201,7 +201,9 @@ class TransactionHold(BaseModel):
     transaction = models.OneToOneField(
         Transaction, on_delete=models.CASCADE, related_name="hold"
     )
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="holds")
+    wallet = models.ForeignKey(
+        Wallet, on_delete=models.CASCADE, related_name="holds", null=True
+    )
     amount_held = models.DecimalField(max_digits=20, decimal_places=8)
     released_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -275,7 +277,7 @@ class TransactionDispute(BaseModel):
     evidence = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
-        return f"Dispute {self.dispute_id} - {self.type} ({self.status})"
+        return f"Dispute {self.dispute_id} - {self.dispute_type} ({self.status})"
 
 
 class TransactionLog(BaseModel):

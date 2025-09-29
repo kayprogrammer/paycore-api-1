@@ -1,11 +1,14 @@
+from locale import currency
 from uuid import UUID
-from pydantic import Field, field_validator
+from ninja import ModelSchema
+from pydantic import Field, constr, field_validator
 from decimal import Decimal
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from datetime import datetime
 
 from apps.common.doc_examples import DATE_EXAMPLE, UUID_EXAMPLE
-from apps.common.schemas import BaseSchema, ResponseSchema
+from apps.common.schemas import BaseSchema, ResponseSchema, UserDataSchema
+from apps.transactions.models import Transaction
 from apps.wallets.models import PaymentFrequency, SplitPaymentType, WalletStatus
 
 
@@ -37,12 +40,12 @@ class UpdateWalletSchema(BaseSchema):
 
 
 class SetWalletPinSchema(BaseSchema):
-    pin: int = Field(..., example=1234, min_length=4, max_length=6)
+    pin: int = Field(example=1234, gt=999, lt=10000)
 
 
 class ChangeWalletPinSchema(BaseSchema):
-    current_pin: int = Field(..., example=1234, min_length=4, max_length=6)
-    new_pin: int = Field(..., example=5678, min_length=4, max_length=6)
+    current_pin: int = Field(..., example=1234, gt=999, lt=10000)
+    new_pin: int = Field(..., example=5678, gt=999, lt=10000)
 
 
 class WalletStatusSchema(BaseSchema):
@@ -54,7 +57,7 @@ class TransferSchema(BaseSchema):
     to_wallet_id: UUID = Field(..., example=UUID_EXAMPLE)
     amount: Decimal = Field(..., example=100.50, gt=0)
     description: Optional[str] = Field(None, example="Payment for dinner")
-    pin: Optional[int] = Field(None, example=1234)
+    pin: Optional[int] = Field(None, example=1234, gt=999, lt=10000)
     reference: Optional[str] = Field(None, example="REF123456")
 
 
@@ -79,18 +82,19 @@ class ReleaseFundsSchema(BaseSchema):
 # =============== SECURITY SCHEMAS ===============
 class TransactionAuthSchema(BaseSchema):
     amount: Decimal = Field(..., example=100.00, gt=0)
-    pin: Optional[int] = Field(None, example=1234)
+    pin: Optional[int] = Field(None, example=1234, gt=999, lt=10000)
+    device_id: Optional[str] = Field(None, example="device_12345")
     biometric_token: Optional[str] = Field(None)
 
 
 class WalletSecuritySchema(BaseSchema):
-    pin: Optional[int] = Field(None, example=1234, min_length=4, max_length=6)
+    pin: Optional[int] = Field(None, example=1234, gt=999, lt=10000)
     enable_biometric: bool = Field(default=False, example=True)
     device_id: Optional[str] = Field(None, example="device_12345")
 
 
 class DisableSecuritySchema(BaseSchema):
-    current_pin: Optional[int] = Field(None, example=1234)
+    current_pin: Optional[int] = Field(None, example=1234, gt=999, lt=10000)
     disable_pin: bool = Field(default=False, example=True)
     disable_biometric: bool = Field(default=False, example=False)
 
@@ -124,7 +128,7 @@ class PayQRCodeSchema(BaseSchema):
     qr_id: UUID = Field(..., example=UUID_EXAMPLE)
     amount: Optional[Decimal] = Field(None, example=25.00, gt=0)
     from_wallet_id: UUID = Field(..., example=UUID_EXAMPLE)
-    pin: Optional[int] = Field(None, example=1234)
+    pin: Optional[int] = Field(None, example=1234, gt=999, lt=10000)
 
 
 # =============== SPLIT PAYMENT SCHEMAS ===============
@@ -146,7 +150,7 @@ class PaySplitPaymentSchema(BaseSchema):
     payment_id: UUID = Field(..., example=UUID_EXAMPLE)
     wallet_id: UUID = Field(..., example=UUID_EXAMPLE)
     amount: Optional[Decimal] = Field(None, example=40.00, gt=0)
-    pin: Optional[str] = Field(None, example="1234")
+    pin: Optional[int] = Field(None, example=1234, gt=999, lt=10000)
 
 
 # =============== RECURRING PAYMENT SCHEMAS ===============
@@ -174,7 +178,7 @@ class UpdateRecurringPaymentSchema(BaseSchema):
 
 # =============== RESPONSE SCHEMAS ===============
 class WalletResponseSchema(BaseSchema):
-    wallet_id: str
+    wallet_id: UUID
     name: str
     wallet_type: str
     currency: CurrencySchema
@@ -197,7 +201,7 @@ class WalletResponseSchema(BaseSchema):
 
 
 class BalanceResponseSchema(BaseSchema):
-    wallet_id: str
+    wallet_id: UUID
     name: str
     currency: CurrencySchema
     balance: Decimal
@@ -211,8 +215,34 @@ class BalanceResponseSchema(BaseSchema):
     status: str
 
 
+class BasicWalletSchema(BaseSchema):
+    currency: CurrencySchema
+    wallet_id: UUID
+    name: str
+    user: UserDataSchema
+
+
+class TransactionSchema(ModelSchema):
+    from_wallet: BasicWalletSchema
+    to_wallet: Optional[BasicWalletSchema]
+
+    class Meta:
+        model = Transaction
+        exclude = [
+            "id",
+            "deleted_at",
+            "from_balance_before",
+            "from_balance_after",
+            "to_balance_before",
+            "to_balance_after",
+            "ip_address",
+            "user_agent",
+            "device_id",
+        ]
+
+
 class TransferResponseSchema(BaseSchema):
-    transfer_id: str
+    transfer_id: UUID
     from_wallet: dict
     to_wallet: dict
     amount: Decimal
@@ -223,7 +253,7 @@ class TransferResponseSchema(BaseSchema):
 
 
 class SecurityResponseSchema(BaseSchema):
-    wallet_id: str
+    wallet_id: UUID
     requires_pin: bool
     requires_biometric: bool
     has_pin_set: bool
@@ -239,8 +269,8 @@ class AuthResponseSchema(BaseSchema):
 
 
 class VirtualCardResponseSchema(BaseSchema):
-    card_id: str
-    wallet_id: str
+    card_id: UUID
+    wallet_id: UUID
     masked_number: str
     card_holder_name: str
     expiry_month: int
@@ -255,8 +285,8 @@ class VirtualCardResponseSchema(BaseSchema):
 
 
 class QRCodeResponseSchema(BaseSchema):
-    qr_id: str
-    wallet_id: str
+    qr_id: UUID
+    wallet_id: UUID
     qr_image_url: Optional[str]
     amount: Optional[Decimal]
     description: Optional[str]
@@ -270,7 +300,7 @@ class QRCodeResponseSchema(BaseSchema):
 
 
 class SplitPaymentResponseSchema(BaseSchema):
-    payment_id: str
+    payment_id: UUID
     total_amount: Decimal
     currency: str
     description: str
@@ -283,9 +313,9 @@ class SplitPaymentResponseSchema(BaseSchema):
 
 
 class RecurringPaymentResponseSchema(BaseSchema):
-    payment_id: str
-    from_wallet_id: str
-    to_wallet_id: Optional[str]
+    payment_id: UUID
+    from_wallet_id: UUID
+    to_wallet_id: Optional[UUID]
     to_external: Optional[str]
     amount: Decimal
     frequency: str
@@ -318,7 +348,7 @@ class BalanceDataResponseSchema(ResponseSchema):
 
 
 class TransferDataResponseSchema(ResponseSchema):
-    data: TransferResponseSchema
+    data: TransactionSchema
 
 
 class SecurityDataResponseSchema(ResponseSchema):

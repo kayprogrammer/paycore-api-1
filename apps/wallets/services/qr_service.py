@@ -1,12 +1,12 @@
 from decimal import Decimal
+from uuid import UUID
 from django.utils import timezone
-from typing import List, Dict, Any, Optional
-import uuid
-import json
+from typing import List, Dict, Any
 
 from apps.accounts.models import User
 from apps.wallets.models import Wallet, QRCode, WalletStatus
-from apps.common.exceptions import RequestError, ErrorCode
+from apps.common.exceptions import NotFoundError, RequestError, ErrorCode
+from apps.wallets.services.wallet_operations import WalletOperations
 
 
 class QRCodeService:
@@ -25,14 +25,9 @@ class QRCodeService:
         """Create a new QR code for receiving payments"""
 
         # Get wallet
-        try:
-            wallet = await Wallet.objects.aget(wallet_id=wallet_id, user=user)
-        except Wallet.DoesNotExist:
-            raise RequestError(
-                err_code=ErrorCode.NOT_FOUND,
-                err_msg="Wallet not found",
-                status_code=404,
-            )
+        wallet = await Wallet.objects.aget_or_none(wallet_id=wallet_id, user=user)
+        if not wallet:
+            raise NotFoundError("Wallet not found")
 
         if wallet.status != WalletStatus.ACTIVE:
             raise RequestError(
@@ -50,7 +45,7 @@ class QRCodeService:
             )
 
         # Create QR code
-        qr_code = await QRCode.objects.acreate(
+        qr_code = QRCode(
             wallet=wallet,
             amount=amount,
             description=description,
@@ -68,7 +63,7 @@ class QRCodeService:
 
     @staticmethod
     async def get_user_qr_codes(
-        user: User, wallet_id: str = None, active_only: bool = True
+        user: User, wallet_id: UUID = None, active_only: bool = True
     ) -> List[QRCode]:
         """Get user's QR codes"""
 
@@ -85,43 +80,31 @@ class QRCodeService:
         return qr_codes
 
     @staticmethod
-    async def get_qr_code(qr_id: str) -> QRCode:
+    async def get_qr_code(qr_id: UUID) -> QRCode:
         """Get a QR code by ID (public method for payments)"""
 
-        try:
-            qr_code = await QRCode.objects.select_related(
-                "wallet", "wallet__user", "wallet__currency"
-            ).aget(qr_id=qr_id)
-        except QRCode.DoesNotExist:
-            raise RequestError(
-                err_code=ErrorCode.NOT_FOUND,
-                err_msg="QR code not found",
-                status_code=404,
-            )
-
+        qr_code = await QRCode.objects.select_related(
+            "wallet", "wallet__user", "wallet__currency"
+        ).aget_or_none(qr_id=qr_id)
+        if not qr_code:
+            raise NotFoundError("QR code not found")
         return qr_code
 
     @staticmethod
-    async def get_user_qr_code(user: User, qr_id: str) -> QRCode:
+    async def get_user_qr_code(user: User, qr_id: UUID) -> QRCode:
         """Get a user's QR code"""
 
-        try:
-            qr_code = await QRCode.objects.select_related("wallet").aget(
-                qr_id=qr_id, wallet__user=user
-            )
-        except QRCode.DoesNotExist:
-            raise RequestError(
-                err_code=ErrorCode.NOT_FOUND,
-                err_msg="QR code not found",
-                status_code=404,
-            )
-
+        qr_code = await QRCode.objects.select_related("wallet").aget_or_none(
+            qr_id=qr_id, wallet__user=user
+        )
+        if not qr_code:
+            raise NotFoundError("QR code not found")
         return qr_code
 
     @staticmethod
     async def update_qr_code(
         user: User,
-        qr_id: str,
+        qr_id: UUID,
         description: str = None,
         expires_at: timezone.datetime = None,
         is_active: bool = None,
@@ -152,7 +135,7 @@ class QRCodeService:
 
     @staticmethod
     async def validate_qr_payment(
-        qr_id: str, amount: Decimal = None, payer_user: User = None
+        qr_id: UUID, amount: Decimal = None, payer_user: User = None
     ) -> tuple[QRCode, str]:
         """Validate a QR code payment"""
 
@@ -191,7 +174,7 @@ class QRCodeService:
     async def process_qr_payment(
         qr_id: str,
         payer_user: User,
-        from_wallet_id: str,
+        from_wallet_id: UUID,
         amount: Decimal = None,
         pin: str = None,
     ) -> Dict[str, Any]:
@@ -209,14 +192,11 @@ class QRCodeService:
         # Use the amount from QR code if fixed, otherwise use provided amount
         payment_amount = qr_code.amount if qr_code.is_amount_fixed else amount
 
-        # Import here to avoid circular imports
-        from .wallet_operations import WalletOperations
-
         # Process transfer
         transfer_result = await WalletOperations.transfer_between_wallets(
             from_user=payer_user,
             from_wallet_id=from_wallet_id,
-            to_wallet_id=str(qr_code.wallet.wallet_id),
+            to_wallet_id=qr_code.wallet.wallet_id,
             amount=payment_amount,
             description=f"QR Payment: {qr_code.description or 'Payment via QR code'}",
             pin=pin,
@@ -236,7 +216,7 @@ class QRCodeService:
 
         return {
             "payment_id": transfer_result["transfer_id"],
-            "qr_id": str(qr_code.qr_id),
+            "qr_id": qr_code.qr_id,
             "amount": payment_amount,
             "currency": qr_code.wallet.currency.code,
             "recipient": {
@@ -250,7 +230,7 @@ class QRCodeService:
 
     @staticmethod
     async def get_qr_code_details(
-        qr_id: str, include_sensitive: bool = False
+        qr_id: UUID, include_sensitive: bool = False
     ) -> Dict[str, Any]:
         """Get QR code details for display or payment"""
 
@@ -284,7 +264,7 @@ class QRCodeService:
         if include_sensitive:
             qr_data.update(
                 {
-                    "wallet_id": str(qr_code.wallet.wallet_id),
+                    "wallet_id": qr_code.wallet.wallet_id,
                     "total_received": qr_code.total_received,
                     "last_used_at": (
                         qr_code.last_used_at.isoformat()
@@ -298,7 +278,7 @@ class QRCodeService:
         return qr_data
 
     @staticmethod
-    async def get_qr_payment_history(user: User, qr_id: str) -> List[Dict[str, Any]]:
+    async def get_qr_payment_history(user: User, qr_id: UUID) -> List[Dict[str, Any]]:
         """Get payment history for a QR code"""
 
         qr_code = await QRCodeService.get_user_qr_code(user, qr_id)
@@ -320,7 +300,7 @@ class QRCodeService:
         ]
 
     @staticmethod
-    async def get_qr_analytics(user: User, wallet_id: str = None) -> Dict[str, Any]:
+    async def get_qr_analytics(user: User, wallet_id: UUID = None) -> Dict[str, Any]:
         """Get QR code analytics for user"""
 
         filters = {"wallet__user": user}
@@ -350,19 +330,17 @@ class QRCodeService:
         }
 
     @staticmethod
-    async def regenerate_qr_image(user: User, qr_id: str) -> QRCode:
+    async def regenerate_qr_image(user: User, qr_id: UUID) -> QRCode:
         """Regenerate QR code image"""
 
         qr_code = await QRCodeService.get_user_qr_code(user, qr_id)
 
-        # Regenerate QR code image
         qr_code.generate_qr_code()
         await qr_code.asave()
-
         return qr_code
 
     @staticmethod
-    async def bulk_deactivate_qr_codes(user: User, wallet_id: str = None) -> int:
+    async def bulk_deactivate_qr_codes(user: User, wallet_id: UUID = None) -> int:
         """Bulk deactivate QR codes"""
 
         filters = {"wallet__user": user, "is_active": True}

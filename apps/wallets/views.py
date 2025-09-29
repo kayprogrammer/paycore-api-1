@@ -170,28 +170,6 @@ async def transfer_funds(request, wallet_id: UUID, data: TransferSchema):
 
 
 @wallet_router.post(
-    "/internal-transfer",
-    summary="Internal transfer between own wallets",
-    description="Transfer funds between user's own wallets",
-    response={200: TransferDataResponseSchema},
-)
-async def internal_transfer(request, data: InternalTransferSchema):
-    user = request.auth
-
-    transfer_result = await WalletOperations.internal_transfer(
-        user=user,
-        from_wallet_id=data.from_wallet_id,
-        to_wallet_id=data.to_wallet_id,
-        amount=data.amount,
-        description=data.description,
-    )
-
-    return CustomResponse.success(
-        message="Internal transfer completed successfully", data=transfer_result
-    )
-
-
-@wallet_router.post(
     "/wallet/{wallet_id}/hold",
     summary="Place funds on hold",
     description="Place a temporary hold on wallet funds",
