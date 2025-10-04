@@ -22,6 +22,12 @@ class TransactionType(models.TextChoices):
     QR_PAYMENT = "qr_payment", "QR Payment"
     VIRTUAL_CARD = "virtual_card", "Virtual Card"
     ADJUSTMENT = "adjustment", "Adjustment"
+    # Card transaction types
+    CARD_PURCHASE = "card_purchase", "Card Purchase"
+    CARD_WITHDRAWAL = "card_withdrawal", "Card ATM Withdrawal"
+    CARD_REFUND = "card_refund", "Card Refund"
+    CARD_REVERSAL = "card_reversal", "Card Reversal"
+    CARD_FUND = "card_fund", "Card Funding"
 
 
 class TransactionStatus(models.TextChoices):
@@ -103,6 +109,30 @@ class Transaction(BaseModel):
     sender_account_number = models.CharField(max_length=50, null=True, blank=True)
     sender_account_name = models.CharField(max_length=100, null=True, blank=True)
     sender_bank_name = models.CharField(max_length=100, null=True, blank=True)
+
+    # Card transaction details (for card purchases, ATM withdrawals, etc.)
+    card = models.ForeignKey(
+        "cards.Card",
+        on_delete=models.SET_NULL,
+        related_name="transactions",
+        null=True,
+        blank=True,
+        help_text="Card used for this transaction (if applicable)",
+    )
+    merchant_name = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Merchant name for card transactions",
+    )
+    merchant_category = models.CharField(
+        max_length=100, null=True, blank=True, help_text="Merchant category code (MCC)"
+    )
+    transaction_location = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Transaction location (city, country, coordinates)",
+    )
 
     # Balances (for auditing)
     from_balance_before = models.DecimalField(

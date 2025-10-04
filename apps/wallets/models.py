@@ -1,5 +1,4 @@
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 import uuid, qrcode
 from io import BytesIO
@@ -216,49 +215,6 @@ class Wallet(BaseModel):
             self.monthly_spent = 0
             self.last_monthly_reset = today
             self.save()
-
-
-class VirtualCard(BaseModel):
-    wallet = models.ForeignKey(
-        Wallet, on_delete=models.CASCADE, related_name="virtual_cards"
-    )
-
-    # Card Details
-    card_number = models.CharField(max_length=19, unique=True)  # Encrypted/tokenized
-    card_holder_name = models.CharField(max_length=100)
-    expiry_month = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(12)]
-    )
-    expiry_year = models.PositiveIntegerField()
-    cvv = models.CharField(max_length=4)  # Encrypted
-
-    # Card Settings
-    spending_limit = models.DecimalField(
-        max_digits=20, decimal_places=8, null=True, blank=True
-    )
-    is_active = models.BooleanField(default=True)
-    is_frozen = models.BooleanField(default=False)
-
-    # Usage Tracking
-    total_spent = models.DecimalField(max_digits=20, decimal_places=8, default=0)
-    last_used_at = models.DateTimeField(null=True, blank=True)
-
-    # Metadata
-    nickname = models.CharField(max_length=50, blank=True, null=True)
-    created_for_merchant = models.CharField(max_length=100, blank=True, null=True)
-
-    def __str__(self):
-        return f"Virtual Card - {self.card_number[-4:]} ({self.wallet.name})"
-
-    @property
-    def masked_number(self):
-        return f"****-****-****-{self.card_number[-4:]}"
-
-    def is_expired(self):
-        now = timezone.now()
-        return (now.year > self.expiry_year) or (
-            now.year == self.expiry_year and now.month > self.expiry_month
-        )
 
 
 class QRCode(BaseModel):
