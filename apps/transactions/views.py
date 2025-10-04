@@ -30,33 +30,47 @@ transaction_router = Router(tags=["Transactions"])
 # =============== TRANSACTION ENDPOINTS ===============
 @transaction_router.post(
     "/transfer",
-    summary="Initiate a transfer",
+    summary="Initiate a wallet transfer",
     description="""
-        Transfer funds from one wallet to another.
-        Requires authentication and may require PIN verification depending on wallet settings.
+        Transfer funds from one wallet to another with comprehensive security.
+
+        **Features:**
+        - Supports PIN and/or biometric authentication
+        - Automatic currency conversion if wallets use different currencies
+        - Transparent fee calculation and breakdown
+        - Atomic operation - either completes fully or rolls back entirely
+        - Complete audit trail with balance snapshots
+
+        **Security:**
+        - PIN verification if wallet requires it
+        - Biometric authentication if wallet requires it
+        - Balance and spending limit validation
+        - Wallet status verification
+
+        **Fees:**
+        - External transfers: 1% of amount
+        - Currency conversion: 0.5% of amount (if applicable)
+
+        All fee details are itemized in the transaction record.
     """,
     response={200: TransactionReceiptResponseSchema},
-    throttle=AuthRateThrottle("50/m"),
+    throttle=AuthRateThrottle("30/m"),
 )
 async def initiate_transfer(request, data: InitiateTransferSchema):
-    """Initiate a wallet-to-wallet transfer"""
     user = request.auth
-    from_wallet = await Wallet.objects.aget_or_none(user=user, is_default=True)
-    if not from_wallet:
-        raise NotFoundError("No wallet found")
-
     result = await TransactionOperations.initiate_transfer(
         user=user,
-        from_wallet_id=from_wallet.wallet_id,
+        from_wallet_id=data.from_wallet_id,
         to_wallet_id=data.to_wallet_id,
         amount=data.amount,
         description=data.description,
         reference=data.reference,
         pin=data.pin,
+        biometric_token=data.biometric_token,
+        device_id=data.device_id,
     )
-
     return CustomResponse.success(
-        message="Transfer initiated successfully", data=result
+        message="Transfer completed successfully", data=result
     )
 
 

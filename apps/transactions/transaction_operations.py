@@ -1,11 +1,11 @@
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.utils import timezone
-from django.db import transaction as db_transaction
 from django.db.models import Q, Sum, Count, Avg
 from uuid import UUID
 from asgiref.sync import sync_to_async
 
+from apps.accounts.auth import Authentication
 from apps.accounts.models import User
 from apps.common.paginators import CustomPagination
 from apps.common.schemas import PaginationQuerySchema
@@ -16,7 +16,9 @@ from apps.transactions.models import (
 from apps.transactions.schemas import TransactionFilterSchema
 from apps.transactions.services import TransactionService
 from apps.wallets.models import Wallet, WalletStatus
-from apps.common.exceptions import RequestError, ErrorCode, NotFoundError
+from apps.common.exceptions import RequestError, ErrorCode, NotFoundError, ValidationError
+from apps.common.decorators import aatomic
+from django.contrib.auth.hashers import check_password
 
 paginator = CustomPagination()
 
@@ -25,6 +27,7 @@ class TransactionOperations:
     """High-level service for transaction operations"""
 
     @staticmethod
+    @aatomic
     async def initiate_transfer(
         user: User,
         from_wallet_id: UUID,
@@ -32,110 +35,162 @@ class TransactionOperations:
         amount: Decimal,
         description: Optional[str] = None,
         reference: Optional[str] = None,
-        pin: Optional[int] = None,
+        pin: Optional[str] = None,
+        biometric_token: Optional[str] = None,
+        device_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Initiate a wallet-to-wallet transfer"""
-
-        # Get wallets
-        from_wallet = await Wallet.objects.select_related("currency", "user").aget(
+        from_wallet = await Wallet.objects.select_related("currency", "user").aget_or_none(
             wallet_id=from_wallet_id, user=user
         )
+        if not from_wallet:
+            raise ValidationError("from_wallet_id", "Source wallet not found")
 
-        to_wallet = await Wallet.objects.select_related("currency", "user").aget(
-            wallet_id=to_wallet_id
-        )
-
-        # Validate transfer
-        if from_wallet.currency_id != to_wallet.currency_id:
-            raise RequestError(
-                ErrorCode.INVALID_ENTRY,
-                "Wallets must have the same currency",
-                400,
-            )
+        to_wallet = await Wallet.objects.select_related("currency", "user").aget_or_none(wallet_id=to_wallet_id)
+        if not to_wallet:
+            raise ValidationError("to_wallet_id", "Destination wallet not found")
 
         if from_wallet.status != WalletStatus.ACTIVE:
-            raise RequestError(
-                ErrorCode.NOT_ALLOWED,
-                "Source wallet is not active",
-                400,
+            raise ValidationError("from_wallet_id", "Source wallet is not active")
+
+        if to_wallet.status != WalletStatus.ACTIVE:
+            raise ValidationError("to_wallet_id", "Destination wallet is not active")
+
+        # Verify PIN if wallet requires it or if PIN is provided
+        if from_wallet.requires_pin or pin:
+            if not pin:
+                raise ValidationError("pin", "PIN is required for this wallet")
+
+            if not from_wallet.pin_hash or not check_password(pin, from_wallet.pin_hash):
+                raise ValidationError("pin", "Invalid PIN")
+
+        # Verify biometric if wallet requires it or if token is provided
+        if from_wallet.requires_biometric or biometric_token:
+            if not biometric_token or not device_id:
+                raise ValidationError(
+                    "biometric_token",
+                    "Biometric authentication required for this wallet"
+                )
+
+            # Validate biometric token
+            auth_user, _ = await Authentication.validate_trust_token(
+                user.email, biometric_token, device_id
             )
 
-        # Check balance
-        can_spend, error_msg = from_wallet.can_spend(amount)
-        if not can_spend:
-            raise RequestError(ErrorCode.INVALID_ENTRY, error_msg, 400)
+            if not auth_user or auth_user.id != user.id:
+                raise ValidationError("biometric_token", "Invalid biometric authentication")
 
-        # Calculate fee (example: 1% for external transfers)
+        converted_amount = amount
+        metadata = {
+            "transfer_type": "wallet_to_wallet",
+            "from_currency": from_wallet.currency.code,
+            "to_currency": to_wallet.currency.code,
+            "original_amount": str(amount),
+        }
+
+        if from_wallet.currency_id != to_wallet.currency_id:
+            # Convert amount via USD
+            amount_in_usd = amount * from_wallet.currency.exchange_rate_usd
+            converted_amount = amount_in_usd / to_wallet.currency.exchange_rate_usd
+            converted_amount = Decimal(
+                str(round(float(converted_amount), to_wallet.currency.decimal_places))
+            )
+
+            metadata.update({
+                "converted_amount": str(converted_amount),
+                "exchange_rate_applied": str(converted_amount / amount),
+                "from_usd_rate": str(from_wallet.currency.exchange_rate_usd),
+                "to_usd_rate": str(to_wallet.currency.exchange_rate_usd),
+            })
+
+        # FEE CALCULATION 
         fee_amount = Decimal("0")
+        fee_details = []
+
+        # Apply transfer fee for external transfers (1%)
         if from_wallet.user_id != to_wallet.user_id:
-            fee_amount = amount * Decimal("0.01")  # 1% fee
+            transfer_fee = amount * Decimal("0.01")
+            fee_amount += transfer_fee
+            fee_details.append({
+                "type": "transfer",
+                "amount": transfer_fee,
+                "percentage": Decimal("1.0"),
+                "description": "External transfer fee"
+            })
+
+        # Apply currency conversion fee if applicable (0.5%)
+        if from_wallet.currency_id != to_wallet.currency_id:
+            conversion_fee = amount * Decimal("0.005")
+            fee_amount += conversion_fee
+            fee_details.append({
+                "type": "currency_conversion",
+                "amount": conversion_fee,
+                "percentage": Decimal("0.5"),
+                "description": "Currency conversion fee"
+            })
 
         total_amount = amount + fee_amount
 
-        # Verify total can be spent
-        can_spend_total, error_msg = from_wallet.can_spend(total_amount)
-        if not can_spend_total:
+        # BALANCE VALIDATION
+        can_spend, error_msg = from_wallet.can_spend(total_amount)
+        if not can_spend:
             raise RequestError(ErrorCode.INVALID_ENTRY, error_msg, 400)
 
-        # Perform transfer in atomic transaction
-        @db_transaction.atomic
-        async def execute_transfer():
-            # Update balances
-            from_balance_before = from_wallet.balance
-            to_balance_before = to_wallet.balance
+        # UPDATE BALANCES (ATOMIC)
+        from_balance_before = from_wallet.balance
+        to_balance_before = to_wallet.balance
 
-            from_wallet.balance -= total_amount
-            from_wallet.available_balance -= total_amount
-            from_wallet.daily_spent += total_amount
-            from_wallet.monthly_spent += total_amount
-            from_wallet.last_transaction_at = timezone.now()
+        # Debit from source wallet
+        from_wallet.balance -= total_amount
+        from_wallet.available_balance -= total_amount
+        from_wallet.daily_spent += total_amount
+        from_wallet.monthly_spent += total_amount
+        from_wallet.last_transaction_at = timezone.now()
 
-            to_wallet.balance += amount
-            to_wallet.available_balance += amount
-            to_wallet.last_transaction_at = timezone.now()
+        # Credit to destination wallet (with converted amount)
+        to_wallet.balance += converted_amount
+        to_wallet.available_balance += converted_amount
+        to_wallet.last_transaction_at = timezone.now()
 
-            await from_wallet.asave()
-            await to_wallet.asave()
+        # Save both wallets
+        await from_wallet.asave()
+        await to_wallet.asave()
 
-            from_balance_after = from_wallet.balance
-            to_balance_after = to_wallet.balance
+        from_balance_after = from_wallet.balance
+        to_balance_after = to_wallet.balance
 
-            # Create transaction record
-            transaction = await TransactionService.create_wallet_transfer_transaction(
-                from_user=from_wallet.user,
-                to_user=to_wallet.user,
-                from_wallet=from_wallet,
-                to_wallet=to_wallet,
-                amount=amount,
-                from_balance_before=from_balance_before,
-                from_balance_after=from_balance_after,
-                to_balance_before=to_balance_before,
-                to_balance_after=to_balance_after,
-                description=description,
-                reference=reference,
-                fee_amount=fee_amount,
-            )
+        # CREATE TRANSACTION RECORD
+        transaction = await TransactionService.create_wallet_transfer_transaction(
+            from_user=from_wallet.user,
+            to_user=to_wallet.user,
+            from_wallet=from_wallet,
+            to_wallet=to_wallet,
+            amount=amount,
+            from_balance_before=from_balance_before,
+            from_balance_after=from_balance_after,
+            to_balance_before=to_balance_before,
+            to_balance_after=to_balance_after,
+            description=description,
+            reference=reference,
+            fee_amount=fee_amount,
+            metadata=metadata,
+        )
 
-            # Add fee if applicable
-            if fee_amount > 0:
-                await TransactionService.add_transaction_fee(
-                    transaction=transaction,
-                    fee_type="transfer",
-                    amount=fee_amount,
-                    percentage=Decimal("1.0"),
-                    description="Transfer fee",
-                )
-
-            # Complete transaction
-            await TransactionService.complete_transaction(
+        # ADD FEE RECORDS
+        for fee_detail in fee_details:
+            await TransactionService.add_transaction_fee(
                 transaction=transaction,
-                changed_by=user,
-                reason="Transfer completed successfully",
+                fee_type=fee_detail["type"],
+                amount=fee_detail["amount"],
+                percentage=fee_detail["percentage"],
+                description=fee_detail["description"],
             )
 
-            return transaction
-
-        transaction = await sync_to_async(execute_transfer)()
+        # COMPLETE TRANSACTION
+        await TransactionService.complete_transaction(
+            transaction=transaction,
+            changed_by=user,
+            reason="Transfer completed successfully",
+        )
 
         return {
             "transaction_id": transaction.transaction_id,

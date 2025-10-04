@@ -150,24 +150,6 @@ async def get_wallet_balance(request, wallet_id: UUID):
         message="Balance retrieved successfully", data=balance_info
     )
 
-
-@wallet_router.post(
-    "/wallet/{wallet_id}/transfer",
-    summary="Transfer to another wallet",
-    description="Transfer funds from this wallet to another wallet",
-    response={200: TransferDataResponseSchema},
-    throttle=AuthRateThrottle("20/m"),
-)
-async def transfer_funds(request, wallet_id: UUID, data: TransferSchema):
-    user = request.auth
-    transfer_result = await WalletOperations.transfer_between_wallets(
-        user, wallet_id, data
-    )
-    return CustomResponse.success(
-        message="Transfer completed successfully", data=transfer_result
-    )
-
-
 @wallet_router.post(
     "/wallet/{wallet_id}/hold",
     summary="Place funds on hold",
