@@ -16,7 +16,6 @@ from apps.wallets.schemas import (
     WalletListResponseSchema,
     TransferSchema,
     TransferDataResponseSchema,
-    InternalTransferSchema,
     HoldFundsSchema,
     ReleaseFundsSchema,
     BalanceDataResponseSchema,
