@@ -14,6 +14,7 @@ from apps.transactions.models import (
     DisputeStatus,
 )
 
+
 # =============== FILTER SCHEMAS ===============
 class TransactionFilterSchema(BaseSchema):
     transaction_type: Optional[TransactionType] = None
@@ -23,7 +24,16 @@ class TransactionFilterSchema(BaseSchema):
     end_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE)
     min_amount: Optional[Decimal] = Field(None, example=10.00, ge=0)
     max_amount: Optional[Decimal] = Field(None, example=1000.00, ge=0)
-    search: Optional[str] = Field(None, example="payment", q=["description__icontains", "reference__icontains", "external_reference__icontains"])
+    search: Optional[str] = Field(
+        None,
+        example="payment",
+        q=[
+            "description__icontains",
+            "reference__icontains",
+            "external_reference__icontains",
+        ],
+    )
+
 
 # =============== REQUEST SCHEMAS ===============
 class InitiateTransferSchema(BaseSchema):
@@ -54,13 +64,17 @@ class InitiateWithdrawalSchema(BaseSchema):
 
 class CreateDisputeSchema(BaseSchema):
     dispute_type: DisputeType = Field(..., example=DisputeType.UNAUTHORIZED)
-    reason: str = Field(..., min_length=10, max_length=1000, example="Transaction not authorized by me")
+    reason: str = Field(
+        ..., min_length=10, max_length=1000, example="Transaction not authorized by me"
+    )
     disputed_amount: Optional[Decimal] = Field(None, example=50.00, gt=0)
     evidence: Optional[dict] = Field(None, example={"screenshot": "url_to_proof"})
 
 
 class ResolveDisputeSchema(BaseSchema):
-    resolution_notes: str = Field(..., min_length=10, example="Dispute resolved in favor of customer")
+    resolution_notes: str = Field(
+        ..., min_length=10, example="Dispute resolved in favor of customer"
+    )
     refund_amount: Optional[Decimal] = Field(None, example=50.00, ge=0)
 
 
@@ -94,10 +108,18 @@ class TransactionSchema(BaseSchema):
     currency_code: str = Field(..., example="USD", alias="from_wallet.currency.code")
     description: Optional[str] = Field(None, example="Payment for services")
     reference: Optional[str] = Field(None, example="TXN-001")
-    from_user_name: Optional[str] = Field(None, example="John Doe", alias="from_user.full_name")
-    to_user_name: Optional[str] = Field(None, example="Jane Smith", alias="to_user.full_name")
-    from_wallet_name: Optional[str] = Field(None, example="Main Wallet", alias="from_wallet.name")
-    to_wallet_name: Optional[str] = Field(None, example="Savings Wallet", alias="to_wallet.name")
+    from_user_name: Optional[str] = Field(
+        None, example="John Doe", alias="from_user.full_name"
+    )
+    to_user_name: Optional[str] = Field(
+        None, example="Jane Smith", alias="to_user.full_name"
+    )
+    from_wallet_name: Optional[str] = Field(
+        None, example="Main Wallet", alias="from_wallet.name"
+    )
+    to_wallet_name: Optional[str] = Field(
+        None, example="Savings Wallet", alias="to_wallet.name"
+    )
     initiated_at: datetime = Field(..., example=DATE_EXAMPLE)
     completed_at: Optional[datetime] = Field(None, example=DATE_EXAMPLE)
     failure_reason: Optional[str] = Field(None, example="Insufficient funds")
@@ -126,6 +148,7 @@ class DisputeSchema(BaseSchema):
     resolution_notes: Optional[str] = None
     resolved_at: Optional[datetime] = None
     created_at: datetime = Field(..., example=DATE_EXAMPLE)
+
 
 class TransactionStatsSchema(BaseSchema):
     total_transactions: int = Field(..., example=150)
@@ -185,8 +208,10 @@ class TransactionStatsResponseSchema(ResponseSchema):
 class DisputeResponseSchema(ResponseSchema):
     data: DisputeSchema
 
+
 class DisputePaginatedDataSchema(PaginatedResponseDataSchema):
     disputes: List[DisputeSchema] = Field(..., alias="items")
+
 
 class DisputeListResponseSchema(ResponseSchema):
     data: DisputePaginatedDataSchema

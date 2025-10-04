@@ -20,6 +20,7 @@ from apps.common.exceptions import RequestError, ErrorCode, NotFoundError
 
 paginator = CustomPagination()
 
+
 class TransactionOperations:
     """High-level service for transaction operations"""
 
@@ -173,7 +174,9 @@ class TransactionOperations:
                 403,
             )
 
-        transaction.fees = await sync_to_async(list)(transaction.fees.values("fee_type", "amount", "percentage", "description"))
+        transaction.fees = await sync_to_async(list)(
+            transaction.fees.values("fee_type", "amount", "percentage", "description")
+        )
         transaction.has_dispute = await transaction.disputes.aexists()
         transaction.can_dispute = (
             transaction.status == TransactionStatus.COMPLETED
@@ -195,10 +198,23 @@ class TransactionOperations:
         page_params: PaginationQuerySchema,
         wallet_id: Optional[UUID] = None,
     ) -> Dict[str, Any]:
-        wallet_id_filter = Q(from_wallet_id=wallet_id) | Q(to_wallet_id=wallet_id) if wallet_id else Q()
-        transactions_q = Transaction.objects.filter(Q(from_user=user) | Q(to_user=user)).filter(wallet_id_filter).select_related(
-            "from_user", "to_user", "from_wallet", "to_wallet", "from_wallet__currency"
-        ).order_by("-created_at")
+        wallet_id_filter = (
+            Q(from_wallet_id=wallet_id) | Q(to_wallet_id=wallet_id)
+            if wallet_id
+            else Q()
+        )
+        transactions_q = (
+            Transaction.objects.filter(Q(from_user=user) | Q(to_user=user))
+            .filter(wallet_id_filter)
+            .select_related(
+                "from_user",
+                "to_user",
+                "from_wallet",
+                "to_wallet",
+                "from_wallet__currency",
+            )
+            .order_by("-created_at")
+        )
 
         filtered_transactions_q = filters.filter(transactions_q)
         paginated_data = await paginator.paginate_queryset(

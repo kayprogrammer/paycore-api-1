@@ -22,8 +22,6 @@ from apps.transactions.transaction_operations import TransactionOperations
 from apps.transactions.dispute_service import DisputeService
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
-from datetime import datetime
-
 from apps.wallets.models import Wallet
 
 transaction_router = Router(tags=["Transactions"])
@@ -74,7 +72,9 @@ async def list_transactions(
     page_params: Query[PaginationQuerySchema] = Query(...),
 ):
     user = request.auth
-    result = await TransactionOperations.list_user_transactions(user, filters, page_params)
+    result = await TransactionOperations.list_user_transactions(
+        user, filters, page_params
+    )
     return CustomResponse.success(
         message="Transactions retrieved successfully", data=result
     )
@@ -101,13 +101,18 @@ async def get_transaction(request, transaction_id: UUID):
     response={200: TransactionListResponseSchema},
 )
 async def get_wallet_transactions(
-    request, wallet_id: UUID, filters: Query[TransactionFilterSchema] = Query(...), page_params: Query[PaginationQuerySchema] = Query(...)
+    request,
+    wallet_id: UUID,
+    filters: Query[TransactionFilterSchema] = Query(...),
+    page_params: Query[PaginationQuerySchema] = Query(...),
 ):
     user = request.auth
     wallet = await Wallet.objects.aget_or_none(wallet_id=wallet_id, user=user)
     if not wallet:
         raise NotFoundError("Wallet not found")
-    result = await TransactionOperations.list_user_transactions(user, filters, page_params, wallet_id=wallet_id)
+    result = await TransactionOperations.list_user_transactions(
+        user, filters, page_params, wallet_id=wallet_id
+    )
     return CustomResponse.success(
         message="Wallet transactions retrieved successfully", data=result
     )
@@ -219,14 +224,16 @@ async def create_dispute(request, transaction_id: UUID, data: CreateDisputeSchem
     response={200: DisputeListResponseSchema},
 )
 async def list_disputes(
-    request, status: DisputeStatus = None, page_params: Query[PaginationQuerySchema] = Query(...)
+    request,
+    status: DisputeStatus = None,
+    page_params: Query[PaginationQuerySchema] = Query(...),
 ):
     user = request.auth
 
-    result = await DisputeService.list_user_disputes(
-        user, status, page_params
+    result = await DisputeService.list_user_disputes(user, status, page_params)
+    return CustomResponse.success(
+        message="Disputes retrieved successfully", data=result
     )
-    return CustomResponse.success(message="Disputes retrieved successfully", data=result)
 
 
 @transaction_router.get(
@@ -256,35 +263,3 @@ async def add_dispute_evidence(request, dispute_id: UUID, evidence: dict):
         user=user, dispute_id=dispute_id, evidence=evidence
     )
     return CustomResponse.success(message="Evidence added successfully")
-
-
-# =============== EXPORT ENDPOINTS ===============
-@transaction_router.get(
-    "/export",
-    summary="Export transactions",
-    description="Export user transactions to CSV or PDF format",
-    response=ResponseSchema,
-)
-async def export_transactions(
-    request,
-    format: str = "csv",
-    start_date: datetime = None,
-    end_date: datetime = None,
-):
-    user = request.auth
-
-    # Placeholder - implement actual export logic
-    # You would typically:
-    # 1. Get filtered transactions
-    # 2. Generate CSV/PDF
-    # 3. Upload to S3 or similar
-    # 4. Return download link
-
-    return CustomResponse.success(
-        message="Export generated successfully",
-        data={
-            "format": format,
-            "status": "processing",
-            "message": "Export will be emailed to you shortly",
-        },
-    )

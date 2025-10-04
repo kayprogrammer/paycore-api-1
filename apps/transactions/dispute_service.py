@@ -18,6 +18,7 @@ from apps.common.paginators import CustomPagination
 
 paginator = CustomPagination()
 
+
 class DisputeService:
     """Service for handling transaction disputes"""
 
@@ -30,7 +31,9 @@ class DisputeService:
         disputed_amount: Optional[Decimal] = None,
         evidence: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        transaction = await Transaction.objects.select_related("from_user", "to_user").aget_or_none(transaction_id=transaction_id)
+        transaction = await Transaction.objects.select_related(
+            "from_user", "to_user"
+        ).aget_or_none(transaction_id=transaction_id)
         if not transaction:
             raise NotFoundError("Transaction not found")
 
@@ -72,7 +75,9 @@ class DisputeService:
             )
 
         # Use transaction amount if not specified
-        disputed_amount = transaction.amount if disputed_amount is None else disputed_amount
+        disputed_amount = (
+            transaction.amount if disputed_amount is None else disputed_amount
+        )
 
         # Validate disputed amount
         if disputed_amount > transaction.amount:
@@ -97,7 +102,9 @@ class DisputeService:
 
     @staticmethod
     async def get_dispute_detail(user: User, dispute_id: UUID) -> Dict[str, Any]:
-        dispute = await TransactionDispute.objects.select_related("transaction", "initiated_by").aget_or_none(dispute_id=dispute_id)
+        dispute = await TransactionDispute.objects.select_related(
+            "transaction", "initiated_by"
+        ).aget_or_none(dispute_id=dispute_id)
         if not dispute:
             raise NotFoundError("Dispute not found")
 
@@ -121,17 +128,25 @@ class DisputeService:
         status: Optional[DisputeStatus] = None,
     ) -> Dict[str, Any]:
 
-        filters = Q(initiated_by=user) | Q(
-            transaction__from_user=user
-        ) | Q(transaction__to_user=user)
+        filters = (
+            Q(initiated_by=user)
+            | Q(transaction__from_user=user)
+            | Q(transaction__to_user=user)
+        )
 
         if status:
             filters &= Q(status=status)
 
-        disputes = TransactionDispute.objects.filter(filters).select_related("initiated_by").order_by("-created_at")
-        paginated_data = await paginator.paginate_queryset(disputes, page_params.page, page_params.limit)
+        disputes = (
+            TransactionDispute.objects.filter(filters)
+            .select_related("initiated_by")
+            .order_by("-created_at")
+        )
+        paginated_data = await paginator.paginate_queryset(
+            disputes, page_params.page, page_params.limit
+        )
         return paginated_data
-    
+
     @staticmethod
     async def update_dispute_status(
         dispute_id: UUID,
@@ -165,7 +180,9 @@ class DisputeService:
         }
 
     @staticmethod
-    async def add_evidence_to_dispute(user: User, dispute_id: UUID, evidence: Dict[str, Any]) -> Dict[str, Any]:
+    async def add_evidence_to_dispute(
+        user: User, dispute_id: UUID, evidence: Dict[str, Any]
+    ) -> Dict[str, Any]:
         dispute = await TransactionDispute.objects.select_related(
             "transaction"
         ).aget_or_none(dispute_id=dispute_id)
