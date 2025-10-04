@@ -1,6 +1,8 @@
+import time
 from uuid import UUID
 from django.contrib.auth.hashers import make_password, check_password
 from typing import Optional, List
+import random
 
 from apps.accounts.models import User
 from apps.common.utils import set_dict_attr
@@ -14,15 +16,33 @@ from apps.common.exceptions import (
 from asgiref.sync import sync_to_async
 
 from apps.wallets.schemas import CreateWalletSchema, UpdateWalletSchema
+from apps.wallets.services.providers.factory import AccountProviderFactory
 
 
 class WalletManager:
     """Service for managing wallet creation, activation, and settings"""
 
     @staticmethod
-    async def create_wallet(user: User, data: CreateWalletSchema) -> Wallet:
-        """Create a new wallet for a user"""
+    async def generate_account_number() -> str:
+        max_attempts = 10
+        attempts = 0
 
+        while True:
+            account_number = "90" + "".join(
+                [str(random.randint(0, 9)) for _ in range(8)]
+            )
+
+            # Check if unique
+            if not await Wallet.objects.filter(account_number=account_number).aexists():
+                return account_number
+
+            attempts += 1
+            if attempts >= max_attempts:
+                # Fallback: use timestamp if random generation fails after max attempts
+                return f"90{int(time.time()) % 100000000:08d}"
+
+    @staticmethod
+    async def create_wallet(user: User, data: CreateWalletSchema) -> Wallet:
         # Get currency
         currency = await Currency.objects.aget_or_none(
             code=data.currency_code, is_active=True
@@ -32,7 +52,6 @@ class WalletManager:
                 "currency_code", f"Currency {data.currency_code} not found or inactive"
             )
 
-        # Check if user already has a default wallet for this currency
         if data.is_default:
             existing_default = await Wallet.objects.aget_or_none(
                 user=user, currency=currency, is_default=True
@@ -41,7 +60,6 @@ class WalletManager:
                 existing_default.is_default = False
                 await existing_default.asave()
 
-        # Create wallet
         existing_wallet = await Wallet.objects.aget_or_none(
             user=user,
             currency=currency,
@@ -54,8 +72,33 @@ class WalletManager:
                 f"User already has a {data.wallet_type} wallet for {currency.code}",
             )
 
+        # Get appropriate provider for currency
+        test_mode = AccountProviderFactory.get_test_mode_setting()
+        provider = AccountProviderFactory.get_provider_for_currency(
+            currency.code, test_mode=test_mode
+        )
+
+        # Create virtual account via provider
+        account_data = await provider.create_account(
+            user_email=user.email,
+            user_first_name=user.first_name or "",
+            user_last_name=user.last_name or "",
+            user_phone=getattr(user, "phone", None),
+            currency_code=currency.code,
+        )
+
+        # Create wallet with provider account details
         wallet = await Wallet.objects.acreate(
-            user=user, currency=currency, **data.model_dump(exclude={"currency_code"})
+            user=user,
+            currency=currency,
+            account_number=account_data["account_number"],
+            account_name=account_data["account_name"],
+            bank_name=account_data["bank_name"],
+            account_provider=provider.get_provider_name(),
+            provider_account_id=account_data["provider_account_id"],
+            provider_metadata=account_data["provider_metadata"],
+            is_test_mode=test_mode,
+            **data.model_dump(exclude={"currency_code"}),
         )
         return wallet
 

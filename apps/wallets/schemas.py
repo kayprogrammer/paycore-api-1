@@ -186,6 +186,25 @@ class WalletResponseSchema(BaseSchema):
     available_balance: Decimal
     pending_balance: Decimal
     formatted_balance: str
+
+    # Account Details (for receiving deposits - like PalmPay/Kuda)
+    account_number: Optional[str] = Field(
+        None, description="Account number for receiving deposits"
+    )
+    account_name: Optional[str] = Field(None, description="Account holder name")
+    bank_name: Optional[str] = Field(None, description="Bank name")
+
+    # Provider Information
+    account_provider: str = Field(
+        ..., description="Provider managing this account (internal, paystack, etc.)"
+    )
+    provider_account_id: Optional[str] = Field(
+        None, description="External provider's account ID"
+    )
+    is_test_mode: bool = Field(
+        ..., description="Whether this account is in test/sandbox mode"
+    )
+
     daily_limit: Optional[Decimal]
     monthly_limit: Optional[Decimal]
     daily_spent: Decimal
@@ -393,3 +412,34 @@ class RecurringPaymentListResponseSchema(ResponseSchema):
 
 class WalletSummaryDataResponseSchema(ResponseSchema):
     data: WalletSummaryResponseSchema
+
+
+# =============== DEPOSIT WEBHOOK SCHEMAS ===============
+class DepositWebhookSchema(BaseSchema):
+    """Schema for processing deposit webhooks from payment providers"""
+
+    account_number: str = Field(..., example="9012345678")
+    amount: Decimal = Field(..., example=1000.00, gt=0)
+    sender_account_number: str = Field(..., example="1234567890")
+    sender_account_name: str = Field(..., example="Jane Smith")
+    sender_bank_name: str = Field(..., example="GTBank")
+    external_reference: str = Field(..., example="FLW-123456789")
+    narration: Optional[str] = Field(None, example="Payment for services")
+    transaction_date: Optional[datetime] = None
+    webhook_payload: Optional[dict] = None
+
+
+class DepositWebhookResponseSchema(BaseSchema):
+    success: bool
+    transaction_id: str
+    external_reference: str
+    amount_received: Decimal
+    fee_charged: Decimal
+    amount_credited: Decimal
+    wallet_balance: Decimal
+    account_number: str
+    status: str
+
+
+class DepositWebhookDataResponseSchema(ResponseSchema):
+    data: DepositWebhookResponseSchema

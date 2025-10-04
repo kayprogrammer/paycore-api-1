@@ -42,8 +42,6 @@ class TransactionService:
         to_balance_after: Optional[Decimal] = None,
         **kwargs,
     ) -> Transaction:
-        """Create a new transaction record"""
-
         net_amount = amount - fee_amount
 
         transaction_data = {
@@ -99,8 +97,6 @@ class TransactionService:
         fee_amount: Decimal = Decimal("0"),
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Transaction:
-        """Create transaction record specifically for wallet transfers"""
-
         return await TransactionService.create_transaction(
             transaction_type=TransactionType.TRANSFER,
             amount=amount,
@@ -134,8 +130,6 @@ class TransactionService:
         expires_at: Optional[timezone.datetime] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Transaction:
-        """Create transaction record for funds hold"""
-
         transaction = await TransactionService.create_transaction(
             transaction_type=TransactionType.HOLD,
             amount=amount,
@@ -170,8 +164,6 @@ class TransactionService:
         hold_transaction: Optional[Transaction] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Transaction:
-        """Create transaction record for funds release"""
-
         return await TransactionService.create_transaction(
             transaction_type=TransactionType.RELEASE,
             amount=amount,
@@ -191,13 +183,10 @@ class TransactionService:
         changed_by: Optional[User] = None,
         reason: Optional[str] = None,
     ) -> Transaction:
-        """Mark transaction as completed and log the change"""
-
         previous_status = transaction.status
         transaction.complete_transaction()
         await transaction.asave()
 
-        # Log the status change
         await TransactionLog.objects.acreate(
             transaction=transaction,
             previous_status=previous_status,
@@ -205,15 +194,12 @@ class TransactionService:
             changed_by=changed_by,
             reason=reason or "Transaction completed successfully",
         )
-
         return transaction
 
     @staticmethod
     async def fail_transaction(
         transaction: Transaction, reason: str, changed_by: Optional[User] = None
     ) -> Transaction:
-        """Mark transaction as failed and log the change"""
-
         previous_status = transaction.status
         transaction.fail_transaction(reason)
         await transaction.asave()
@@ -237,8 +223,6 @@ class TransactionService:
         percentage: Optional[Decimal] = None,
         description: Optional[str] = None,
     ) -> TransactionFee:
-        """Add a fee to a transaction"""
-
         return await TransactionFee.objects.acreate(
             transaction=transaction,
             fee_type=fee_type,
@@ -254,12 +238,9 @@ class TransactionService:
         changed_by: Optional[User] = None,
         reason: Optional[str] = None,
     ) -> Transaction:
-        """Update transaction status with logging"""
-
         previous_status = transaction.status
         transaction.status = new_status
 
-        # Set appropriate timestamps
         if new_status == TransactionStatus.PROCESSING and not transaction.processed_at:
             transaction.processed_at = timezone.now()
         elif new_status == TransactionStatus.COMPLETED and not transaction.completed_at:
@@ -271,7 +252,6 @@ class TransactionService:
 
         await transaction.asave()
 
-        # Log the status change
         await TransactionLog.objects.acreate(
             transaction=transaction,
             previous_status=previous_status,
@@ -279,51 +259,4 @@ class TransactionService:
             changed_by=changed_by,
             reason=reason or f"Status changed to {new_status}",
         )
-
         return transaction
-
-    @staticmethod
-    async def get_user_transactions(
-        user: User,
-        limit: int = 50,
-        offset: int = 0,
-        transaction_type: Optional[TransactionType] = None,
-        status: Optional[TransactionStatus] = None,
-    ):
-        """Get user's transactions with filtering"""
-
-        filters = {"from_user": user}
-
-        if transaction_type:
-            filters["type"] = transaction_type
-        if status:
-            filters["status"] = status
-
-        return await sync_to_async(list)(
-            Transaction.objects.filter(**filters).order_by("-created_at")[
-                offset : offset + limit
-            ]
-        )
-
-    @staticmethod
-    async def get_wallet_transactions(
-        wallet_id: UUID,
-        limit: int = 50,
-        offset: int = 0,
-        transaction_type: Optional[TransactionType] = None,
-        status: Optional[TransactionStatus] = None,
-    ):
-        """Get transactions for a specific wallet"""
-
-        filters = Q(from_wallet_id=wallet_id) | Q(to_wallet_id=wallet_id)
-
-        if transaction_type:
-            filters &= Q(transaction_type=transaction_type)
-        if status:
-            filters &= Q(status=status)
-
-        return await sync_to_async(list)(
-            Transaction.objects.filter(filters).order_by("-created_at")[
-                offset : offset + limit
-            ]
-        )

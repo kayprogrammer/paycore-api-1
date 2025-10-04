@@ -379,3 +379,25 @@ KYC_PROVIDER = config("KYC_PROVIDER", default="onfido")
 ONFIDO_BASE_URL = config("ONFIDO_BASE_URL", default="https://api.eu.onfido.com/v3.6")
 ONFIDO_API_KEY = config("ONFIDO_API_KEY")
 ONFIDO_WEBHOOK_TOKEN = config("ONFIDO_WEBHOOK_TOKEN")
+
+# Payment Provider Settings
+# Controls whether all payment providers run in test/sandbox mode
+# Set to False in production to use live credentials
+PAYMENT_PROVIDERS_TEST_MODE = config(
+    "PAYMENT_PROVIDERS_TEST_MODE", default=True, cast=bool
+)
+
+# Paystack Configuration
+# Get your keys from: https://dashboard.paystack.com/#/settings/developers
+PAYSTACK_TEST_SECRET_KEY = config("PAYSTACK_TEST_SECRET_KEY", default="")
+PAYSTACK_TEST_PUBLIC_KEY = config("PAYSTACK_TEST_PUBLIC_KEY", default="")
+PAYSTACK_LIVE_SECRET_KEY = config("PAYSTACK_LIVE_SECRET_KEY", default="")
+PAYSTACK_LIVE_PUBLIC_KEY = config("PAYSTACK_LIVE_PUBLIC_KEY", default="")
+
+# Flutterwave Configuration (Future use)
+FLUTTERWAVE_TEST_SECRET_KEY = config("FLUTTERWAVE_TEST_SECRET_KEY", default="")
+FLUTTERWAVE_LIVE_SECRET_KEY = config("FLUTTERWAVE_LIVE_SECRET_KEY", default="")
+
+# Wise Configuration (Future use)
+WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default="")
+WISE_LIVE_API_KEY = config("WISE_LIVE_API_KEY", default="")

@@ -97,7 +97,6 @@ class WalletOperations:
 
         return wallet
 
-    
     @staticmethod
     async def hold_funds(
         user: User, wallet_id: uuid.UUID, data: HoldFundsSchema

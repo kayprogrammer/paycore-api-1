@@ -16,7 +16,12 @@ from apps.transactions.models import (
 from apps.transactions.schemas import TransactionFilterSchema
 from apps.transactions.services import TransactionService
 from apps.wallets.models import Wallet, WalletStatus
-from apps.common.exceptions import RequestError, ErrorCode, NotFoundError, ValidationError
+from apps.common.exceptions import (
+    RequestError,
+    ErrorCode,
+    NotFoundError,
+    ValidationError,
+)
 from apps.common.decorators import aatomic
 from django.contrib.auth.hashers import check_password
 
@@ -39,13 +44,15 @@ class TransactionOperations:
         biometric_token: Optional[str] = None,
         device_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        from_wallet = await Wallet.objects.select_related("currency", "user").aget_or_none(
-            wallet_id=from_wallet_id, user=user
-        )
+        from_wallet = await Wallet.objects.select_related(
+            "currency", "user"
+        ).aget_or_none(wallet_id=from_wallet_id, user=user)
         if not from_wallet:
             raise ValidationError("from_wallet_id", "Source wallet not found")
 
-        to_wallet = await Wallet.objects.select_related("currency", "user").aget_or_none(wallet_id=to_wallet_id)
+        to_wallet = await Wallet.objects.select_related(
+            "currency", "user"
+        ).aget_or_none(wallet_id=to_wallet_id)
         if not to_wallet:
             raise ValidationError("to_wallet_id", "Destination wallet not found")
 
@@ -60,7 +67,9 @@ class TransactionOperations:
             if not pin:
                 raise ValidationError("pin", "PIN is required for this wallet")
 
-            if not from_wallet.pin_hash or not check_password(pin, from_wallet.pin_hash):
+            if not from_wallet.pin_hash or not check_password(
+                pin, from_wallet.pin_hash
+            ):
                 raise ValidationError("pin", "Invalid PIN")
 
         # Verify biometric if wallet requires it or if token is provided
@@ -68,7 +77,7 @@ class TransactionOperations:
             if not biometric_token or not device_id:
                 raise ValidationError(
                     "biometric_token",
-                    "Biometric authentication required for this wallet"
+                    "Biometric authentication required for this wallet",
                 )
 
             # Validate biometric token
@@ -77,7 +86,9 @@ class TransactionOperations:
             )
 
             if not auth_user or auth_user.id != user.id:
-                raise ValidationError("biometric_token", "Invalid biometric authentication")
+                raise ValidationError(
+                    "biometric_token", "Invalid biometric authentication"
+                )
 
         converted_amount = amount
         metadata = {
@@ -95,14 +106,16 @@ class TransactionOperations:
                 str(round(float(converted_amount), to_wallet.currency.decimal_places))
             )
 
-            metadata.update({
-                "converted_amount": str(converted_amount),
-                "exchange_rate_applied": str(converted_amount / amount),
-                "from_usd_rate": str(from_wallet.currency.exchange_rate_usd),
-                "to_usd_rate": str(to_wallet.currency.exchange_rate_usd),
-            })
+            metadata.update(
+                {
+                    "converted_amount": str(converted_amount),
+                    "exchange_rate_applied": str(converted_amount / amount),
+                    "from_usd_rate": str(from_wallet.currency.exchange_rate_usd),
+                    "to_usd_rate": str(to_wallet.currency.exchange_rate_usd),
+                }
+            )
 
-        # FEE CALCULATION 
+        # FEE CALCULATION
         fee_amount = Decimal("0")
         fee_details = []
 
@@ -110,23 +123,27 @@ class TransactionOperations:
         if from_wallet.user_id != to_wallet.user_id:
             transfer_fee = amount * Decimal("0.01")
             fee_amount += transfer_fee
-            fee_details.append({
-                "type": "transfer",
-                "amount": transfer_fee,
-                "percentage": Decimal("1.0"),
-                "description": "External transfer fee"
-            })
+            fee_details.append(
+                {
+                    "type": "transfer",
+                    "amount": transfer_fee,
+                    "percentage": Decimal("1.0"),
+                    "description": "External transfer fee",
+                }
+            )
 
         # Apply currency conversion fee if applicable (0.5%)
         if from_wallet.currency_id != to_wallet.currency_id:
             conversion_fee = amount * Decimal("0.005")
             fee_amount += conversion_fee
-            fee_details.append({
-                "type": "currency_conversion",
-                "amount": conversion_fee,
-                "percentage": Decimal("0.5"),
-                "description": "Currency conversion fee"
-            })
+            fee_details.append(
+                {
+                    "type": "currency_conversion",
+                    "amount": conversion_fee,
+                    "percentage": Decimal("0.5"),
+                    "description": "Currency conversion fee",
+                }
+            )
 
         total_amount = amount + fee_amount
 

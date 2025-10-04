@@ -11,7 +11,7 @@ from apps.common.models import BaseModel
 
 class Currency(BaseModel):
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=10, unique=True)  # USD, EUR, BTC, ETH
+    code = models.CharField(max_length=10, unique=True)  # NGN, USD, EUR, BTC, ETH
     symbol = models.CharField(max_length=10)  # $, €, ₿, Ξ
     decimal_places = models.PositiveIntegerField(default=2)
     is_crypto = models.BooleanField(default=False)
@@ -42,6 +42,13 @@ class WalletStatus(models.TextChoices):
     FROZEN = "frozen", "Frozen"
     SUSPENDED = "suspended", "Suspended"
     CLOSED = "closed", "Closed"
+
+
+class AccountProvider(models.TextChoices):
+    INTERNAL = "internal", "Internal"
+    PAYSTACK = "paystack", "Paystack"
+    FLUTTERWAVE = "flutterwave", "Flutterwave"
+    WISE = "wise", "Wise"
 
 
 class SplitPaymentType(models.TextChoices):
@@ -82,6 +89,48 @@ class Wallet(BaseModel):
     name = models.CharField(max_length=100, help_text="User-defined wallet name")
     wallet_type = models.CharField(
         max_length=20, choices=WalletType.choices, default=WalletType.MAIN
+    )
+
+    # Account Number (for receiving external deposits - like PalmPay/Kuda)
+    account_number = models.CharField(
+        max_length=20,
+        unique=True,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text="Unique account number for receiving deposits (auto-generated for main wallets)",
+    )
+    account_name = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Account holder name (usually user's full name)",
+    )
+    bank_name = models.CharField(
+        max_length=100, default="PayCore", help_text="Bank name shown for this account"
+    )
+
+    # Provider Integration (for multi-currency virtual accounts)
+    account_provider = models.CharField(
+        max_length=20,
+        choices=AccountProvider.choices,
+        default=AccountProvider.INTERNAL,
+        help_text="Provider managing this account (internal, paystack, flutterwave, wise)",
+    )
+    provider_account_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="External provider's account ID reference",
+    )
+    provider_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Provider-specific metadata and configuration",
+    )
+    is_test_mode = models.BooleanField(
+        default=False, help_text="Indicates if this account is in test/sandbox mode"
     )
 
     # Balance and Limits

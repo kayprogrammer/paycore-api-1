@@ -95,6 +95,14 @@ class Transaction(BaseModel):
     recurring_payment_id = models.UUIDField(null=True, blank=True)
     qr_code_id = models.UUIDField(null=True, blank=True)
     virtual_card_id = models.UUIDField(null=True, blank=True)
+    virtual_account_id = models.UUIDField(
+        null=True, blank=True, help_text="Virtual account used for this deposit"
+    )
+
+    # External deposit details (for virtual account deposits)
+    sender_account_number = models.CharField(max_length=50, null=True, blank=True)
+    sender_account_name = models.CharField(max_length=100, null=True, blank=True)
+    sender_bank_name = models.CharField(max_length=100, null=True, blank=True)
 
     # Balances (for auditing)
     from_balance_before = models.DecimalField(

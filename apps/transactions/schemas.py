@@ -39,14 +39,28 @@ class TransactionFilterSchema(BaseSchema):
 class InitiateTransferSchema(BaseSchema):
     """Schema for initiating a wallet-to-wallet transfer"""
 
-    from_wallet_id: UUID = Field(..., example=UUID_EXAMPLE, description="Source wallet ID")
-    to_wallet_id: UUID = Field(..., example=UUID_EXAMPLE, description="Destination wallet ID")
+    from_wallet_id: UUID = Field(
+        ..., example=UUID_EXAMPLE, description="Source wallet ID"
+    )
+    to_wallet_id: UUID = Field(
+        ..., example=UUID_EXAMPLE, description="Destination wallet ID"
+    )
     amount: Decimal = Field(..., example=100.50, gt=0, description="Amount to transfer")
     description: Optional[str] = Field(None, example="Payment for services")
     reference: Optional[str] = Field(None, example="INV-2024-001")
-    pin: Optional[str] = Field(None, example="1234", min_length=4, max_length=6, description="Wallet PIN if required")
-    biometric_token: Optional[str] = Field(None, description="Biometric authentication token")
-    device_id: Optional[str] = Field(None, example="device_12345", description="Device ID for biometric verification")
+    pin: Optional[str] = Field(
+        None,
+        example="1234",
+        min_length=4,
+        max_length=6,
+        description="Wallet PIN if required",
+    )
+    biometric_token: Optional[str] = Field(
+        None, description="Biometric authentication token"
+    )
+    device_id: Optional[str] = Field(
+        None, example="device_12345", description="Device ID for biometric verification"
+    )
 
 
 class InitiateDepositSchema(BaseSchema):
