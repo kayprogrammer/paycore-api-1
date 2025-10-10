@@ -189,3 +189,5 @@ quick-start: req mig build monitoring-up
 	@echo "  Flower:       admin / paycore123"
 	@echo "  Grafana:      admin / paycore123"
 
+seed-bill:
+	python manage.py seed_bill_providers

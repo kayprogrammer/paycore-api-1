@@ -28,6 +28,8 @@ class TransactionType(models.TextChoices):
     CARD_REFUND = "card_refund", "Card Refund"
     CARD_REVERSAL = "card_reversal", "Card Reversal"
     CARD_FUND = "card_fund", "Card Funding"
+    # Bill payment type
+    BILL_PAYMENT = "bill_payment", "Bill Payment"
 
 
 class TransactionStatus(models.TextChoices):

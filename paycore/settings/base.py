@@ -44,6 +44,7 @@ LOCAL_APPS = [
     "apps.profiles",
     "apps.wallets",
     "apps.cards",
+    "apps.bills",
     "apps.transactions",
     "apps.payments",
     "apps.loans",

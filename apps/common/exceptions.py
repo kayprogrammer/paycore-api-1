@@ -33,6 +33,9 @@ class ErrorCode:
     VALIDATION_ERROR = "validation_error"
 
     EXTERNAL_SERVICE_ERROR = "external_service_error"
+    BILL_PROVIDER_UNAVAILABLE = "bill_provider_unavailable"
+    BILL_CUSTOMER_VALIDATION_FAILED = "bill_customer_validation_failed"
+
 
 
 class RequestError(Exception):
