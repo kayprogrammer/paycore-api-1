@@ -395,9 +395,23 @@ PAYSTACK_TEST_PUBLIC_KEY = config("PAYSTACK_TEST_PUBLIC_KEY", default="")
 PAYSTACK_LIVE_SECRET_KEY = config("PAYSTACK_LIVE_SECRET_KEY", default="")
 PAYSTACK_LIVE_PUBLIC_KEY = config("PAYSTACK_LIVE_PUBLIC_KEY", default="")
 
-# Flutterwave Configuration (Future use)
+# Flutterwave Configuration
+# Get your keys from: https://dashboard.flutterwave.com/settings/apis
+# Used for: Virtual cards (USD, NGN, GBP)
 FLUTTERWAVE_TEST_SECRET_KEY = config("FLUTTERWAVE_TEST_SECRET_KEY", default="")
 FLUTTERWAVE_LIVE_SECRET_KEY = config("FLUTTERWAVE_LIVE_SECRET_KEY", default="")
+FLUTTERWAVE_WEBHOOK_SECRET = config("FLUTTERWAVE_WEBHOOK_SECRET", default="")
+
+# Sudo Africa Configuration
+# Get your keys from: https://dashboard.sudo.africa/developers/keys
+# Used for: Virtual cards (USD, NGN)
+SUDO_TEST_SECRET_KEY = config("SUDO_TEST_SECRET_KEY", default="")
+SUDO_LIVE_SECRET_KEY = config("SUDO_LIVE_SECRET_KEY", default="")
+SUDO_WEBHOOK_SECRET = config("SUDO_WEBHOOK_SECRET", default="")
+
+# Card Provider Settings
+# Set to True to use test/sandbox mode, False for production
+CARD_PROVIDERS_TEST_MODE = config("CARD_PROVIDERS_TEST_MODE", default=True, cast=bool)
 
 # Wise Configuration (Future use)
 WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default="")

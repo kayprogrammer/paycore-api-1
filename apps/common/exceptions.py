@@ -32,6 +32,8 @@ class ErrorCode:
     MISMATCH = "mismatch"
     VALIDATION_ERROR = "validation_error"
 
+    EXTERNAL_SERVICE_ERROR = "external_service_error"
+
 
 class RequestError(Exception):
     default_detail = "An error occured"

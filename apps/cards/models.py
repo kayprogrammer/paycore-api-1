@@ -207,3 +207,11 @@ class Card(BaseModel):
             self.save(
                 update_fields=["monthly_spent", "last_monthly_reset", "updated_at"]
             )
+
+    def freeze(self):
+        """Freeze the card (temporary block)."""
+        self.is_frozen = True
+
+    def unfreeze(self):
+        """Unfreeze the card."""
+        self.is_frozen = False

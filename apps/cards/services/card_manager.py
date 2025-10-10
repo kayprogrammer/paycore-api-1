@@ -11,6 +11,7 @@ from apps.common.exceptions import (
     ValidationError,
 )
 from apps.cards.schemas import CreateCardSchema, UpdateCardSchema
+from apps.cards.services.providers.factory import CardProviderFactory
 from asgiref.sync import sync_to_async
 
 
@@ -19,6 +20,15 @@ class CardManager:
 
     @staticmethod
     async def create_card(user: User, data: CreateCardSchema) -> Card:
+        """
+        Create a new card for a user using appropriate provider.
+
+        Strategy:
+        - USD → Flutterwave or Sudo (based on configuration)
+        - NGN → Flutterwave or Sudo
+        - GBP → Flutterwave
+        """
+        # Get and validate wallet
         wallet = await Wallet.objects.select_related("currency", "user").aget_or_none(
             wallet_id=data.wallet_id, user=user
         )
@@ -31,29 +41,42 @@ class CardManager:
                 f"Card currency must match wallet currency ({wallet.currency.code})",
             )
 
-        # For now, create a test card with dummy details
-        # TODO: Integrate with card provider based on currency
+        test_mode = CardProviderFactory.get_test_mode_setting()
+        provider = CardProviderFactory.get_provider_for_currency(
+            wallet.currency.code, test_mode=test_mode
+        )
+
+        card_data = await provider.create_card(
+            user_email=user.email,
+            user_first_name=user.first_name or "",
+            user_last_name=user.last_name or "",
+            user_phone=getattr(user, "phone", ""),
+            currency_code=wallet.currency.code,
+            card_type=data.card_type,
+            card_brand=data.card_brand,
+            billing_address=data.billing_address.model_dump() if data.billing_address else None,
+        )
+
         card = await Card.objects.acreate(
             user=user,
             wallet=wallet,
             card_type=data.card_type,
             card_brand=data.card_brand,
-            card_number="4111111111111111",  # TODO: Get from provider
-            card_holder_name=user.full_name,
-            expiry_month=12,  # TODO: Get from provider
-            expiry_year=2029,  # TODO: Get from provider
-            cvv="123",  # TODO: Get from provider
-            card_provider="internal",  # TODO: Use provider factory
-            provider_card_id="test_card_id",  # TODO: Get from provider
-            is_test_mode=True,
+            card_number=card_data["card_number"],
+            card_holder_name=card_data["card_holder_name"],
+            expiry_month=card_data["expiry_month"],
+            expiry_year=card_data["expiry_year"],
+            cvv=card_data["cvv"],
+            card_provider=provider.get_provider_name(),
+            provider_card_id=card_data["provider_card_id"],
+            provider_metadata=card_data["provider_metadata"],
+            is_test_mode=test_mode,
             spending_limit=data.spending_limit,
             daily_limit=data.daily_limit,
             monthly_limit=data.monthly_limit,
             nickname=data.nickname,
             created_for_merchant=data.created_for_merchant,
-            billing_address=(
-                data.billing_address.model_dump() if data.billing_address else {}
-            ),
+            billing_address=data.billing_address.model_dump() if data.billing_address else {},
             status=CardStatus.INACTIVE,  # Cards start inactive, must be activated
         )
 
@@ -88,7 +111,6 @@ class CardManager:
     async def update_card(user: User, card_id: UUID, data: UpdateCardSchema) -> Card:
         card = await CardManager.get_card(user, card_id)
 
-        # Update fields
         update_fields = []
         for field, value in data.model_dump(exclude_unset=True).items():
             if value is not None:
@@ -111,39 +133,64 @@ class CardManager:
     @staticmethod
     async def freeze_card(user: User, card_id: UUID) -> Card:
         card = await CardManager.get_card(user, card_id)
+
         if card.is_frozen:
-            return card
+            raise ValidationError("card", "Card is already frozen")
 
         if card.status == CardStatus.BLOCKED:
-            raise RequestError(ErrorCode.NOT_ALLOWED, "Cannot freeze a blocked card")
+            raise ValidationError("card", "Cannot freeze a blocked card")
 
-        card.is_frozen = True
+        test_mode = CardProviderFactory.get_test_mode_setting()
+        provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+        await provider.freeze_card(card.provider_card_id)
+
+        card.freeze()
         await card.asave(update_fields=["is_frozen", "updated_at"])
+
         return card
 
     @staticmethod
     async def unfreeze_card(user: User, card_id: UUID) -> Card:
         card = await CardManager.get_card(user, card_id)
+
         if not card.is_frozen:
             return card
+
+        test_mode = CardProviderFactory.get_test_mode_setting()
+        provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+        await provider.unfreeze_card(card.provider_card_id)
+
         card.is_frozen = False
         await card.asave(update_fields=["is_frozen", "updated_at"])
+
         return card
 
     @staticmethod
     async def block_card(user: User, card_id: UUID) -> Card:
         card = await CardManager.get_card(user, card_id)
+
         if card.status == CardStatus.BLOCKED:
             return card
 
+        # Get provider and block card
+        test_mode = CardProviderFactory.get_test_mode_setting()
+        provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+        await provider.block_card(card.provider_card_id)
+
         card.status = CardStatus.BLOCKED
-        # TODO: Call provider API to block card
         await card.asave(update_fields=["status", "updated_at"])
+
         return card
 
     @staticmethod
     async def activate_card(user: User, card_id: UUID) -> Card:
-        """Activate a card"""
+        """
+        Activate a card.
+
+        Note: Most card providers create cards in an inactive state.
+        Activation is typically a local status update that authorizes the user
+        to start using the card. The provider's card itself is already functional.
+        """
         card = await CardManager.get_card(user, card_id)
 
         if card.status == CardStatus.ACTIVE:
@@ -156,18 +203,27 @@ class CardManager:
             raise RequestError(ErrorCode.NOT_ALLOWED, "Cannot activate an expired card")
 
         card.status = CardStatus.ACTIVE
-        # TODO: Call provider API to activate card
         await card.asave(update_fields=["status", "updated_at"])
+
         return card
 
     @staticmethod
     async def delete_card(user: User, card_id: UUID) -> None:
+        """
+        Delete a card (permanent termination).
+
+        This blocks the card with the provider and locally, keeping the record
+        for audit/transaction history purposes.
+        """
         card = await CardManager.get_card(user, card_id)
 
         if card.status != CardStatus.BLOCKED:
+            test_mode = CardProviderFactory.get_test_mode_setting()
+            provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+            await provider.block_card(card.provider_card_id)
+
             card.status = CardStatus.BLOCKED
             await card.asave(update_fields=["status", "updated_at"])
 
-        # TODO: Call provider API to terminate card
-        # For now, we just block it and keep the record
-        # In production, you might soft-delete or actually delete
+        # Keep the record for audit/transaction history purposes
+        # In production, you might soft-delete by adding a deleted_at field
