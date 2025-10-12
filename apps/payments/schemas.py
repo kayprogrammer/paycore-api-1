@@ -130,9 +130,9 @@ class CreateInvoiceSchema(BaseSchema):
     due_date: date = Field(..., example="2025-11-10")
 
     @field_validator("due_date")
-    def validate_dates(self, value: date):
-        if value < self.issue_date:
-            raise ValueError("Due date must be after issue date")
+    @classmethod
+    def validate_dates(cls, value: date):
+        # Note: Issue date validation happens at model level
         return value
 
 

@@ -18,6 +18,7 @@ from apps.cards.webhooks import webhook_router
 from apps.bills.views import bill_router
 from apps.transactions.views import transaction_router
 from apps.payments.views import payment_router
+from apps.loans.views import loan_router
 from apps.common.health_checks import celery_health_check, system_health_check
 from django.urls import path
 
@@ -45,6 +46,7 @@ api.add_router("/api/v1/cards", webhook_router)
 api.add_router("/api/v1/bills", bill_router, auth=AuthUser())
 api.add_router("/api/v1/transactions", transaction_router, auth=AuthUser())
 api.add_router("/api/v1/payments", payment_router)  # Mixed auth (some public endpoints)
+api.add_router("/api/v1/loans", loan_router, auth=AuthUser())
 
 
 class HealthCheckResponse(Schema):

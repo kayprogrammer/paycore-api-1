@@ -46,6 +46,24 @@ class ErrorCode:
     INVALID_API_KEY = "invalid_api_key"
     API_KEY_INACTIVE = "api_key_inactive"
 
+    # Loan specific
+    LOAN_PRODUCT_INACTIVE = "loan_product_inactive"
+    LOAN_AMOUNT_BELOW_MIN = "loan_amount_below_min"
+    LOAN_AMOUNT_ABOVE_MAX = "loan_amount_above_max"
+    LOAN_TENURE_INVALID = "loan_tenure_invalid"
+    LOAN_ALREADY_ACTIVE = "loan_already_active"
+    LOAN_NOT_APPROVED = "loan_not_approved"
+    LOAN_ALREADY_DISBURSED = "loan_already_disbursed"
+    LOAN_NOT_ACTIVE = "loan_not_active"
+    LOAN_ALREADY_PAID = "loan_already_paid"
+    CREDIT_SCORE_TOO_LOW = "credit_score_too_low"
+    ACCOUNT_AGE_INSUFFICIENT = "account_age_insufficient"
+    COLLATERAL_REQUIRED = "collateral_required"
+    GUARANTOR_REQUIRED = "guarantor_required"
+    REPAYMENT_SCHEDULE_NOT_FOUND = "repayment_schedule_not_found"
+    REPAYMENT_AMOUNT_INVALID = "repayment_amount_invalid"
+    EARLY_REPAYMENT_NOT_ALLOWED = "early_repayment_not_allowed"
+
 
 class RequestError(Exception):
     default_detail = "An error occured"

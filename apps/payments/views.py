@@ -1,8 +1,6 @@
 from uuid import UUID
 from typing import Optional
 from ninja import Query, Router
-from asgiref.sync import sync_to_async
-from django.db.models import Q
 
 from apps.accounts.auth import AuthUser
 from apps.common.exceptions import NotFoundError
