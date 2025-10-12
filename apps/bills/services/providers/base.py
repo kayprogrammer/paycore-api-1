@@ -28,10 +28,7 @@ class BaseBillPaymentProvider(ABC):
 
     @abstractmethod
     async def validate_customer(
-        self,
-        provider_code: str,
-        customer_id: str,
-        **kwargs
+        self, provider_code: str, customer_id: str, **kwargs
     ) -> Dict[str, Any]:
         """
         Validate customer details before payment.
@@ -95,11 +92,7 @@ class BaseBillPaymentProvider(ABC):
         pass
 
     @abstractmethod
-    async def query_transaction(
-        self,
-        reference: str,
-        **kwargs
-    ) -> Dict[str, Any]:
+    async def query_transaction(self, reference: str, **kwargs) -> Dict[str, Any]:
         """
         Query transaction status.
 

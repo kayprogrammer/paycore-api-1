@@ -14,9 +14,7 @@ from apps.transactions.models import (
 )
 from apps.common.exceptions import RequestError, ErrorCode, NotFoundError
 from django.db.models import Q
-from apps.common.paginators import CustomPagination
-
-paginator = CustomPagination()
+from apps.common.paginators import Paginator
 
 
 class DisputeService:
@@ -142,7 +140,7 @@ class DisputeService:
             .select_related("initiated_by")
             .order_by("-created_at")
         )
-        paginated_data = await paginator.paginate_queryset(
+        paginated_data = await Paginator.paginate_queryset(
             disputes, page_params.page, page_params.limit
         )
         return paginated_data

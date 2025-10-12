@@ -22,6 +22,7 @@ bill_router = Router(tags=["Bill Payments"])
 # Bill Providers & Packages
 # ============================================================================
 
+
 @bill_router.get("/providers", response=List[BillProviderSchema])
 async def list_providers(request, category: str = None):
     """
@@ -130,6 +131,7 @@ async def list_provider_packages(request, provider_id: UUID):
 # Customer Validation
 # ============================================================================
 
+
 @bill_router.post("/validate-customer", response=CustomerValidationSchema)
 async def validate_customer(request, data: ValidateCustomerSchema):
     """
@@ -153,6 +155,7 @@ async def validate_customer(request, data: ValidateCustomerSchema):
 # ============================================================================
 # Bill Payments
 # ============================================================================
+
 
 @bill_router.post("/pay", response={200: BillPaymentSchema})
 async def create_bill_payment(request, data: CreateBillPaymentSchema):
@@ -258,6 +261,7 @@ async def get_bill_payment(request, payment_id: UUID):
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 
 async def _payment_to_schema(payment) -> BillPaymentSchema:
     """Convert BillPayment model to schema"""

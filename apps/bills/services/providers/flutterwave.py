@@ -5,7 +5,12 @@ from decimal import Decimal
 from django.conf import settings
 
 from apps.bills.services.providers.base import BaseBillPaymentProvider
-from apps.common.exceptions import RequestError, ValidationError, NotFoundError, ErrorCode
+from apps.common.exceptions import (
+    RequestError,
+    ValidationError,
+    NotFoundError,
+    ErrorCode,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +31,9 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
     """
 
     BASE_URL_PRODUCTION = "https://api.flutterwave.com/v3"
-    BASE_URL_TEST = "https://api.flutterwave.com/v3"  # Flutterwave uses same URL for test
+    BASE_URL_TEST = (
+        "https://api.flutterwave.com/v3"  # Flutterwave uses same URL for test
+    )
 
     def __init__(self, test_mode: bool = False):
         super().__init__(test_mode)
@@ -54,10 +61,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
         }
 
     async def validate_customer(
-        self,
-        provider_code: str,
-        customer_id: str,
-        **kwargs
+        self, provider_code: str, customer_id: str, **kwargs
     ) -> Dict[str, Any]:
         """Validate customer details"""
         url = f"{self.base_url}/bill-items/{provider_code}/validate"
@@ -74,9 +78,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    url,
-                    json=payload,
-                    headers=self._get_headers()
+                    url, json=payload, headers=self._get_headers()
                 )
 
                 data = response.json()
@@ -84,8 +86,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
                 if response.status_code != 200 or data.get("status") != "success":
                     logger.error(f"Flutterwave validation failed: {data}")
                     raise ValidationError(
-                        "customer_id",
-                        data.get("message", "Customer validation failed")
+                        "customer_id", data.get("message", "Customer validation failed")
                     )
 
                 # Parse response
@@ -103,14 +104,14 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
                         "minimum_amount": customer_data.get("minimum_amount"),
                         "maximum_amount": customer_data.get("maximum_amount"),
                         "response_message": customer_data.get("response_message"),
-                    }
+                    },
                 }
 
         except httpx.RequestError as e:
             logger.error(f"Flutterwave API request failed: {str(e)}")
             raise RequestError(
                 ErrorCode.EXTERNAL_SERVICE_ERROR,
-                "Failed to validate customer. Please try again."
+                "Failed to validate customer. Please try again.",
             )
 
     async def process_payment(
@@ -119,7 +120,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
         customer_id: str,
         amount: Decimal,
         reference: str,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """Process bill payment"""
         url = f"{self.base_url}/bills"
@@ -144,9 +145,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    url,
-                    json=payload,
-                    headers=self._get_headers()
+                    url, json=payload, headers=self._get_headers()
                 )
 
                 data = response.json()
@@ -167,35 +166,30 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
                     "customer_name": payment_data.get("customer_name", ""),
                     "amount": Decimal(str(payment_data.get("amount", amount))),
                     "fee": Decimal(str(payment_data.get("fee", 0))),
-                    "message": payment_data.get("response_message", "Payment successful"),
+                    "message": payment_data.get(
+                        "response_message", "Payment successful"
+                    ),
                     "extra_data": {
                         "network": payment_data.get("network"),
                         "phone_number": payment_data.get("phone_number"),
                         "transaction_date": payment_data.get("transaction_date"),
-                    }
+                    },
                 }
 
         except httpx.RequestError as e:
             logger.error(f"Flutterwave API request failed: {str(e)}")
             raise RequestError(
                 ErrorCode.EXTERNAL_SERVICE_ERROR,
-                "Payment processing failed. Please try again."
+                "Payment processing failed. Please try again.",
             )
 
-    async def query_transaction(
-        self,
-        reference: str,
-        **kwargs
-    ) -> Dict[str, Any]:
+    async def query_transaction(self, reference: str, **kwargs) -> Dict[str, Any]:
         """Query transaction status"""
         url = f"{self.base_url}/transactions/{reference}/verify"
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    url,
-                    headers=self._get_headers()
-                )
+                response = await client.get(url, headers=self._get_headers())
 
                 data = response.json()
 
@@ -205,8 +199,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
                 if response.status_code != 200:
                     logger.error(f"Flutterwave query failed: {data}")
                     raise RequestError(
-                        ErrorCode.EXTERNAL_SERVICE_ERROR,
-                        "Failed to query transaction"
+                        ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to query transaction"
                     )
 
                 # Parse response
@@ -234,8 +227,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
         except httpx.RequestError as e:
             logger.error(f"Flutterwave API request failed: {str(e)}")
             raise RequestError(
-                ErrorCode.EXTERNAL_SERVICE_ERROR,
-                "Failed to query transaction"
+                ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to query transaction"
             )
 
     def get_available_services(self) -> Dict[str, list]:

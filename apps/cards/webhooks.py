@@ -36,13 +36,17 @@ async def flutterwave_webhook(request: HttpRequest):
 
         if not signature:
             logger.warning("Flutterwave webhook received without signature")
-            return JsonResponse({"status": "error", "message": "Missing signature"}, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Missing signature"}, status=400
+            )
 
         try:
             payload = json.loads(raw_body.decode("utf-8"))
         except json.JSONDecodeError:
             logger.error("Invalid JSON in Flutterwave webhook")
-            return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON"}, status=400
+            )
 
         provider = CardProviderFactory.get_provider("flutterwave")
 
@@ -53,7 +57,9 @@ async def flutterwave_webhook(request: HttpRequest):
 
         if not is_valid:
             logger.warning(f"Invalid Flutterwave webhook signature: {signature}")
-            return JsonResponse({"status": "error", "message": "Invalid signature"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid signature"}, status=401
+            )
 
         event_data = provider.parse_webhook_event(payload)
         event_type = event_data.get("event_type")
@@ -71,7 +77,9 @@ async def flutterwave_webhook(request: HttpRequest):
 
     except Exception as e:
         logger.error(f"Error processing Flutterwave webhook: {str(e)}", exc_info=True)
-        return JsonResponse({"status": "error", "message": "Internal error"}, status=500)
+        return JsonResponse(
+            {"status": "error", "message": "Internal error"}, status=500
+        )
 
 
 @webhook_router.post("/webhooks/sudo", auth=None)
@@ -94,13 +102,17 @@ async def sudo_webhook(request: HttpRequest):
 
         if not signature:
             logger.warning("Sudo webhook received without signature")
-            return JsonResponse({"status": "error", "message": "Missing signature"}, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Missing signature"}, status=400
+            )
 
         try:
             payload = json.loads(raw_body.decode("utf-8"))
         except json.JSONDecodeError:
             logger.error("Invalid JSON in Sudo webhook")
-            return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON"}, status=400
+            )
 
         provider = CardProviderFactory.get_provider("sudo")
         is_valid = await provider.verify_webhook_signature(
@@ -110,7 +122,9 @@ async def sudo_webhook(request: HttpRequest):
 
         if not is_valid:
             logger.warning(f"Invalid Sudo webhook signature: {signature}")
-            return JsonResponse({"status": "error", "message": "Invalid signature"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid signature"}, status=401
+            )
 
         event_data = provider.parse_webhook_event(payload)
         event_type = event_data.get("event_type")
@@ -130,7 +144,9 @@ async def sudo_webhook(request: HttpRequest):
 
     except Exception as e:
         logger.error(f"Error processing Sudo webhook: {str(e)}", exc_info=True)
-        return JsonResponse({"status": "error", "message": "Internal error"}, status=500)
+        return JsonResponse(
+            {"status": "error", "message": "Internal error"}, status=500
+        )
 
 
 async def _handle_card_transaction(event_data: Dict[str, Any], provider_name: str):
@@ -142,13 +158,17 @@ async def _handle_card_transaction(event_data: Dict[str, Any], provider_name: st
     try:
         # Get card by provider card ID
         provider_card_id = event_data.get("card_id")
-        card = await Card.objects.select_related("wallet", "wallet__currency", "user").aget_or_none(
+        card = await Card.objects.select_related(
+            "wallet", "wallet__currency", "user"
+        ).aget_or_none(
             provider_card_id=provider_card_id,
             card_provider=provider_name,
         )
 
         if not card:
-            logger.warning(f"Card not found for {provider_name} transaction: {provider_card_id}")
+            logger.warning(
+                f"Card not found for {provider_name} transaction: {provider_card_id}"
+            )
             return
 
         # Check if transaction already exists (idempotency)
@@ -164,7 +184,9 @@ async def _handle_card_transaction(event_data: Dict[str, Any], provider_name: st
         # Extract transaction details
         amount = event_data.get("amount", Decimal("0"))
         currency = event_data.get("currency")
-        transaction_type = event_data.get("transaction_type", TransactionType.CARD_PURCHASE)
+        transaction_type = event_data.get(
+            "transaction_type", TransactionType.CARD_PURCHASE
+        )
         merchant_name = event_data.get("merchant_name")
         merchant_category = event_data.get("merchant_category")
         location = event_data.get("location", {})
@@ -175,7 +197,9 @@ async def _handle_card_transaction(event_data: Dict[str, Any], provider_name: st
 
         # Deduct amount from wallet
         if amount > wallet.balance:
-            logger.error(f"Insufficient balance for card transaction: {amount} > {wallet.balance}")
+            logger.error(
+                f"Insufficient balance for card transaction: {amount} > {wallet.balance}"
+            )
             # Transaction still recorded but marked as failed
             transaction_status = TransactionStatus.FAILED
             balance_after = balance_before
@@ -191,9 +215,15 @@ async def _handle_card_transaction(event_data: Dict[str, Any], provider_name: st
             card.daily_spent += amount
             card.monthly_spent += amount
             card.last_used_at = timezone.now()
-            await card.asave(update_fields=[
-                "total_spent", "daily_spent", "monthly_spent", "last_used_at", "updated_at"
-            ])
+            await card.asave(
+                update_fields=[
+                    "total_spent",
+                    "daily_spent",
+                    "monthly_spent",
+                    "last_used_at",
+                    "updated_at",
+                ]
+            )
 
         # Create transaction record
         transaction = await Transaction.objects.acreate(
@@ -213,9 +243,13 @@ async def _handle_card_transaction(event_data: Dict[str, Any], provider_name: st
             provider_response=metadata,
             description=f"{transaction_type.replace('_', ' ').title()} at {merchant_name or 'merchant'}",
         )
-        logger.info(f"Card transaction recorded: {transaction.transaction_id} - {amount} {currency}")
+        logger.info(
+            f"Card transaction recorded: {transaction.transaction_id} - {amount} {currency}"
+        )
     except Exception as e:
-        logger.error(f"Error handling card transaction webhook: {str(e)}", exc_info=True)
+        logger.error(
+            f"Error handling card transaction webhook: {str(e)}", exc_info=True
+        )
 
 
 async def _handle_card_lifecycle_event(event_data: Dict[str, Any], provider_name: str):
@@ -233,7 +267,9 @@ async def _handle_card_lifecycle_event(event_data: Dict[str, Any], provider_name
         )
 
         if not card:
-            logger.warning(f"Card not found for {provider_name} lifecycle event: {provider_card_id}")
+            logger.warning(
+                f"Card not found for {provider_name} lifecycle event: {provider_card_id}"
+            )
             return
 
         event_type = event_data.get("event_type")

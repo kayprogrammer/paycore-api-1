@@ -51,7 +51,7 @@ class FlutterwaveCardProvider(BaseCardProvider):
         card_type: str,
         card_brand: str,
         billing_address: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Create a Flutterwave virtual card.
@@ -62,7 +62,7 @@ class FlutterwaveCardProvider(BaseCardProvider):
         if not self.supports_currency(currency_code):
             raise ValidationError(
                 "currency_code",
-                f"Flutterwave does not support {currency_code} cards. Supported: {', '.join(self.SUPPORTED_CURRENCIES)}"
+                f"Flutterwave does not support {currency_code} cards. Supported: {', '.join(self.SUPPORTED_CURRENCIES)}",
             )
 
         payload = {
@@ -75,13 +75,15 @@ class FlutterwaveCardProvider(BaseCardProvider):
         }
 
         if billing_address:
-            payload.update({
-                "billing_address": billing_address.get("street", ""),
-                "billing_city": billing_address.get("city", ""),
-                "billing_state": billing_address.get("state", ""),
-                "billing_postal_code": billing_address.get("postal_code", ""),
-                "billing_country": billing_address.get("country", ""),
-            })
+            payload.update(
+                {
+                    "billing_address": billing_address.get("street", ""),
+                    "billing_city": billing_address.get("city", ""),
+                    "billing_state": billing_address.get("state", ""),
+                    "billing_postal_code": billing_address.get("postal_code", ""),
+                    "billing_country": billing_address.get("country", ""),
+                }
+            )
 
         # Make API request
         try:
@@ -114,8 +116,12 @@ class FlutterwaveCardProvider(BaseCardProvider):
                 return {
                     "card_number": card_data.get("card_pan"),
                     "card_holder_name": card_data.get("name_on_card"),
-                    "expiry_month": int(card_data.get("expiration", "01/2025").split("/")[0]),
-                    "expiry_year": int(card_data.get("expiration", "01/2025").split("/")[1]),
+                    "expiry_month": int(
+                        card_data.get("expiration", "01/2025").split("/")[0]
+                    ),
+                    "expiry_year": int(
+                        card_data.get("expiration", "01/2025").split("/")[1]
+                    ),
                     "cvv": card_data.get("cvv"),
                     "provider_card_id": card_data.get("id"),
                     "masked_number": card_data.get("masked_pan", "****"),
@@ -289,7 +295,9 @@ class FlutterwaveCardProvider(BaseCardProvider):
             return {
                 "event_type": "transaction.success",
                 "card_id": data.get("card_id"),
-                "transaction_type": self._map_transaction_type(data.get("type", "purchase")),
+                "transaction_type": self._map_transaction_type(
+                    data.get("type", "purchase")
+                ),
                 "amount": Decimal(str(data.get("amount", 0))),
                 "currency": data.get("currency", "USD"),
                 "merchant_name": data.get("merchant_name"),

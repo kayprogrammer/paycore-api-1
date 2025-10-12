@@ -12,6 +12,7 @@ from apps.common.schemas import BaseSchema
 # Bill Provider Schemas
 # ============================================================================
 
+
 class BillProviderSchema(BaseSchema):
     provider_id: UUID
     name: str
@@ -44,6 +45,7 @@ class BillPackageSchema(BaseSchema):
 
 class BillProviderDetailSchema(BillProviderSchema):
     """Detailed bill provider with packages"""
+
     packages: List[BillPackageSchema] = Field(default_factory=list)
 
 
@@ -51,22 +53,34 @@ class BillProviderDetailSchema(BillProviderSchema):
 # Bill Payment Request Schemas
 # ============================================================================
 
+
 class ValidateCustomerSchema(BaseSchema):
     provider_id: UUID = Field(..., description="Bill provider ID")
-    customer_id: str = Field(..., min_length=1, max_length=200, description="Customer ID/Number")
+    customer_id: str = Field(
+        ..., min_length=1, max_length=200, description="Customer ID/Number"
+    )
+
 
 class CreateBillPaymentSchema(BaseSchema):
     wallet_id: UUID = Field(..., description="Wallet to debit")
     provider_id: UUID = Field(..., description="Bill provider ID")
-    customer_id: str = Field(..., min_length=1, max_length=200, description="Customer ID/Number")
-    amount: Optional[Decimal] = Field(None, ge=0, description="Payment amount (required if no package)")
-    package_id: Optional[UUID] = Field(None, description="Package ID (for predefined packages)")
+    customer_id: str = Field(
+        ..., min_length=1, max_length=200, description="Customer ID/Number"
+    )
+    amount: Optional[Decimal] = Field(
+        None, ge=0, description="Payment amount (required if no package)"
+    )
+    package_id: Optional[UUID] = Field(
+        None, description="Package ID (for predefined packages)"
+    )
 
     # Optional fields
     customer_email: Optional[str] = Field(None, max_length=200)
     customer_phone: Optional[str] = Field(None, max_length=20)
     save_beneficiary: bool = Field(default=False, description="Save as beneficiary")
-    beneficiary_nickname: Optional[str] = Field(None, max_length=100, description="Nickname for beneficiary")
+    beneficiary_nickname: Optional[str] = Field(
+        None, max_length=100, description="Nickname for beneficiary"
+    )
     pin: Optional[str] = Field(None, description="Transaction PIN")
     extra_data: Optional[Dict[str, Any]] = Field(...)
 
@@ -78,6 +92,7 @@ class ReprocessBillPaymentSchema(BaseSchema):
 # ============================================================================
 # Bill Payment Response Schemas
 # ============================================================================
+
 
 class CustomerValidationSchema(BaseSchema):
     is_valid: bool
@@ -122,6 +137,7 @@ class BillPaymentListSchema(BaseSchema):
 # Bill Beneficiary Schemas
 # ============================================================================
 
+
 class CreateBeneficiarySchema(BaseSchema):
     provider_id: UUID = Field(..., description="Bill provider ID")
     customer_id: str = Field(..., min_length=1, max_length=200)
@@ -148,6 +164,7 @@ class BillBeneficiarySchema(BaseSchema):
 # ============================================================================
 # Bill Schedule Schemas
 # ============================================================================
+
 
 class CreateBillScheduleSchema(BaseSchema):
     wallet_id: UUID = Field(..., description="Wallet to debit")
@@ -189,6 +206,7 @@ class BillScheduleSchema(BaseSchema):
 # Analytics Schemas
 # ============================================================================
 
+
 class BillPaymentStatsSchema(BaseSchema):
     total_payments: int
     successful_payments: int
@@ -203,6 +221,7 @@ class BillPaymentStatsSchema(BaseSchema):
 # ============================================================================
 # Filter Schemas
 # ============================================================================
+
 
 class BillPaymentFilterSchema(BaseSchema):
     category: Optional[str] = None

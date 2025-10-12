@@ -53,7 +53,7 @@ class SudoCardProvider(BaseCardProvider):
         card_type: str,
         card_brand: str,
         billing_address: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Create a Sudo virtual card.
@@ -65,14 +65,11 @@ class SudoCardProvider(BaseCardProvider):
             raise ValidationError(
                 "currency_code",
                 f"Sudo does not support {currency_code} cards. "
-                f"Supported: {', '.join(self.SUPPORTED_CURRENCIES)}"
+                f"Supported: {', '.join(self.SUPPORTED_CURRENCIES)}",
             )
 
         if not self.supports_card_type(card_type):
-            raise ValidationError(
-                "card_type",
-                f"Sudo only supports virtual cards"
-            )
+            raise ValidationError("card_type", f"Sudo only supports virtual cards")
 
         payload = {
             "type": card_brand.lower(),  # visa, mastercard
@@ -82,7 +79,7 @@ class SudoCardProvider(BaseCardProvider):
                 "customer_email": user_email,
                 "customer_name": f"{user_first_name} {user_last_name}",
                 "customer_phone": user_phone,
-            }
+            },
         }
 
         if billing_address:
@@ -331,7 +328,9 @@ class SudoCardProvider(BaseCardProvider):
             return {
                 "event_type": "transaction.success",
                 "card_id": data.get("card_id"),
-                "transaction_type": self._map_transaction_type(data.get("type", "purchase")),
+                "transaction_type": self._map_transaction_type(
+                    data.get("type", "purchase")
+                ),
                 "amount": Decimal(str(data.get("amount", 0))),
                 "currency": data.get("currency", "USD"),
                 "merchant_name": data.get("merchant", {}).get("name"),

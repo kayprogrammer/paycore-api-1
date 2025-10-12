@@ -36,6 +36,15 @@ class ErrorCode:
     BILL_PROVIDER_UNAVAILABLE = "bill_provider_unavailable"
     BILL_CUSTOMER_VALIDATION_FAILED = "bill_customer_validation_failed"
 
+    # Payment specific
+    PAYMENT_LINK_EXPIRED = "payment_link_expired"
+    PAYMENT_LINK_INACTIVE = "payment_link_inactive"
+    PAYMENT_ALREADY_PAID = "payment_already_paid"
+    INVOICE_ALREADY_PAID = "invoice_already_paid"
+    INVOICE_EXPIRED = "invoice_expired"
+    INSUFFICIENT_BALANCE = "insufficient_balance"
+    INVALID_API_KEY = "invalid_api_key"
+    API_KEY_INACTIVE = "api_key_inactive"
 
 
 class RequestError(Exception):

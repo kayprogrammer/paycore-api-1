@@ -54,7 +54,9 @@ class CardManager:
             currency_code=wallet.currency.code,
             card_type=data.card_type,
             card_brand=data.card_brand,
-            billing_address=data.billing_address.model_dump() if data.billing_address else None,
+            billing_address=(
+                data.billing_address.model_dump() if data.billing_address else None
+            ),
         )
 
         card = await Card.objects.acreate(
@@ -76,7 +78,9 @@ class CardManager:
             monthly_limit=data.monthly_limit,
             nickname=data.nickname,
             created_for_merchant=data.created_for_merchant,
-            billing_address=data.billing_address.model_dump() if data.billing_address else {},
+            billing_address=(
+                data.billing_address.model_dump() if data.billing_address else {}
+            ),
             status=CardStatus.INACTIVE,  # Cards start inactive, must be activated
         )
 
@@ -141,7 +145,9 @@ class CardManager:
             raise ValidationError("card", "Cannot freeze a blocked card")
 
         test_mode = CardProviderFactory.get_test_mode_setting()
-        provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+        provider = CardProviderFactory.get_provider(
+            card.card_provider, test_mode=test_mode
+        )
         await provider.freeze_card(card.provider_card_id)
 
         card.freeze()
@@ -157,7 +163,9 @@ class CardManager:
             return card
 
         test_mode = CardProviderFactory.get_test_mode_setting()
-        provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+        provider = CardProviderFactory.get_provider(
+            card.card_provider, test_mode=test_mode
+        )
         await provider.unfreeze_card(card.provider_card_id)
 
         card.is_frozen = False
@@ -174,7 +182,9 @@ class CardManager:
 
         # Get provider and block card
         test_mode = CardProviderFactory.get_test_mode_setting()
-        provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+        provider = CardProviderFactory.get_provider(
+            card.card_provider, test_mode=test_mode
+        )
         await provider.block_card(card.provider_card_id)
 
         card.status = CardStatus.BLOCKED
@@ -219,7 +229,9 @@ class CardManager:
 
         if card.status != CardStatus.BLOCKED:
             test_mode = CardProviderFactory.get_test_mode_setting()
-            provider = CardProviderFactory.get_provider(card.card_provider, test_mode=test_mode)
+            provider = CardProviderFactory.get_provider(
+                card.card_provider, test_mode=test_mode
+            )
             await provider.block_card(card.provider_card_id)
 
             card.status = CardStatus.BLOCKED

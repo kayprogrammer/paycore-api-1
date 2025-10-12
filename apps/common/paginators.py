@@ -38,3 +38,6 @@ class CustomPagination(PaginationBase):
             "page": current_page,
             "total_pages": last_page,
         }
+
+
+Paginator = CustomPagination()

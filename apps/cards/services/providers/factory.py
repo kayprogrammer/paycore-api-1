@@ -48,7 +48,7 @@ class CardProviderFactory:
             raise ValidationError(
                 "currency_code",
                 f"No card provider supports {currency_code} cards. "
-                f"Supported currencies: {', '.join(cls.CURRENCY_PROVIDER_MAP.keys())}"
+                f"Supported currencies: {', '.join(cls.CURRENCY_PROVIDER_MAP.keys())}",
             )
 
         # Check if provider is enabled in settings
@@ -60,13 +60,13 @@ class CardProviderFactory:
                 else:
                     raise ValidationError(
                         "provider",
-                        f"Flutterwave is not configured. Please add credentials to settings."
+                        f"Flutterwave is not configured. Please add credentials to settings.",
                     )
         elif provider_type == CardProvider.SUDO:
             if not cls._is_sudo_enabled():
                 raise ValidationError(
                     "provider",
-                    f"Sudo is not configured. Please add credentials to settings."
+                    f"Sudo is not configured. Please add credentials to settings.",
                 )
 
         return cls.get_provider(provider_type, test_mode)

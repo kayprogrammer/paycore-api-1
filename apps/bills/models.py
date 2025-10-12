@@ -5,6 +5,7 @@ from decimal import Decimal
 import uuid
 from autoslug import AutoSlugField
 
+
 class BillCategory(models.TextChoices):
     AIRTIME = "airtime", "Airtime Recharge"
     DATA = "data", "Data Bundle"
@@ -28,10 +29,12 @@ class BillPaymentStatus(models.TextChoices):
     REVERSED = "reversed", "Reversed"
     CANCELLED = "cancelled", "Cancelled"
 
+
 class BillProviderFeeType(models.TextChoices):
     FLAT = "flat", "Flat Fee"
     PERCENTAGE = "percentage", "Percentage"
     NONE = "none", "No Fee"
+
 
 class BillProvider(BaseModel):
     """
@@ -44,32 +47,56 @@ class BillProvider(BaseModel):
     - Internet: Spectranet, Smile, Swift
     """
 
-    provider_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    provider_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
     name = models.CharField(max_length=100)
     slug = AutoSlugField(max_length=100, unique=True, populate_from="name")
     category = models.CharField(max_length=50, choices=BillCategory.choices)
-    provider_code = models.CharField(max_length=50, unique=True, help_text="Code used by payment gateway")
+    provider_code = models.CharField(
+        max_length=50, unique=True, help_text="Code used by payment gateway"
+    )
     is_active = models.BooleanField(default=True)
-    is_available = models.BooleanField(default=True, help_text="Temporarily unavailable")
+    is_available = models.BooleanField(
+        default=True, help_text="Temporarily unavailable"
+    )
 
     logo_url = models.URLField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
-    supports_amount_range = models.BooleanField(default=False, help_text="User can enter custom amount")
-    min_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    max_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    supports_amount_range = models.BooleanField(
+        default=False, help_text="User can enter custom amount"
+    )
+    min_amount = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True
+    )
+    max_amount = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True
+    )
 
     fee_type = models.CharField(
         max_length=20,
         choices=BillProviderFeeType.choices,
-        default=BillProviderFeeType.FLAT
+        default=BillProviderFeeType.FLAT,
     )
     fee_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    fee_cap = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True, help_text="Maximum fee amount")
+    fee_cap = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Maximum fee amount",
+    )
 
     # Metadata
-    requires_customer_validation = models.BooleanField(default=False, help_text="Validate customer before payment")
-    validation_fields = models.JSONField(default=dict, blank=True, help_text="Required fields for validation")
-    extra_fields = models.JSONField(default=dict, blank=True, help_text="Additional fields required")
+    requires_customer_validation = models.BooleanField(
+        default=False, help_text="Validate customer before payment"
+    )
+    validation_fields = models.JSONField(
+        default=dict, blank=True, help_text="Required fields for validation"
+    )
+    extra_fields = models.JSONField(
+        default=dict, blank=True, help_text="Additional fields required"
+    )
 
     class Meta:
         ordering = ["category", "name"]
@@ -98,14 +125,22 @@ class BillProvider(BaseModel):
 
 
 class BillPackage(BaseModel):
-    package_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
-    provider = models.ForeignKey(BillProvider, on_delete=models.CASCADE, related_name="packages")
+    package_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
+    provider = models.ForeignKey(
+        BillProvider, on_delete=models.CASCADE, related_name="packages"
+    )
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=100, help_text="Package code from provider")
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     description = models.TextField(null=True, blank=True)
-    validity_period = models.CharField(max_length=100, null=True, blank=True, help_text="e.g., '30 days', '1 month'")
-    benefits = models.JSONField(default=list, blank=True, help_text="List of package benefits")
+    validity_period = models.CharField(
+        max_length=100, null=True, blank=True, help_text="e.g., '30 days', '1 month'"
+    )
+    benefits = models.JSONField(
+        default=list, blank=True, help_text="List of package benefits"
+    )
     is_popular = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     display_order = models.IntegerField(default=0)
@@ -117,7 +152,9 @@ class BillPackage(BaseModel):
             models.Index(fields=["code"]),
         ]
         constraints = [
-            models.UniqueConstraint(fields=["provider", "code"], name="unique_package_provider_code")
+            models.UniqueConstraint(
+                fields=["provider", "code"], name="unique_package_provider_code"
+            )
         ]
 
     def __str__(self):
@@ -125,35 +162,64 @@ class BillPackage(BaseModel):
 
 
 class BillPayment(BaseModel):
-    payment_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    payment_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
 
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="bill_payments")
-    wallet = models.ForeignKey("wallets.Wallet", on_delete=models.CASCADE, related_name="bill_payments")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="bill_payments"
+    )
+    wallet = models.ForeignKey(
+        "wallets.Wallet", on_delete=models.CASCADE, related_name="bill_payments"
+    )
     transaction = models.OneToOneField(
         "transactions.Transaction",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="bill_payment"
+        related_name="bill_payment",
     )
-    provider = models.ForeignKey(BillProvider, on_delete=models.PROTECT, related_name="payments")
-    package = models.ForeignKey(BillPackage, on_delete=models.SET_NULL, null=True, blank=True, related_name="payments")
+    provider = models.ForeignKey(
+        BillProvider, on_delete=models.PROTECT, related_name="payments"
+    )
+    package = models.ForeignKey(
+        BillPackage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
 
     category = models.CharField(max_length=50, choices=BillCategory.choices)
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     fee_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=20, decimal_places=2)  # amount + fee
-    customer_id = models.CharField(max_length=200, help_text="Customer ID/Number (meter number, phone, smartcard)")
+    customer_id = models.CharField(
+        max_length=200, help_text="Customer ID/Number (meter number, phone, smartcard)"
+    )
     customer_name = models.CharField(max_length=200, null=True, blank=True)
     customer_email = models.EmailField(null=True, blank=True)
     customer_phone = models.CharField(max_length=20, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=BillPaymentStatus.choices, default=BillPaymentStatus.PENDING)
-    provider_reference = models.CharField(max_length=200, null=True, blank=True, db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=BillPaymentStatus.choices,
+        default=BillPaymentStatus.PENDING,
+    )
+    provider_reference = models.CharField(
+        max_length=200, null=True, blank=True, db_index=True
+    )
     provider_response = models.JSONField(default=dict, blank=True)
     token = models.CharField(max_length=500, null=True, blank=True)
-    token_units = models.CharField(max_length=100, null=True, blank=True, help_text="Units purchased (kWh, GB, etc.)")
+    token_units = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Units purchased (kWh, GB, etc.)",
+    )
     description = models.TextField(null=True, blank=True)
-    extra_data = models.JSONField(default=dict, blank=True, help_text="Additional payment data")
+    extra_data = models.JSONField(
+        default=dict, blank=True, help_text="Additional payment data"
+    )
     completed_at = models.DateTimeField(null=True, blank=True)
     failed_at = models.DateTimeField(null=True, blank=True)
     failure_reason = models.TextField(null=True, blank=True)
@@ -192,10 +258,18 @@ class BillPayment(BaseModel):
 
 
 class BillBeneficiary(BaseModel):
-    beneficiary_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="bill_beneficiaries")
-    provider = models.ForeignKey(BillProvider, on_delete=models.CASCADE, related_name="beneficiaries")
-    nickname = models.CharField(max_length=100, help_text="User-friendly name (e.g., 'Home Electricity')")
+    beneficiary_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="bill_beneficiaries"
+    )
+    provider = models.ForeignKey(
+        BillProvider, on_delete=models.CASCADE, related_name="beneficiaries"
+    )
+    nickname = models.CharField(
+        max_length=100, help_text="User-friendly name (e.g., 'Home Electricity')"
+    )
     customer_id = models.CharField(max_length=200)
     customer_name = models.CharField(max_length=200, null=True, blank=True)
     usage_count = models.IntegerField(default=0)
@@ -209,7 +283,10 @@ class BillBeneficiary(BaseModel):
             models.Index(fields=["user", "provider"]),
         ]
         constraints = [
-            models.UniqueConstraint(fields=["user", "provider", "customer_id"], name="unique_user_provider_customer_beneficiary"),
+            models.UniqueConstraint(
+                fields=["user", "provider", "customer_id"],
+                name="unique_user_provider_customer_beneficiary",
+            ),
         ]
 
     def __str__(self):
@@ -221,10 +298,18 @@ class BillBeneficiary(BaseModel):
 
 
 class BillPaymentSchedule(BaseModel):
-    schedule_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="bill_schedules")
-    provider = models.ForeignKey(BillProvider, on_delete=models.CASCADE, related_name="schedules")
-    wallet = models.ForeignKey("wallets.Wallet", on_delete=models.CASCADE, related_name="bill_schedules")
+    schedule_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="bill_schedules"
+    )
+    provider = models.ForeignKey(
+        BillProvider, on_delete=models.CASCADE, related_name="schedules"
+    )
+    wallet = models.ForeignKey(
+        "wallets.Wallet", on_delete=models.CASCADE, related_name="bill_schedules"
+    )
     customer_id = models.CharField(max_length=200)
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     frequency = models.CharField(

@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.cards.models import Card
-from apps.common.paginators import CustomPagination
+from apps.common.paginators import Paginator
 from apps.common.schemas import PaginationQuerySchema
 from apps.transactions.models import (
     Transaction,
@@ -21,8 +21,6 @@ from apps.common.exceptions import (
 )
 from apps.common.decorators import aatomic
 from apps.wallets.services.security_service import WalletSecurityService
-
-paginator = CustomPagination()
 
 
 class CardOperations:
@@ -118,6 +116,6 @@ class CardOperations:
             .select_related("from_wallet", "from_wallet__currency")
             .order_by("-created_at")
         )
-        return await paginator.paginate_queryset(
+        return await Paginator.paginate_queryset(
             queryset, page_params.page, page_params.limit
         )

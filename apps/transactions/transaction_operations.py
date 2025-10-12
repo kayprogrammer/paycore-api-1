@@ -7,7 +7,7 @@ from asgiref.sync import sync_to_async
 
 from apps.accounts.auth import Authentication
 from apps.accounts.models import User
-from apps.common.paginators import CustomPagination
+from apps.common.paginators import Paginator
 from apps.common.schemas import PaginationQuerySchema
 from apps.transactions.models import (
     Transaction,
@@ -24,8 +24,6 @@ from apps.common.exceptions import (
 )
 from apps.common.decorators import aatomic
 from django.contrib.auth.hashers import check_password
-
-paginator = CustomPagination()
 
 
 class TransactionOperations:
@@ -289,7 +287,7 @@ class TransactionOperations:
         )
 
         filtered_transactions_q = filters.filter(transactions_q)
-        paginated_data = await paginator.paginate_queryset(
+        paginated_data = await Paginator.paginate_queryset(
             filtered_transactions_q, page_params.page, page_params.limit
         )
         return paginated_data
