@@ -79,6 +79,17 @@ class ErrorCode:
     INVESTMENT_RENEWAL_NOT_ALLOWED = "investment_renewal_not_allowed"
     INVESTMENT_RETURN_ALREADY_PAID = "investment_return_already_paid"
 
+    # Compliance specific
+    KYC_ALREADY_VERIFIED = "kyc_already_verified"
+    KYC_PENDING = "kyc_pending"
+    KYC_REQUIRED = "kyc_required"
+    KYC_LEVEL_INSUFFICIENT = "kyc_level_insufficient"
+    KYC_DOCUMENT_UPLOAD_FAILED = "kyc_document_upload_failed"
+    AML_CHECK_FAILED = "aml_check_failed"
+    SANCTIONS_MATCH_FOUND = "sanctions_match_found"
+    TRANSACTION_FLAGGED = "transaction_flagged"
+    COMPLIANCE_REVIEW_REQUIRED = "compliance_review_required"
+
 
 class RequestError(Exception):
     default_detail = "An error occured"
