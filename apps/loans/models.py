@@ -62,6 +62,20 @@ class CreditScoreBand(models.TextChoices):
     VERY_POOR = "very_poor", "Very Poor (300-599)"
 
 
+class AutoRepaymentStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    INACTIVE = "inactive", "Inactive"
+    SUSPENDED = "suspended", "Suspended"
+    FAILED = "failed", "Failed"
+
+
+class RiskLevel(models.TextChoices):
+    LOW = "low", "Low Risk"
+    MEDIUM = "medium", "Medium Risk"
+    HIGH = "high", "High Risk"
+    VERY_HIGH = "very_high", "Very High Risk"
+
+
 class LoanProduct(BaseModel):
     product_id = models.UUIDField(
         default=uuid.uuid4, unique=True, editable=False, db_index=True
@@ -246,6 +260,16 @@ class LoanApplication(BaseModel):
         if not self.is_active:
             return False
         return self.repayment_schedules.filter(status=RepaymentStatus.OVERDUE).exists()
+
+    @property
+    def loan_product_name(self):
+        """Get loan product name"""
+        return self.loan_product.name if self.loan_product else None
+
+    @property
+    def loan_product_type(self):
+        """Get loan product type"""
+        return self.loan_product.product_type if self.loan_product else None
 
 
 class LoanRepaymentSchedule(BaseModel):
@@ -442,3 +466,117 @@ class CreditScore(BaseModel):
             return CreditScoreBand.POOR
         else:
             return CreditScoreBand.VERY_POOR
+
+
+class AutoRepayment(BaseModel):
+    """Automatic loan repayment configuration"""
+
+    auto_repayment_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
+
+    loan = models.OneToOneField(
+        LoanApplication,
+        on_delete=models.CASCADE,
+        related_name="auto_repayment",
+        help_text="Loan to auto-repay",
+    )
+    wallet = models.ForeignKey(
+        "wallets.Wallet",
+        on_delete=models.PROTECT,
+        related_name="loan_auto_repayments",
+        help_text="Wallet to debit automatically",
+    )
+
+    is_enabled = models.BooleanField(
+        default=True, help_text="Whether auto-repayment is active"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=AutoRepaymentStatus.choices,
+        default=AutoRepaymentStatus.ACTIVE,
+    )
+
+    auto_pay_full_amount = models.BooleanField(
+        default=True, help_text="Pay full installment amount automatically"
+    )
+    custom_amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Custom amount to pay (if not full amount)",
+    )
+
+    days_before_due = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of days before due date to trigger payment (0 = on due date)",
+    )
+
+    retry_on_failure = models.BooleanField(
+        default=True, help_text="Retry if payment fails due to insufficient balance"
+    )
+    max_retry_attempts = models.PositiveIntegerField(
+        default=3, help_text="Maximum number of retry attempts"
+    )
+    retry_interval_hours = models.PositiveIntegerField(
+        default=24, help_text="Hours between retry attempts"
+    )
+
+    total_payments_made = models.PositiveIntegerField(
+        default=0, help_text="Total number of automatic payments processed"
+    )
+    last_payment_date = models.DateTimeField(
+        null=True, blank=True, help_text="Last successful automatic payment"
+    )
+    last_payment_amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Amount of last automatic payment",
+    )
+    last_failure_date = models.DateTimeField(
+        null=True, blank=True, help_text="Last failed payment attempt"
+    )
+    last_failure_reason = models.TextField(
+        null=True, blank=True, help_text="Reason for last failure"
+    )
+    consecutive_failures = models.PositiveIntegerField(
+        default=0, help_text="Number of consecutive failed attempts"
+    )
+
+    send_notification_on_success = models.BooleanField(
+        default=True, help_text="Send notification when payment succeeds"
+    )
+    send_notification_on_failure = models.BooleanField(
+        default=True, help_text="Send notification when payment fails"
+    )
+
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["loan", "status"]),
+            models.Index(fields=["is_enabled", "status"]),
+            models.Index(fields=["wallet", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Auto-Repayment for Loan {self.loan.application_id} - {self.status}"
+
+    @property
+    def is_active(self):
+        return self.is_enabled and self.status == AutoRepaymentStatus.ACTIVE
+
+    def suspend(self, reason: str = None):
+        self.status = AutoRepaymentStatus.SUSPENDED
+        if reason and self.metadata:
+            self.metadata["suspension_reason"] = reason
+            self.metadata["suspended_at"] = timezone.now().isoformat()
+
+    def reactivate(self):
+        if self.status == AutoRepaymentStatus.SUSPENDED:
+            self.status = AutoRepaymentStatus.ACTIVE
+            self.consecutive_failures = 0

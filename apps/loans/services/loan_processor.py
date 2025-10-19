@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.utils import timezone
-from django.db.models import Coalesce, Sum, F, Case, When, DecimalField, Count, Min
+from django.db.models import Sum, F, Case, When, DecimalField, Count, Min
+from django.db.models.functions import Coalesce
 import secrets
 
 from apps.accounts.models import User

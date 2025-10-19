@@ -12,6 +12,8 @@ from apps.common.schemas import (
     UserDataSchema,
 )
 from apps.loans.models import (
+    AutoRepayment,
+    AutoRepaymentStatus,
     CollateralType,
     CreditScore,
     LoanApplication,
@@ -132,24 +134,19 @@ class LoanApplicationSchema(ModelSchema):
         exclude = ["id", "deleted_at", "wallet"]
 
 
-class LoanApplicationListSchema(ModelSchema):
+class LoanApplicationListSchema(BaseSchema):
+    application_id: UUID
+    loan_product_name: str = Field(..., description="Loan product name")
+    loan_product_type: str = Field(..., description="Loan product type")
+    requested_amount: Decimal
+    approved_amount: Optional[Decimal]
+    tenure_months: int
+    status: str
+    credit_score: Optional[int]
+    created_at: datetime
     currency: CurrencySchema = Field(
         ..., description="Currency of the loan", alias="loan_product.currency"
     )
-
-    class Meta:
-        model = LoanApplication
-        fields = [
-            "application_id",
-            "loan_product_name",
-            "loan_product_type",
-            "requested_amount",
-            "approved_amount",
-            "tenure_months",
-            "status",
-            "credit_score",
-            "created_at",
-        ]
 
 
 class LoanCalculationSchema(BaseSchema):
@@ -350,3 +347,82 @@ class LoanDetailsSchema(BaseSchema):
 
 class LoanDetailsDataResponseSchema(ResponseSchema):
     data: LoanDetailsSchema
+
+
+# ============================================================================
+# Auto-Repayment Schemas
+# ============================================================================
+
+
+class EnableAutoRepaymentSchema(BaseSchema):
+    wallet_id: UUID = Field(..., description="Wallet to use for automatic repayments")
+    auto_pay_full_amount: bool = Field(
+        True,
+        description="Pay full installment amount (principal + interest + late fees)",
+    )
+    custom_amount: Optional[Decimal] = Field(
+        None,
+        gt=0,
+        description="Custom payment amount (if not paying full amount)",
+    )
+    days_before_due: int = Field(
+        0,
+        ge=0,
+        le=30,
+        description="Days before due date to trigger payment (0 = on due date)",
+    )
+    retry_on_failure: bool = Field(
+        True, description="Retry payment if it fails due to insufficient balance"
+    )
+    max_retry_attempts: int = Field(
+        3, ge=1, le=10, description="Maximum retry attempts before suspending"
+    )
+    retry_interval_hours: int = Field(
+        24, ge=1, le=168, description="Hours to wait between retry attempts"
+    )
+    send_notification_on_success: bool = Field(
+        True, description="Send notification on successful payment"
+    )
+    send_notification_on_failure: bool = Field(
+        True, description="Send notification on payment failure"
+    )
+
+
+class UpdateAutoRepaymentSchema(BaseSchema):
+    wallet_id: Optional[UUID] = Field(
+        None, description="Update wallet for automatic repayments"
+    )
+    auto_pay_full_amount: Optional[bool] = Field(
+        None, description="Update full amount payment setting"
+    )
+    custom_amount: Optional[Decimal] = Field(
+        None, gt=0, description="Update custom payment amount"
+    )
+    days_before_due: Optional[int] = Field(
+        None, ge=0, le=30, description="Update payment timing"
+    )
+    retry_on_failure: Optional[bool] = Field(
+        None, description="Update retry on failure setting"
+    )
+    max_retry_attempts: Optional[int] = Field(
+        None, ge=1, le=10, description="Update max retry attempts"
+    )
+    retry_interval_hours: Optional[int] = Field(
+        None, ge=1, le=168, description="Update retry interval"
+    )
+    send_notification_on_success: Optional[bool] = Field(
+        None, description="Update success notification setting"
+    )
+    send_notification_on_failure: Optional[bool] = Field(
+        None, description="Update failure notification setting"
+    )
+
+
+class AutoRepaymentSchema(ModelSchema):
+    class Meta:
+        model = AutoRepayment
+        exclude = ["id", "loan", "wallet", "deleted_at"]
+
+
+class AutoRepaymentDataResponseSchema(ResponseSchema):
+    data: AutoRepaymentSchema

@@ -21,10 +21,14 @@ from apps.loans.schemas import (
     CreditScoreDataResponseSchema,
     LoanSummaryDataResponseSchema,
     LoanDetailsDataResponseSchema,
+    EnableAutoRepaymentSchema,
+    UpdateAutoRepaymentSchema,
+    AutoRepaymentDataResponseSchema,
 )
 from apps.loans.services.loan_manager import LoanManager
 from apps.loans.services.loan_processor import LoanProcessor
 from apps.loans.services.credit_score_service import CreditScoreService
+from apps.loans.services.auto_repayment_service import AutoRepaymentService
 
 
 loan_router = Router(tags=["Loans"])
@@ -250,3 +254,104 @@ async def get_loan_details(request, application_id: UUID):
     user = request.auth
     details = await LoanProcessor.get_loan_details(user, application_id)
     return CustomResponse.success("Loan details retrieved successfully", details)
+
+
+# ==================== AUTO-REPAYMENT ====================
+
+
+@loan_router.post(
+    "/applications/{application_id}/auto-repayment/enable",
+    summary="Enable automatic repayment",
+    response={201: AutoRepaymentDataResponseSchema},
+    auth=AuthUser(),
+)
+async def enable_auto_repayment(
+    request, application_id: UUID, data: EnableAutoRepaymentSchema
+):
+    user = request.auth
+    auto_repayment = await AutoRepaymentService.enable_auto_repayment(
+        user, application_id, data
+    )
+    return CustomResponse.success(
+        "Automatic repayment enabled successfully", auto_repayment, 201
+    )
+
+
+@loan_router.get(
+    "/applications/{application_id}/auto-repayment",
+    summary="Get automatic repayment settings",
+    response={200: AutoRepaymentDataResponseSchema},
+    auth=AuthUser(),
+)
+async def get_auto_repayment(request, application_id: UUID):
+    from apps.loans.services.auto_repayment_service import AutoRepaymentService
+
+    user = request.auth
+    auto_repayment = await AutoRepaymentService.get_auto_repayment(user, application_id)
+    return CustomResponse.success(
+        "Automatic repayment settings retrieved successfully", auto_repayment
+    )
+
+
+@loan_router.put(
+    "/applications/{application_id}/auto-repayment",
+    summary="Update automatic repayment settings",
+    response={200: AutoRepaymentDataResponseSchema},
+    auth=AuthUser(),
+)
+async def update_auto_repayment(
+    request, application_id: UUID, data: UpdateAutoRepaymentSchema
+):
+    user = request.auth
+    auto_repayment = await AutoRepaymentService.update_auto_repayment(
+        user, application_id, data
+    )
+    return CustomResponse.success(
+        "Automatic repayment settings updated successfully", auto_repayment
+    )
+
+
+@loan_router.post(
+    "/applications/{application_id}/auto-repayment/disable",
+    summary="Disable automatic repayment",
+    response={200: dict},
+    auth=AuthUser(),
+)
+async def disable_auto_repayment(request, application_id: UUID):
+    user = request.auth
+    await AutoRepaymentService.disable_auto_repayment(user, application_id)
+    return CustomResponse.success("Automatic repayment disabled successfully")
+
+
+@loan_router.post(
+    "/applications/{application_id}/auto-repayment/suspend",
+    summary="Suspend automatic repayment temporarily",
+    response={200: AutoRepaymentDataResponseSchema},
+    auth=AuthUser(),
+)
+async def suspend_auto_repayment(
+    request, application_id: UUID, reason: Optional[str] = None
+):
+    user = request.auth
+    auto_repayment = await AutoRepaymentService.suspend_auto_repayment(
+        user, application_id, reason
+    )
+    return CustomResponse.success(
+        "Automatic repayment suspended successfully", auto_repayment
+    )
+
+
+@loan_router.post(
+    "/applications/{application_id}/auto-repayment/reactivate",
+    summary="Reactivate suspended automatic repayment",
+    response={200: AutoRepaymentDataResponseSchema},
+    auth=AuthUser(),
+)
+async def reactivate_auto_repayment(request, application_id: UUID):
+    user = request.auth
+    auto_repayment = await AutoRepaymentService.reactivate_auto_repayment(
+        user, application_id
+    )
+    return CustomResponse.success(
+        "Automatic repayment reactivated successfully", auto_repayment
+    )

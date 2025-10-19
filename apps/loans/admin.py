@@ -1,5 +1,6 @@
 from django.contrib import admin
 from apps.loans.models import (
+    AutoRepayment,
     LoanProduct,
     LoanApplication,
     LoanRepaymentSchedule,
@@ -382,3 +383,115 @@ class CreditScoreAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("user")
+
+
+@admin.register(AutoRepayment)
+class AutoRepaymentAdmin(admin.ModelAdmin):
+    list_display = [
+        "auto_repayment_id",
+        "loan",
+        "wallet",
+        "is_enabled",
+        "status",
+        "total_payments_made",
+        "consecutive_failures",
+        "last_payment_date",
+        "created_at",
+    ]
+    list_filter = [
+        "is_enabled",
+        "status",
+        "auto_pay_full_amount",
+        "retry_on_failure",
+        "created_at",
+    ]
+    search_fields = [
+        "loan__user__email",
+        "loan__user__first_name",
+        "loan__user__last_name",
+        "loan__application_id",
+    ]
+    readonly_fields = [
+        "auto_repayment_id",
+        "total_payments_made",
+        "last_payment_date",
+        "last_payment_amount",
+        "last_failure_date",
+        "last_failure_reason",
+        "consecutive_failures",
+        "created_at",
+        "updated_at",
+    ]
+    raw_id_fields = ["loan", "wallet"]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "auto_repayment_id",
+                    "loan",
+                    "wallet",
+                    "is_enabled",
+                    "status",
+                )
+            },
+        ),
+        (
+            "Payment Configuration",
+            {
+                "fields": (
+                    "auto_pay_full_amount",
+                    "custom_amount",
+                    "days_before_due",
+                )
+            },
+        ),
+        (
+            "Retry Configuration",
+            {
+                "fields": (
+                    "retry_on_failure",
+                    "max_retry_attempts",
+                    "retry_interval_hours",
+                )
+            },
+        ),
+        (
+            "Notification Settings",
+            {
+                "fields": (
+                    "send_notification_on_success",
+                    "send_notification_on_failure",
+                )
+            },
+        ),
+        (
+            "Payment Tracking",
+            {
+                "fields": (
+                    "total_payments_made",
+                    "last_payment_date",
+                    "last_payment_amount",
+                )
+            },
+        ),
+        (
+            "Failure Tracking",
+            {
+                "fields": (
+                    "consecutive_failures",
+                    "last_failure_date",
+                    "last_failure_reason",
+                )
+            },
+        ),
+        ("Metadata", {"fields": ("created_at", "updated_at")}),
+    )
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("loan", "loan__user", "wallet", "wallet__currency")
+        )
