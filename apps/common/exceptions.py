@@ -64,6 +64,19 @@ class ErrorCode:
     REPAYMENT_AMOUNT_INVALID = "repayment_amount_invalid"
     EARLY_REPAYMENT_NOT_ALLOWED = "early_repayment_not_allowed"
 
+    # Investment specific
+    INVESTMENT_PRODUCT_INACTIVE = "investment_product_inactive"
+    INVESTMENT_PRODUCT_SOLD_OUT = "investment_product_sold_out"
+    INVESTMENT_AMOUNT_BELOW_MIN = "investment_amount_below_min"
+    INVESTMENT_AMOUNT_ABOVE_MAX = "investment_amount_above_max"
+    INVESTMENT_DURATION_BELOW_MIN = "investment_duration_below_min"
+    INVESTMENT_DURATION_ABOVE_MAX = "investment_duration_above_max"
+    INVESTMENT_NOT_ACTIVE = "investment_not_active"
+    INVESTMENT_NOT_MATURED = "investment_not_matured"
+    INVESTMENT_EARLY_LIQUIDATION_NOT_ALLOWED = "investment_early_liquidation_not_allowed"
+    INVESTMENT_RENEWAL_NOT_ALLOWED = "investment_renewal_not_allowed"
+    INVESTMENT_RETURN_ALREADY_PAID = "investment_return_already_paid"
+
 
 class RequestError(Exception):
     default_detail = "An error occured"
