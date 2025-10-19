@@ -11,7 +11,7 @@ from apps.loans.models import (
     RepaymentStatus,
     AutoRepaymentStatus,
     CreditScore,
-    LoanStatus
+    LoanStatus,
 )
 from apps.loans.services.loan_processor import LoanProcessor
 from apps.loans.schemas import MakeLoanRepaymentSchema

@@ -36,8 +36,7 @@ class InvestmentTasks:
             renewed_count = 0
 
             matured_investments = Investment.objects.filter(
-                status=InvestmentStatus.ACTIVE,
-                maturity_date__lte=today
+                status=InvestmentStatus.ACTIVE, maturity_date__lte=today
             ).select_related("user", "product", "wallet", "wallet__currency")
 
             for investment in matured_investments:
@@ -45,15 +44,12 @@ class InvestmentTasks:
                     # Check if investment has auto-renew enabled
                     if investment.auto_renew and investment.product.allows_auto_renewal:
                         renew_data = RenewInvestmentSchema(
-                            duration_days=investment.duration_days,
-                            auto_renew=True
+                            duration_days=investment.duration_days, auto_renew=True
                         )
 
-                        new_investment = async_to_sync(InvestmentManager.renew_investment)(
-                            investment.user,
-                            investment.investment_id,
-                            renew_data
-                        )
+                        new_investment = async_to_sync(
+                            InvestmentManager.renew_investment
+                        )(investment.user, investment.investment_id, renew_data)
 
                         renewed_count += 1
                         logger.info(
@@ -61,9 +57,9 @@ class InvestmentTasks:
                         )
                     else:
                         # Process maturity payout
-                        processed_investment = async_to_sync(InvestmentProcessor.process_maturity)(
-                            investment.investment_id
-                        )
+                        processed_investment = async_to_sync(
+                            InvestmentProcessor.process_maturity
+                        )(investment.investment_id)
 
                         processed_count += 1
                         logger.info(
@@ -71,7 +67,9 @@ class InvestmentTasks:
                         )
 
                 except Exception as e:
-                    logger.error(f"Failed to process matured investment {investment.investment_id}: {str(e)}")
+                    logger.error(
+                        f"Failed to process matured investment {investment.investment_id}: {str(e)}"
+                    )
                     failed_count += 1
 
             logger.info(
@@ -110,19 +108,19 @@ class InvestmentTasks:
             due_returns = InvestmentReturn.objects.filter(
                 is_paid=False,
                 payout_date__lte=today,
-                investment__status=InvestmentStatus.ACTIVE
+                investment__status=InvestmentStatus.ACTIVE,
             ).select_related(
                 "investment",
                 "investment__user",
                 "investment__wallet",
-                "investment__wallet__currency"
+                "investment__wallet__currency",
             )
 
             for investment_return in due_returns:
                 try:
-                    processed_return = async_to_sync(InvestmentProcessor.process_periodic_return)(
-                        investment_return.return_id
-                    )
+                    processed_return = async_to_sync(
+                        InvestmentProcessor.process_periodic_return
+                    )(investment_return.return_id)
 
                     processed_count += 1
                     logger.info(
@@ -130,7 +128,9 @@ class InvestmentTasks:
                     )
 
                 except Exception as e:
-                    logger.error(f"Failed to process return {investment_return.return_id}: {str(e)}")
+                    logger.error(
+                        f"Failed to process return {investment_return.return_id}: {str(e)}"
+                    )
                     failed_count += 1
 
             logger.info(
@@ -165,14 +165,20 @@ class InvestmentTasks:
 
             for user in users_with_investments:
                 try:
-                    portfolio = async_to_sync(InvestmentProcessor.update_portfolio)(user)
+                    portfolio = async_to_sync(InvestmentProcessor.update_portfolio)(
+                        user
+                    )
                     updated_count += 1
 
                 except Exception as e:
-                    logger.error(f"Failed to update portfolio for user {user.id}: {str(e)}")
+                    logger.error(
+                        f"Failed to update portfolio for user {user.id}: {str(e)}"
+                    )
                     failed_count += 1
 
-            logger.info(f"Portfolio update complete: {updated_count} updated, {failed_count} failed")
+            logger.info(
+                f"Portfolio update complete: {updated_count} updated, {failed_count} failed"
+            )
 
             return {
                 "status": "success",

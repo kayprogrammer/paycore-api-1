@@ -78,6 +78,7 @@ class InvestmentSchema(ModelSchema):
         model = Investment
         exclude = ["id", "updated_at", "deleted_at"]
 
+
 class InvestmentListSchema(BaseSchema):
     investment_id: UUID
     product_name: str
@@ -120,7 +121,9 @@ class InvestmentDetailsDataResponseSchema(ResponseSchema):
 
 
 class LiquidateInvestmentSchema(BaseSchema):
-    reason: Optional[str] = Field(None, max_length=500, description="Reason for liquidation")
+    reason: Optional[str] = Field(
+        None, max_length=500, description="Reason for liquidation"
+    )
     accept_penalty: bool = Field(..., description="Accept early liquidation penalty")
 
 
@@ -139,7 +142,14 @@ class RenewInvestmentSchema(BaseSchema):
 class InvestmentReturnSchema(ModelSchema):
     class Meta:
         model = InvestmentReturn
-        exclude = ["id", "investment", "transaction", "created_at", "updated_at", "deleted_at"]
+        exclude = [
+            "id",
+            "investment",
+            "transaction",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        ]
 
 
 class InvestmentReturnListSchema(ModelSchema):

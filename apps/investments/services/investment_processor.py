@@ -38,7 +38,7 @@ class InvestmentProcessor:
         if investment.status != InvestmentStatus.ACTIVE:
             raise RequestError(
                 ErrorCode.INVESTMENT_NOT_ACTIVE,
-                f"Cannot process maturity for investment with status: {investment.status}"
+                f"Cannot process maturity for investment with status: {investment.status}",
             )
 
         total_payout = investment.principal_amount + investment.actual_returns
@@ -62,7 +62,7 @@ class InvestmentProcessor:
                 "investment_id": str(investment.investment_id),
                 "principal": str(investment.principal_amount),
                 "returns": str(investment.actual_returns),
-            }
+            },
         )
 
         investment.status = InvestmentStatus.MATURED
@@ -93,7 +93,7 @@ class InvestmentProcessor:
             "investment",
             "investment__user",
             "investment__wallet",
-            "investment__wallet__currency"
+            "investment__wallet__currency",
         ).aget_or_none(return_id=return_id)
 
         if not investment_return:
@@ -102,7 +102,7 @@ class InvestmentProcessor:
         if investment_return.is_paid:
             raise RequestError(
                 ErrorCode.INVESTMENT_RETURN_ALREADY_PAID,
-                "This return has already been paid"
+                "This return has already been paid",
             )
 
         investment = investment_return.investment
@@ -110,7 +110,7 @@ class InvestmentProcessor:
         if not investment.is_active:
             raise RequestError(
                 ErrorCode.INVESTMENT_NOT_ACTIVE,
-                "Cannot process returns for inactive investment"
+                "Cannot process returns for inactive investment",
             )
 
         wallet = investment.wallet
@@ -131,7 +131,7 @@ class InvestmentProcessor:
             metadata={
                 "investment_id": str(investment.investment_id),
                 "return_id": str(investment_return.return_id),
-            }
+            },
         )
 
         investment_return.is_paid = True
@@ -159,7 +159,9 @@ class InvestmentProcessor:
             status=InvestmentStatus.MATURED
         ).acount()
 
-        active_agg = await investments.filter(status=InvestmentStatus.ACTIVE).aaggregate(
+        active_agg = await investments.filter(
+            status=InvestmentStatus.ACTIVE
+        ).aaggregate(
             total_invested=Sum("principal_amount"),
             total_returns=Sum("actual_returns"),
         )
@@ -170,9 +172,8 @@ class InvestmentProcessor:
         )
 
         total_invested = all_agg["all_invested"] or Decimal(0)
-        total_active_value = (
-            (active_agg["total_invested"] or Decimal(0)) +
-            (active_agg["total_returns"] or Decimal(0))
+        total_active_value = (active_agg["total_invested"] or Decimal(0)) + (
+            active_agg["total_returns"] or Decimal(0)
         )
         total_returns_earned = all_agg["all_returns"] or Decimal(0)
 
@@ -183,8 +184,7 @@ class InvestmentProcessor:
 
         investments_by_type = {}
         async for row in investments.values("product__product_type").annotate(
-            count=Count("id"),
-            total=Sum("principal_amount")
+            count=Count("id"), total=Sum("principal_amount")
         ):
             investments_by_type[row["product__product_type"]] = {
                 "count": row["count"],
@@ -193,8 +193,7 @@ class InvestmentProcessor:
 
         investments_by_risk = {}
         async for row in investments.values("product__risk_level").annotate(
-            count=Count("id"),
-            total=Sum("principal_amount")
+            count=Count("id"), total=Sum("principal_amount")
         ):
             investments_by_risk[row["product__risk_level"]] = {
                 "count": row["count"],
@@ -202,10 +201,11 @@ class InvestmentProcessor:
             }
 
         thirty_days_from_now = timezone.now() + timezone.timedelta(days=30)
-        upcoming_maturities = await sync_to_async(list)(investments.filter(
-            status=InvestmentStatus.ACTIVE,
-            maturity_date__lte=thirty_days_from_now
-        ).order_by("maturity_date")[:5])
+        upcoming_maturities = await sync_to_async(list)(
+            investments.filter(
+                status=InvestmentStatus.ACTIVE, maturity_date__lte=thirty_days_from_now
+            ).order_by("maturity_date")[:5]
+        )
 
         return {
             "total_investments": total_investments,
@@ -223,18 +223,20 @@ class InvestmentProcessor:
     @staticmethod
     @aatomic
     async def update_portfolio(user: User) -> InvestmentPortfolio:
-        portfolio, created = await InvestmentPortfolio.objects.aget_or_create(
-            user=user
-        )
+        portfolio, created = await InvestmentPortfolio.objects.aget_or_create(user=user)
 
         investments = Investment.objects.filter(user=user)
         # Aggregate data
         total_count = await investments.acount()
         active_count = await investments.filter(status=InvestmentStatus.ACTIVE).acount()
-        matured_count = await investments.filter(status=InvestmentStatus.MATURED).acount()
+        matured_count = await investments.filter(
+            status=InvestmentStatus.MATURED
+        ).acount()
 
         # Financial aggregates
-        active_agg = await investments.filter(status=InvestmentStatus.ACTIVE).aaggregate(
+        active_agg = await investments.filter(
+            status=InvestmentStatus.ACTIVE
+        ).aaggregate(
             total_active=Sum("principal_amount"),
         )
 
@@ -244,7 +246,9 @@ class InvestmentProcessor:
             avg_rate=Avg("interest_rate"),
         )
 
-        matured_agg = await investments.filter(status=InvestmentStatus.MATURED).aaggregate(
+        matured_agg = await investments.filter(
+            status=InvestmentStatus.MATURED
+        ).aaggregate(
             total_matured=Sum("total_payout"),
         )
 
@@ -270,12 +274,16 @@ class InvestmentProcessor:
         if not investment:
             raise NotFoundError("Investment not found")
 
-        returns_history = await sync_to_async(list)(investment.returns.all().order_by("payout_date"))
+        returns_history = await sync_to_async(list)(
+            investment.returns.all().order_by("payout_date")
+        )
         total_returns_paid = sum(ret.amount for ret in returns_history if ret.is_paid)
 
-        next_return = await investment.returns.filter(is_paid=False).order_by(
-            "payout_date"
-        ).afirst()
+        next_return = (
+            await investment.returns.filter(is_paid=False)
+            .order_by("payout_date")
+            .afirst()
+        )
 
         next_payout_date = next_return.payout_date if next_return else None
         next_payout_amount = next_return.amount if next_return else Decimal(0)

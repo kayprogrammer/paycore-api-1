@@ -133,7 +133,14 @@ class InvestmentAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     ]
-    raw_id_fields = ["user", "product", "wallet", "renewed_from", "investment_transaction", "payout_transaction"]
+    raw_id_fields = [
+        "user",
+        "product",
+        "wallet",
+        "renewed_from",
+        "investment_transaction",
+        "payout_transaction",
+    ]
     date_hierarchy = "created_at"
 
     fieldsets = (

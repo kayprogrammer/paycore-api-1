@@ -42,7 +42,9 @@ async def list_investment_products(
     risk_level: Optional[str] = None,
     currency_code: Optional[str] = None,
 ):
-    queryset = InvestmentProduct.objects.filter(is_active=True).select_related("currency")
+    queryset = InvestmentProduct.objects.filter(is_active=True).select_related(
+        "currency"
+    )
     if product_type:
         queryset = queryset.filter(product_type=product_type)
     if risk_level:
@@ -50,7 +52,9 @@ async def list_investment_products(
     if currency_code:
         queryset = queryset.filter(currency__code=currency_code)
     products = await sync_to_async(list)(queryset.order_by("product_type", "name"))
-    return CustomResponse.success("Investment products retrieved successfully", products)
+    return CustomResponse.success(
+        "Investment products retrieved successfully", products
+    )
 
 
 @investment_router.get(
@@ -112,11 +116,19 @@ async def create_investment(request, data: CreateInvestmentSchema):
     response={200: InvestmentListDataResponseSchema},
     auth=AuthUser(),
 )
-async def list_investments(request, status: Optional[str] = None, page_params: PaginationQuerySchema = Query(...)):
+async def list_investments(
+    request,
+    status: Optional[str] = None,
+    page_params: PaginationQuerySchema = Query(...),
+):
     """List user's investments with optional status filter"""
     user = request.auth
-    paginated_investments_data = await InvestmentManager.list_investments(user, status, page_params)
-    return CustomResponse.success("Investments retrieved successfully", paginated_investments_data)
+    paginated_investments_data = await InvestmentManager.list_investments(
+        user, status, page_params
+    )
+    return CustomResponse.success(
+        "Investments retrieved successfully", paginated_investments_data
+    )
 
 
 @investment_router.get(
@@ -133,13 +145,16 @@ async def get_investment_details(request, investment_id: UUID):
 
 # ==================== INVESTMENT ACTIONS ====================
 
+
 @investment_router.post(
     "/investment/{investment_id}/liquidate",
     summary="Liquidate investment (early exit)",
     response={200: InvestmentDataResponseSchema},
     auth=AuthUser(),
 )
-async def liquidate_investment(request, investment_id: UUID, data: LiquidateInvestmentSchema):
+async def liquidate_investment(
+    request, investment_id: UUID, data: LiquidateInvestmentSchema
+):
     user = request.auth
     investment = await InvestmentManager.liquidate_investment(user, investment_id)
     return CustomResponse.success("Investment liquidated successfully", investment)

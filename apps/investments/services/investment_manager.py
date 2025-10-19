@@ -29,14 +29,15 @@ from asgiref.sync import sync_to_async
 from apps.common.paginators import Paginator
 from apps.common.schemas import PaginationQuerySchema
 
+
 class InvestmentManager:
     """Service for managing investments"""
 
     @staticmethod
     async def get_investment_product(product_id) -> InvestmentProduct:
-        product = await InvestmentProduct.objects.select_related("currency").aget_or_none(
-            product_id=product_id
-        )
+        product = await InvestmentProduct.objects.select_related(
+            "currency"
+        ).aget_or_none(product_id=product_id)
         if not product:
             raise NotFoundError("Investment product not found")
 
@@ -49,37 +50,37 @@ class InvestmentManager:
         if not product.is_active:
             raise RequestError(
                 ErrorCode.INVESTMENT_PRODUCT_INACTIVE,
-                "This investment product is not currently available"
+                "This investment product is not currently available",
             )
 
         if not product.is_available:
             raise RequestError(
                 ErrorCode.INVESTMENT_PRODUCT_SOLD_OUT,
-                "This investment product has no available slots"
+                "This investment product has no available slots",
             )
 
         if data.amount < product.min_amount:
             raise RequestError(
                 ErrorCode.INVESTMENT_AMOUNT_BELOW_MIN,
-                f"Minimum investment amount is {product.min_amount} {product.currency.code}"
+                f"Minimum investment amount is {product.min_amount} {product.currency.code}",
             )
 
         if product.max_amount and data.amount > product.max_amount:
             raise RequestError(
                 ErrorCode.INVESTMENT_AMOUNT_ABOVE_MAX,
-                f"Maximum investment amount is {product.max_amount} {product.currency.code}"
+                f"Maximum investment amount is {product.max_amount} {product.currency.code}",
             )
 
         if data.duration_days < product.min_duration_days:
             raise RequestError(
                 ErrorCode.INVESTMENT_DURATION_BELOW_MIN,
-                f"Minimum investment duration is {product.min_duration_days} days"
+                f"Minimum investment duration is {product.min_duration_days} days",
             )
 
         if product.max_duration_days and data.duration_days > product.max_duration_days:
             raise RequestError(
                 ErrorCode.INVESTMENT_DURATION_ABOVE_MAX,
-                f"Maximum investment duration is {product.max_duration_days} days"
+                f"Maximum investment duration is {product.max_duration_days} days",
             )
 
         wallet = await Wallet.objects.select_related("currency").aget_or_none(
@@ -91,14 +92,13 @@ class InvestmentManager:
 
         if wallet.currency_id != product.currency_id:
             raise ValidationError(
-                "wallet_id",
-                f"Wallet currency must be {product.currency.code}"
+                "wallet_id", f"Wallet currency must be {product.currency.code}"
             )
 
         if wallet.available_balance < data.amount:
             raise RequestError(
                 ErrorCode.INSUFFICIENT_BALANCE,
-                f"Insufficient balance. Available: {wallet.available_balance} {wallet.currency.code}"
+                f"Insufficient balance. Available: {wallet.available_balance} {wallet.currency.code}",
             )
 
         # Calculate investment details
@@ -153,7 +153,9 @@ class InvestmentManager:
         return investment
 
     @staticmethod
-    async def _generate_payout_schedule(investment: Investment, product: InvestmentProduct):
+    async def _generate_payout_schedule(
+        investment: Investment, product: InvestmentProduct
+    ):
         frequency_days = {
             InterestPayoutFrequency.MONTHLY: 30,
             InterestPayoutFrequency.QUARTERLY: 90,
@@ -199,14 +201,20 @@ class InvestmentManager:
         return investment
 
     @staticmethod
-    async def list_investments(user: User, status: Optional[str] = None, page_params: PaginationQuerySchema = None):
+    async def list_investments(
+        user: User,
+        status: Optional[str] = None,
+        page_params: PaginationQuerySchema = None,
+    ):
         queryset = Investment.objects.filter(user=user).select_related(
             "product", "product__currency", "wallet"
         )
 
         if status:
             queryset = queryset.filter(status=status)
-        paginated_data = await Paginator.paginate_queryset(queryset.order_by("-created_at"), page_params.page, page_params.limit)
+        paginated_data = await Paginator.paginate_queryset(
+            queryset.order_by("-created_at"), page_params.page, page_params.limit
+        )
         return paginated_data
 
     @staticmethod
@@ -218,12 +226,12 @@ class InvestmentManager:
         if not investment.is_active:
             raise RequestError(
                 ErrorCode.INVESTMENT_NOT_ACTIVE,
-                f"Cannot liquidate investment with status: {investment.status}"
+                f"Cannot liquidate investment with status: {investment.status}",
             )
         if not investment.product.allows_early_liquidation:
             raise RequestError(
                 ErrorCode.INVESTMENT_EARLY_LIQUIDATION_NOT_ALLOWED,
-                "Early liquidation is not allowed for this investment product"
+                "Early liquidation is not allowed for this investment product",
             )
 
         penalty_amount = Decimal(0)
@@ -231,9 +239,13 @@ class InvestmentManager:
             penalty_rate = investment.product.early_liquidation_penalty / 100
             penalty_amount = investment.principal_amount * penalty_rate
 
-        payout_amount = investment.principal_amount + investment.actual_returns - penalty_amount
+        payout_amount = (
+            investment.principal_amount + investment.actual_returns - penalty_amount
+        )
 
-        wallet = await Wallet.objects.select_related("currency").aget(id=investment.wallet_id)
+        wallet = await Wallet.objects.select_related("currency").aget(
+            id=investment.wallet_id
+        )
         wallet.balance += payout_amount
         wallet.available_balance += payout_amount
         await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
@@ -251,7 +263,7 @@ class InvestmentManager:
                 "principal": str(investment.principal_amount),
                 "returns": str(investment.actual_returns),
                 "penalty": str(penalty_amount),
-            }
+            },
         )
 
         # Update investment
@@ -286,7 +298,7 @@ class InvestmentManager:
         if old_investment.status != InvestmentStatus.MATURED:
             raise RequestError(
                 ErrorCode.INVESTMENT_NOT_MATURED,
-                "Only matured investments can be renewed"
+                "Only matured investments can be renewed",
             )
 
         product = await InvestmentProduct.objects.select_related("currency").aget(
@@ -296,26 +308,26 @@ class InvestmentManager:
         if not product.allows_auto_renewal:
             raise RequestError(
                 ErrorCode.INVESTMENT_RENEWAL_NOT_ALLOWED,
-                "This investment product does not allow renewals"
+                "This investment product does not allow renewals",
             )
 
         if not product.is_available:
             raise RequestError(
                 ErrorCode.INVESTMENT_PRODUCT_SOLD_OUT,
-                "This investment product has no available slots"
+                "This investment product has no available slots",
             )
 
         duration_days = data.duration_days or old_investment.duration_days
         if duration_days < product.min_duration_days:
             raise RequestError(
                 ErrorCode.INVESTMENT_DURATION_BELOW_MIN,
-                f"Minimum investment duration is {product.min_duration_days} days"
+                f"Minimum investment duration is {product.min_duration_days} days",
             )
 
         if product.max_duration_days and duration_days > product.max_duration_days:
             raise RequestError(
                 ErrorCode.INVESTMENT_DURATION_ABOVE_MAX,
-                f"Maximum investment duration is {product.max_duration_days} days"
+                f"Maximum investment duration is {product.max_duration_days} days",
             )
 
         # Calculate new investment details
@@ -356,23 +368,31 @@ class InvestmentManager:
         return new_investment
 
     @staticmethod
-    async def calculate_investment(product_id, amount: Decimal, duration_days: int) -> dict:
+    async def calculate_investment(
+        product_id, amount: Decimal, duration_days: int
+    ) -> dict:
         product = await InvestmentManager.get_investment_product(product_id)
 
         interest_decimal = product.interest_rate / 100
         expected_returns = (amount * interest_decimal * duration_days) / 365
         total_maturity_value = amount + expected_returns
 
-        effective_annual_rate = (expected_returns / amount) * (365 / duration_days) * 100
+        effective_annual_rate = (
+            (expected_returns / amount) * (365 / duration_days) * 100
+        )
 
         payout_schedule = []
 
         if product.payout_frequency == InterestPayoutFrequency.AT_MATURITY:
-            payout_schedule.append({
-                "date": (timezone.now() + timedelta(days=duration_days)).isoformat(),
-                "amount": float(total_maturity_value),
-                "type": "maturity",
-            })
+            payout_schedule.append(
+                {
+                    "date": (
+                        timezone.now() + timedelta(days=duration_days)
+                    ).isoformat(),
+                    "amount": float(total_maturity_value),
+                    "type": "maturity",
+                }
+            )
         else:
             frequency_days = {
                 InterestPayoutFrequency.MONTHLY: 30,
@@ -384,24 +404,30 @@ class InvestmentManager:
             interval_days = frequency_days.get(product.payout_frequency, 0)
             if interval_days:
                 total_payouts = duration_days // interval_days
-                interest_per_payout = expected_returns / total_payouts if total_payouts > 0 else 0
+                interest_per_payout = (
+                    expected_returns / total_payouts if total_payouts > 0 else 0
+                )
 
                 current_date = timezone.now()
                 for i in range(total_payouts):
                     payout_date = current_date + timedelta(days=interval_days * (i + 1))
-                    payout_schedule.append({
-                        "date": payout_date.isoformat(),
-                        "amount": float(interest_per_payout),
-                        "type": "interest",
-                    })
+                    payout_schedule.append(
+                        {
+                            "date": payout_date.isoformat(),
+                            "amount": float(interest_per_payout),
+                            "type": "interest",
+                        }
+                    )
 
                 # Final payout with principal
                 maturity_date = current_date + timedelta(days=duration_days)
-                payout_schedule.append({
-                    "date": maturity_date.isoformat(),
-                    "amount": float(amount),
-                    "type": "principal",
-                })
+                payout_schedule.append(
+                    {
+                        "date": maturity_date.isoformat(),
+                        "amount": float(amount),
+                        "type": "principal",
+                    }
+                )
 
         return {
             "product_id": product.product_id,

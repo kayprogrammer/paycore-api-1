@@ -73,7 +73,9 @@ class ErrorCode:
     INVESTMENT_DURATION_ABOVE_MAX = "investment_duration_above_max"
     INVESTMENT_NOT_ACTIVE = "investment_not_active"
     INVESTMENT_NOT_MATURED = "investment_not_matured"
-    INVESTMENT_EARLY_LIQUIDATION_NOT_ALLOWED = "investment_early_liquidation_not_allowed"
+    INVESTMENT_EARLY_LIQUIDATION_NOT_ALLOWED = (
+        "investment_early_liquidation_not_allowed"
+    )
     INVESTMENT_RENEWAL_NOT_ALLOWED = "investment_renewal_not_allowed"
     INVESTMENT_RETURN_ALREADY_PAID = "investment_return_already_paid"
 

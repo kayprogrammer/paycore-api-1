@@ -10,6 +10,7 @@ from apps.accounts.models import User
 
 class InvestmentType(models.TextChoices):
     """Types of investment products"""
+
     FIXED_DEPOSIT = "fixed_deposit", "Fixed Deposit"
     SAVINGS_PLAN = "savings_plan", "Savings Plan"
     MUTUAL_FUND = "mutual_fund", "Mutual Fund"
@@ -21,6 +22,7 @@ class InvestmentType(models.TextChoices):
 
 class RiskLevel(models.TextChoices):
     """Investment risk levels"""
+
     LOW = "low", "Low Risk"
     MEDIUM = "medium", "Medium Risk"
     HIGH = "high", "High Risk"
@@ -29,6 +31,7 @@ class RiskLevel(models.TextChoices):
 
 class InterestPayoutFrequency(models.TextChoices):
     """How often interest/returns are paid"""
+
     MONTHLY = "monthly", "Monthly"
     QUARTERLY = "quarterly", "Quarterly"
     SEMI_ANNUALLY = "semi_annually", "Semi-Annually"
@@ -38,6 +41,7 @@ class InterestPayoutFrequency(models.TextChoices):
 
 class InvestmentStatus(models.TextChoices):
     """Status of a user's investment"""
+
     PENDING = "pending", "Pending"
     ACTIVE = "active", "Active"
     MATURED = "matured", "Matured"
@@ -49,53 +53,57 @@ class InvestmentStatus(models.TextChoices):
 class InvestmentProduct(BaseModel):
     """Investment products offered by the platform"""
 
-    product_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    product_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
     name = models.CharField(max_length=200)
     product_type = models.CharField(max_length=20, choices=InvestmentType.choices)
     description = models.TextField(blank=True)
 
     currency = models.ForeignKey(
-        "wallets.Currency",
-        on_delete=models.PROTECT,
-        related_name="investment_products"
+        "wallets.Currency", on_delete=models.PROTECT, related_name="investment_products"
     )
     min_amount = models.DecimalField(max_digits=20, decimal_places=2)
-    max_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    max_amount = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True
+    )
 
     interest_rate = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        help_text="Annual interest rate in percentage"
+        max_digits=5, decimal_places=2, help_text="Annual interest rate in percentage"
     )
     payout_frequency = models.CharField(
         max_length=20,
         choices=InterestPayoutFrequency.choices,
-        default=InterestPayoutFrequency.AT_MATURITY
+        default=InterestPayoutFrequency.AT_MATURITY,
     )
 
-    min_duration_days = models.PositiveIntegerField(help_text="Minimum investment duration in days")
+    min_duration_days = models.PositiveIntegerField(
+        help_text="Minimum investment duration in days"
+    )
     max_duration_days = models.PositiveIntegerField(
         null=True,
         blank=True,
-        help_text="Maximum investment duration in days (null for flexible)"
+        help_text="Maximum investment duration in days (null for flexible)",
     )
 
-    risk_level = models.CharField(max_length=20, choices=RiskLevel.choices, default=RiskLevel.LOW)
-    is_capital_guaranteed = models.BooleanField(default=True, help_text="Is principal amount guaranteed?")
+    risk_level = models.CharField(
+        max_length=20, choices=RiskLevel.choices, default=RiskLevel.LOW
+    )
+    is_capital_guaranteed = models.BooleanField(
+        default=True, help_text="Is principal amount guaranteed?"
+    )
     allows_early_liquidation = models.BooleanField(default=False)
     early_liquidation_penalty = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=0,
-        help_text="Penalty percentage for early liquidation"
+        help_text="Penalty percentage for early liquidation",
     )
     allows_auto_renewal = models.BooleanField(default=True)
 
     is_active = models.BooleanField(default=True)
     available_slots = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Limited slots available (null for unlimited)"
+        null=True, blank=True, help_text="Limited slots available (null for unlimited)"
     )
     slots_taken = models.PositiveIntegerField(default=0)
 
@@ -117,7 +125,10 @@ class InvestmentProduct(BaseModel):
     def is_available(self):
         if not self.is_active:
             return False
-        if self.available_slots is not None and self.slots_taken >= self.available_slots:
+        if (
+            self.available_slots is not None
+            and self.slots_taken >= self.available_slots
+        ):
             return False
         return True
 
@@ -125,22 +136,26 @@ class InvestmentProduct(BaseModel):
 class Investment(BaseModel):
     """User's investment instances"""
 
-    investment_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    investment_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, db_index=True
+    )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="investments")
-    product = models.ForeignKey(InvestmentProduct, on_delete=models.PROTECT, related_name="investments")
+    product = models.ForeignKey(
+        InvestmentProduct, on_delete=models.PROTECT, related_name="investments"
+    )
     wallet = models.ForeignKey(
         "wallets.Wallet",
         on_delete=models.PROTECT,
         related_name="investments",
-        help_text="Wallet used for investment and returns"
+        help_text="Wallet used for investment and returns",
     )
 
     principal_amount = models.DecimalField(max_digits=20, decimal_places=2)
     interest_rate = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        help_text="Interest rate at time of investment (locked)"
+        help_text="Interest rate at time of investment (locked)",
     )
     duration_days = models.PositiveIntegerField(help_text="Investment duration in days")
 
@@ -149,27 +164,25 @@ class Investment(BaseModel):
     actual_maturity_date = models.DateTimeField(null=True, blank=True)
 
     expected_returns = models.DecimalField(
-        max_digits=20,
-        decimal_places=2,
-        help_text="Expected total returns at maturity"
+        max_digits=20, decimal_places=2, help_text="Expected total returns at maturity"
     )
     actual_returns = models.DecimalField(
         max_digits=20,
         decimal_places=2,
         default=0,
-        help_text="Actual returns earned so far"
+        help_text="Actual returns earned so far",
     )
     total_payout = models.DecimalField(
         max_digits=20,
         decimal_places=2,
         default=0,
-        help_text="Total amount paid out (principal + returns)"
+        help_text="Total amount paid out (principal + returns)",
     )
 
     status = models.CharField(
         max_length=20,
         choices=InvestmentStatus.choices,
-        default=InvestmentStatus.PENDING
+        default=InvestmentStatus.PENDING,
     )
 
     auto_renew = models.BooleanField(default=False)
@@ -178,14 +191,12 @@ class Investment(BaseModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="renewals"
+        related_name="renewals",
     )
 
     liquidation_date = models.DateTimeField(null=True, blank=True)
     liquidation_penalty = models.DecimalField(
-        max_digits=20,
-        decimal_places=2,
-        default=0
+        max_digits=20, decimal_places=2, default=0
     )
 
     investment_transaction = models.ForeignKey(
@@ -193,14 +204,14 @@ class Investment(BaseModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="investments_created"
+        related_name="investments_created",
     )
     payout_transaction = models.ForeignKey(
         "transactions.Transaction",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="investments_paid_out"
+        related_name="investments_paid_out",
     )
 
     notes = models.TextField(blank=True)
@@ -249,7 +260,9 @@ class InvestmentReturn(BaseModel):
 
     return_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
-    investment = models.ForeignKey(Investment, on_delete=models.CASCADE, related_name="returns")
+    investment = models.ForeignKey(
+        Investment, on_delete=models.CASCADE, related_name="returns"
+    )
 
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     payout_date = models.DateTimeField()
@@ -262,7 +275,7 @@ class InvestmentReturn(BaseModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="investment_returns"
+        related_name="investment_returns",
     )
 
     notes = models.TextField(blank=True)
@@ -281,12 +294,20 @@ class InvestmentReturn(BaseModel):
 class InvestmentPortfolio(BaseModel):
     """Aggregate portfolio view for each user"""
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="investment_portfolio")
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="investment_portfolio"
+    )
 
     total_invested = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    total_active_investments = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    total_returns_earned = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    total_matured_value = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    total_active_investments = models.DecimalField(
+        max_digits=20, decimal_places=2, default=0
+    )
+    total_returns_earned = models.DecimalField(
+        max_digits=20, decimal_places=2, default=0
+    )
+    total_matured_value = models.DecimalField(
+        max_digits=20, decimal_places=2, default=0
+    )
 
     active_investments_count = models.PositiveIntegerField(default=0)
     matured_investments_count = models.PositiveIntegerField(default=0)
@@ -296,7 +317,7 @@ class InvestmentPortfolio(BaseModel):
         max_digits=5,
         decimal_places=2,
         default=0,
-        help_text="Average return rate across all investments"
+        help_text="Average return rate across all investments",
     )
 
     last_calculated_at = models.DateTimeField(auto_now=True)
