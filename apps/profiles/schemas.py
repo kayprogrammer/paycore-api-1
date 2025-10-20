@@ -20,7 +20,7 @@ class UserUpdateSchema(BaseSchema):
     push_enabled: bool = Field(..., example=True)
     in_app_enabled: bool = Field(..., example=True)
     email_enabled: bool = Field(..., example=True)
-    
+
     @field_validator("first_name", "last_name")
     def no_spaces(cls, v: str):
         if " " in v:

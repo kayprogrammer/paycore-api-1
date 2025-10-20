@@ -28,7 +28,9 @@ class NotificationTriggers:
     # ============= Payment Notifications =============
 
     @staticmethod
-    def payment_received(user: User, amount: Decimal, currency: str, reference: str = None):
+    def payment_received(
+        user: User, amount: Decimal, currency: str, reference: str = None
+    ):
         NotificationTasks.send_notification.delay(
             user_id=user.id,
             title="Payment Received",
@@ -41,7 +43,13 @@ class NotificationTriggers:
         )
 
     @staticmethod
-    def payment_sent(user: User, amount: Decimal, currency: str, recipient: str, reference: str = None):
+    def payment_sent(
+        user: User,
+        amount: Decimal,
+        currency: str,
+        recipient: str,
+        reference: str = None,
+    ):
         NotificationTasks.send_notification.delay(
             user_id=user.id,
             title="Payment Sent",
@@ -113,7 +121,9 @@ class NotificationTriggers:
         )
 
     @staticmethod
-    def loan_payment_due(user: User, loan_id: str, amount: Decimal, currency: str, due_date: str):
+    def loan_payment_due(
+        user: User, loan_id: str, amount: Decimal, currency: str, due_date: str
+    ):
         NotificationTasks.send_notification.delay(
             user_id=user.id,
             title="Loan Payment Due",
@@ -141,7 +151,9 @@ class NotificationTriggers:
         )
 
     @staticmethod
-    def card_transaction(user: User, card_id: str, amount: Decimal, currency: str, merchant: str):
+    def card_transaction(
+        user: User, card_id: str, amount: Decimal, currency: str, merchant: str
+    ):
         NotificationTasks.send_notification.delay(
             user_id=user.id,
             title="Card Transaction",
@@ -218,7 +230,9 @@ class NotificationTriggers:
     # ============= Bill Payment Notifications =============
 
     @staticmethod
-    def bill_payment_successful(user: User, amount: Decimal, currency: str, biller: str, reference: str = None):
+    def bill_payment_successful(
+        user: User, amount: Decimal, currency: str, biller: str, reference: str = None
+    ):
         NotificationTasks.send_notification.delay(
             user_id=user.id,
             title="Bill Payment Successful",
@@ -231,7 +245,9 @@ class NotificationTriggers:
         )
 
     @staticmethod
-    def bill_payment_failed(user: User, amount: Decimal, currency: str, biller: str, reason: str = None):
+    def bill_payment_failed(
+        user: User, amount: Decimal, currency: str, biller: str, reason: str = None
+    ):
         message = f"Your {biller} bill payment of {currency} {amount:,.2f} failed"
         if reason:
             message += f": {reason}"

@@ -21,7 +21,7 @@ class NotificationTasks:
     @shared_task(
         name="notifications.send_notification",
         queue="notifications",
-        retry_kwargs={"max_retries": 3, "countdown": 60}
+        retry_kwargs={"max_retries": 3, "countdown": 60},
     )
     def send_notification(
         user_id: int,
@@ -29,7 +29,7 @@ class NotificationTasks:
         message: str,
         notification_type: str = "other",
         priority: str = "medium",
-        **kwargs
+        **kwargs,
     ):
         """
         Send notification to a user (in-app, push, and real-time)
@@ -58,7 +58,9 @@ class NotificationTasks:
                 logger.info(f"Notification sent to user {user_id}: {title}")
                 return {"status": "success", "notification_id": str(notification.id)}
             else:
-                logger.warning(f"Notification not sent to user {user_id} (disabled in preferences)")
+                logger.warning(
+                    f"Notification not sent to user {user_id} (disabled in preferences)"
+                )
                 return {"status": "skipped", "reason": "user_preferences"}
 
         except User.DoesNotExist:
@@ -72,7 +74,7 @@ class NotificationTasks:
     @shared_task(
         name="notifications.send_bulk_notification",
         queue="notifications",
-        retry_kwargs={"max_retries": 2, "countdown": 120}
+        retry_kwargs={"max_retries": 2, "countdown": 120},
     )
     def send_bulk_notification(
         user_ids: List[int],
@@ -80,7 +82,7 @@ class NotificationTasks:
         message: str,
         notification_type: str = "system",
         priority: str = "medium",
-        **kwargs
+        **kwargs,
     ):
         """
         Send notification to multiple users efficiently using bulk operations
@@ -146,13 +148,12 @@ class NotificationCleanupTasks:
         Runs daily at 2 AM
         """
         try:
-            retention_days = getattr(settings, 'NOTIFICATION_RETENTION_DAYS', 90)
+            retention_days = getattr(settings, "NOTIFICATION_RETENTION_DAYS", 90)
             cutoff_date = timezone.now() - timedelta(days=retention_days)
 
             # Delete old read notifications
             deleted_count, _ = Notification.objects.filter(
-                is_read=True,
-                read_at__lt=cutoff_date
+                is_read=True, read_at__lt=cutoff_date
             ).delete()
 
             logger.info(f"Cleaned up {deleted_count} old notifications")
@@ -164,7 +165,9 @@ class NotificationCleanupTasks:
             raise
 
     @staticmethod
-    @shared_task(name="notifications.cleanup_expired_notifications", queue="maintenance")
+    @shared_task(
+        name="notifications.cleanup_expired_notifications", queue="maintenance"
+    )
     def cleanup_expired_notifications():
         try:
             deleted_count, _ = Notification.objects.filter(
@@ -179,6 +182,7 @@ class NotificationCleanupTasks:
             logger.error(f"Error deleting expired notifications: {str(e)}")
             raise
 
+
 class NotificationStatsTask:
     """Tasks for notification statistics and analytics"""
 
@@ -192,7 +196,9 @@ class NotificationStatsTask:
         try:
             yesterday = timezone.now() - timedelta(days=1)
             start_of_day = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_of_day = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
+            end_of_day = yesterday.replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            )
 
             # Count notifications sent yesterday
             notifications = Notification.objects.filter(
@@ -229,7 +235,9 @@ class NotificationStatsTask:
                 "by_priority": by_priority,
             }
 
-            logger.info(f"Daily notification stats generated: {total_sent} notifications sent")
+            logger.info(
+                f"Daily notification stats generated: {total_sent} notifications sent"
+            )
 
             # You can save these stats to a model or send to an analytics service
             return stats

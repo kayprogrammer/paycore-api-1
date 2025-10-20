@@ -23,6 +23,7 @@ from apps.investments.views import investment_router
 from apps.support.views import support_router
 from apps.compliance.views import compliance_router
 from apps.notifications.views import notification_router
+from apps.audit_logs.views import audit_router
 from apps.common.health_checks import celery_health_check, system_health_check
 from django.urls import path
 
@@ -57,6 +58,7 @@ api.add_router(
     "/api/v1/compliance", compliance_router
 )  # Mixed auth (user and admin endpoints)
 api.add_router("/api/v1/notifications", notification_router, auth=AuthUser())
+api.add_router("/api/v1/audit-logs", audit_router, auth=AuthUser())
 
 
 class HealthCheckResponse(Schema):

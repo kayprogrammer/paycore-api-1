@@ -1,17 +1,30 @@
 from typing import Dict, Any, List
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from firebase_admin.messaging import APNSConfig, APNSPayload, AndroidConfig, AndroidNotification, Aps, Message, MulticastMessage, Notification, send_each_for_multicast
+from firebase_admin.messaging import (
+    APNSConfig,
+    APNSPayload,
+    AndroidConfig,
+    AndroidNotification,
+    Aps,
+    Message,
+    MulticastMessage,
+    Notification,
+    send_each_for_multicast,
+)
 import logging
 
 try:
     from firebase_admin import messaging
     from fcm_django.models import FCMDevice
+
     FIREBASE_AVAILABLE = True
 except ImportError:
     FIREBASE_AVAILABLE = False
     logger = logging.getLogger(__name__)
-    logger.warning("Firebase Admin SDK not available. Push notifications will not work.")
+    logger.warning(
+        "Firebase Admin SDK not available. Push notifications will not work."
+    )
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -36,7 +49,11 @@ class FCMService:
 
         if not user.push_enabled:
             logger.info(f"Push notifications disabled for user {user.id}")
-            return {"success": 0, "failure": 0, "errors": ["Push notifications disabled for user"]}
+            return {
+                "success": 0,
+                "failure": 0,
+                "errors": ["Push notifications disabled for user"],
+            }
 
         try:
             device = FCMDevice.objects.filter(user=user, active=True).first()
@@ -45,7 +62,9 @@ class FCMService:
                 logger.info(f"No active device for user {user.id}")
                 return {"success": 0, "failure": 0, "errors": ["No active device"]}
 
-            device.send_message(Message(notification=Notification(title=title, body=body), data=data))
+            device.send_message(
+                Message(notification=Notification(title=title, body=body), data=data)
+            )
             logger.info(f"Push notification sent to user {user.id}")
             return {"success": 1, "failure": 0}
 
@@ -81,7 +100,7 @@ class FCMService:
                         sound=sound,
                         channel_id="default",
                         priority="high",
-                    )
+                    ),
                 ),
                 apns=APNSConfig(
                     payload=APNSPayload(
@@ -101,16 +120,22 @@ class FCMService:
             invalid_tokens = [
                 tokens[idx]
                 for idx, resp in enumerate(response.responses)
-                if not resp.success and resp.exception
-                and resp.exception.code in ["invalid-registration-token", "registration-token-not-registered"]
+                if not resp.success
+                and resp.exception
+                and resp.exception.code
+                in ["invalid-registration-token", "registration-token-not-registered"]
             ]
 
             # Bulk deactivate invalid tokens in one query
             if invalid_tokens:
-                deactivated = FCMDevice.objects.filter(registration_id__in=invalid_tokens).update(active=False)
+                deactivated = FCMDevice.objects.filter(
+                    registration_id__in=invalid_tokens
+                ).update(active=False)
                 logger.info(f"Deactivated {deactivated} invalid device tokens")
 
-            logger.info(f"Push sent: {response.success_count} success, {response.failure_count} failed")
+            logger.info(
+                f"Push sent: {response.success_count} success, {response.failure_count} failed"
+            )
 
             return {
                 "success": response.success_count,
@@ -141,13 +166,12 @@ class FCMService:
                     title=title,
                     body=body,
                 ),
-                data=data
+                data=data,
             ),
-            topic
+            topic,
         )
         logger.info(f"Successfully sent message to topic {topic}: {response}")
         return True
-
 
     @staticmethod
     async def subscribe_to_topic(user: User, topic: str) -> Dict[str, int]:
@@ -168,7 +192,6 @@ class FCMService:
             return {"success": 0, "failure": 0, "errors": ["No active device"]}
         device.handle_topic_subscription(False, topic=topic)
         return {"success": 1, "failure": 0}
-
 
     @staticmethod
     async def register_device(
@@ -192,19 +215,25 @@ class FCMService:
                     "registration_id": device_token,
                     "type": device_type,
                     "active": True,
-                }
+                },
             )
 
             action = "registered" if created else "updated"
             logger.info(f"Device {action} for user {user.id}: {device_type}")
 
             # Subscribe user to global FCM topic
-            subscription_result = FCMService.subscribe_to_topic(user, settings.GLOBAL_FCM_TOPIC_NAME)
+            subscription_result = FCMService.subscribe_to_topic(
+                user, settings.GLOBAL_FCM_TOPIC_NAME
+            )
 
             if subscription_result["success"] > 0:
-                logger.info(f"User {user.id} subscribed to topic: {settings.GLOBAL_FCM_TOPIC_NAME}")
+                logger.info(
+                    f"User {user.id} subscribed to topic: {settings.GLOBAL_FCM_TOPIC_NAME}"
+                )
             else:
-                logger.warning(f"Failed to subscribe user {user.id} to topic: {settings.GLOBAL_FCM_TOPIC_NAME}")
+                logger.warning(
+                    f"Failed to subscribe user {user.id} to topic: {settings.GLOBAL_FCM_TOPIC_NAME}"
+                )
 
             return {
                 "success": True,
@@ -235,7 +264,11 @@ class FCMService:
 
         try:
             # Get all user IDs
-            user_ids = [u.id for u in users] if isinstance(users, list) else list(users.values_list('id', flat=True))
+            user_ids = (
+                [u.id for u in users]
+                if isinstance(users, list)
+                else list(users.values_list("id", flat=True))
+            )
 
             devices = FCMDevice.objects.filter(user_id__in=user_ids, active=True)
 
@@ -243,9 +276,13 @@ class FCMService:
                 logger.info(f"No active devices for {len(user_ids)} users")
                 return {"success": 0, "failure": 0, "errors": ["No active devices"]}
 
-            devices.send_message(Message(notification=Notification(title=title, body=body), data=data))
+            devices.send_message(
+                Message(notification=Notification(title=title, body=body), data=data)
+            )
             device_count = devices.count()
-            logger.info(f"Bulk push sent to {device_count} devices for {len(user_ids)} users")
+            logger.info(
+                f"Bulk push sent to {device_count} devices for {len(user_ids)} users"
+            )
             return {"success": device_count, "failure": 0}
 
         except Exception as e:

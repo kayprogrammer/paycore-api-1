@@ -149,25 +149,25 @@ from celery.schedules import crontab
 
 app.conf.beat_schedule = {
     # Notification cleanup tasks
-    'cleanup-old-notifications': {
-        'task': 'notifications.cleanup_old_notifications',
-        'schedule': crontab(hour=2, minute=0),  # 2 AM daily
+    "cleanup-old-notifications": {
+        "task": "notifications.cleanup_old_notifications",
+        "schedule": crontab(hour=2, minute=0),  # 2 AM daily
     },
-    'cleanup-expired-notifications': {
-        'task': 'notifications.cleanup_expired_notifications',
-        'schedule': crontab(minute=0),  # Every hour
+    "cleanup-expired-notifications": {
+        "task": "notifications.cleanup_expired_notifications",
+        "schedule": crontab(minute=0),  # Every hour
     },
-    'generate-daily-notification-stats': {
-        'task': 'notifications.generate_daily_stats',
-        'schedule': crontab(hour=0, minute=5),  # 00:05 daily
+    "generate-daily-notification-stats": {
+        "task": "notifications.generate_daily_stats",
+        "schedule": crontab(hour=0, minute=5),  # 00:05 daily
     },
     # Compliance tasks (from previous implementation)
-    'daily-kyc-expiry-check': {
-        'task': 'compliance.daily_kyc_expiry_check',
-        'schedule': crontab(hour=0, minute=0),  # Midnight daily
+    "daily-kyc-expiry-check": {
+        "task": "compliance.daily_kyc_expiry_check",
+        "schedule": crontab(hour=0, minute=0),  # Midnight daily
     },
-    'weekly-sanctions-rescan': {
-        'task': 'compliance.weekly_sanctions_rescan',
-        'schedule': crontab(day_of_week=1, hour=2, minute=0),  # Monday 2 AM
+    "weekly-sanctions-rescan": {
+        "task": "compliance.weekly_sanctions_rescan",
+        "schedule": crontab(day_of_week=1, hour=2, minute=0),  # Monday 2 AM
     },
 }

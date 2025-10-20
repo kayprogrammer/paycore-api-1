@@ -470,6 +470,7 @@ async def biometrics_login(
     # Register FCM device and subscribe to global topic if provided
     if data.device_token and data.device_type:
         from apps.notifications.services.fcm import FCMService
+
         FCMService.register_device(user, data.device_token, data.device_type)
 
     # Create access and refresh tokens

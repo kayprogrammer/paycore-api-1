@@ -1,6 +1,7 @@
 from urllib.parse import parse_qs
 from apps.accounts.auth import Authentication
 
+
 class NotificationAuthMiddleware:
     """
     Middleware to authenticate WebSocket connections using JWT token

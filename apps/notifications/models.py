@@ -31,11 +31,9 @@ class Notification(BaseModel):
     In-app notification model
     Supports real-time delivery via WebSockets and push notifications via FCM
     """
+
     user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="notifications",
-        db_index=True
+        User, on_delete=models.CASCADE, related_name="notifications", db_index=True
     )
 
     # Content
@@ -45,12 +43,12 @@ class Notification(BaseModel):
         max_length=20,
         choices=NotificationType.choices,
         default=NotificationType.OTHER,
-        db_index=True
+        db_index=True,
     )
     priority = models.CharField(
         max_length=10,
         choices=NotificationPriority.choices,
-        default=NotificationPriority.MEDIUM
+        default=NotificationPriority.MEDIUM,
     )
 
     # Status tracking
@@ -65,41 +63,34 @@ class Notification(BaseModel):
 
     # Related object (polymorphic reference)
     related_object_type = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Model name: Payment, Loan, Card, etc."
+        max_length=50, blank=True, help_text="Model name: Payment, Loan, Card, etc."
     )
     related_object_id = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="UUID or ID of related object"
+        max_length=100, blank=True, help_text="UUID or ID of related object"
     )
 
     # Action data (for deep linking in mobile apps)
     action_url = models.CharField(
         max_length=500,
         blank=True,
-        help_text="Deep link or URL to open when notification is tapped"
+        help_text="Deep link or URL to open when notification is tapped",
     )
     action_data = models.JSONField(
         default=dict,
         blank=True,
-        help_text="Additional data for handling notification action"
+        help_text="Additional data for handling notification action",
     )
 
     # Metadata
     metadata = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Additional metadata for the notification"
+        default=dict, blank=True, help_text="Additional metadata for the notification"
     )
 
     expires_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Optional expiration date for time-sensitive notifications"
+        help_text="Optional expiration date for time-sensitive notifications",
     )
-
 
     class Meta:
         ordering = ["-created_at"]
@@ -129,31 +120,26 @@ class NotificationTemplate(BaseModel):
     Reusable notification templates
     For consistent messaging across the platform
     """
+
     name = models.CharField(max_length=100, unique=True)
     notification_type = models.CharField(
-        max_length=20,
-        choices=NotificationType.choices
+        max_length=20, choices=NotificationType.choices
     )
     priority = models.CharField(
         max_length=10,
         choices=NotificationPriority.choices,
-        default=NotificationPriority.MEDIUM
+        default=NotificationPriority.MEDIUM,
     )
 
     # Template content (supports variable substitution)
     title_template = models.CharField(
-        max_length=200,
-        help_text="Use {{variable}} for substitution"
+        max_length=200, help_text="Use {{variable}} for substitution"
     )
-    message_template = models.TextField(
-        help_text="Use {{variable}} for substitution"
-    )
+    message_template = models.TextField(help_text="Use {{variable}} for substitution")
 
     # Default action
     action_url_template = models.CharField(
-        max_length=500,
-        blank=True,
-        help_text="Use {{variable}} for substitution"
+        max_length=500, blank=True, help_text="Use {{variable}} for substitution"
     )
 
     is_active = models.BooleanField(default=True)
@@ -170,13 +156,17 @@ class NotificationTemplate(BaseModel):
 
         def replace_vars(template: str, ctx: dict):
             return re.sub(
-                r'\{\{(\w+)\}\}',
+                r"\{\{(\w+)\}\}",
                 lambda m: str(ctx.get(m.group(1), m.group(0))),
-                template
+                template,
             )
 
         return {
             "title": replace_vars(self.title_template, context),
             "message": replace_vars(self.message_template, context),
-            "action_url": replace_vars(self.action_url_template, context) if self.action_url_template else "",
+            "action_url": (
+                replace_vars(self.action_url_template, context)
+                if self.action_url_template
+                else ""
+            ),
         }

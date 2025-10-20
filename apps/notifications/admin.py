@@ -39,36 +39,26 @@ class NotificationAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
 
     fieldsets = (
-        ("Basic Information", {
-            "fields": ("id", "user", "title", "message")
-        }),
-        ("Classification", {
-            "fields": ("notification_type", "priority")
-        }),
-        ("Status", {
-            "fields": ("is_read", "read_at")
-        }),
-        ("Delivery Tracking", {
-            "fields": (
-                "sent_via_push",
-                "push_sent_at",
-                "sent_via_websocket",
-                "websocket_sent_at",
-            )
-        }),
-        ("Related Object", {
-            "fields": ("related_object_type", "related_object_id")
-        }),
-        ("Action Data", {
-            "fields": ("action_url", "action_data")
-        }),
-        ("Metadata", {
-            "fields": ("metadata", "expires_at")
-        }),
-        ("Timestamps", {
-            "fields": ("created_at", "updated_at")
-        }),
+        ("Basic Information", {"fields": ("id", "user", "title", "message")}),
+        ("Classification", {"fields": ("notification_type", "priority")}),
+        ("Status", {"fields": ("is_read", "read_at")}),
+        (
+            "Delivery Tracking",
+            {
+                "fields": (
+                    "sent_via_push",
+                    "push_sent_at",
+                    "sent_via_websocket",
+                    "websocket_sent_at",
+                )
+            },
+        ),
+        ("Related Object", {"fields": ("related_object_type", "related_object_id")}),
+        ("Action Data", {"fields": ("action_url", "action_data")}),
+        ("Metadata", {"fields": ("metadata", "expires_at")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
+
 
 @admin.register(NotificationTemplate)
 class NotificationTemplateAdmin(admin.ModelAdmin):
@@ -86,14 +76,16 @@ class NotificationTemplateAdmin(admin.ModelAdmin):
     ordering = ["name"]
 
     fieldsets = (
-        ("Basic Information", {
-            "fields": ("id", "name", "notification_type", "priority", "is_active")
-        }),
-        ("Template Content", {
-            "fields": ("title_template", "message_template", "action_url_template"),
-            "description": "Use {{variable}} for variable substitution"
-        }),
-        ("Timestamps", {
-            "fields": ("created_at", "updated_at")
-        }),
+        (
+            "Basic Information",
+            {"fields": ("id", "name", "notification_type", "priority", "is_active")},
+        ),
+        (
+            "Template Content",
+            {
+                "fields": ("title_template", "message_template", "action_url_template"),
+                "description": "Use {{variable}} for variable substitution",
+            },
+        ),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )

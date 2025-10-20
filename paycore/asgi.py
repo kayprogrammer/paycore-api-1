@@ -23,11 +23,11 @@ from channels.security.websocket import AllowedHostsOriginValidator
 from apps.notifications.consumers import NotificationAuthMiddleware
 from apps.notifications.routing import websocket_urlpatterns
 
-application = ProtocolTypeRouter({
-    "http": django_asgi_app,
-    "websocket": AllowedHostsOriginValidator(
-        NotificationAuthMiddleware(
-            URLRouter(websocket_urlpatterns)
-        )
-    ),
-})
+application = ProtocolTypeRouter(
+    {
+        "http": django_asgi_app,
+        "websocket": AllowedHostsOriginValidator(
+            NotificationAuthMiddleware(URLRouter(websocket_urlpatterns))
+        ),
+    }
+)

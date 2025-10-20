@@ -30,7 +30,9 @@ class WebSocketService:
             channel_layer = get_channel_layer()
 
             if not channel_layer:
-                logger.warning("Channel layer not configured. WebSocket notification not sent.")
+                logger.warning(
+                    "Channel layer not configured. WebSocket notification not sent."
+                )
                 return False
 
             # Prepare notification data
@@ -57,7 +59,7 @@ class WebSocketService:
                 {
                     "type": "notification_message",
                     "notification": notification_data,
-                }
+                },
             )
 
             logger.info(f"WebSocket notification sent to user {user_id}")
@@ -82,7 +84,7 @@ class WebSocketService:
                 {
                     "type": "unread_count_update",
                     "count": count,
-                }
+                },
             )
 
             return True
@@ -117,7 +119,7 @@ class WebSocketService:
                 {
                     "type": "notification_message",
                     "notification": notification_data,
-                }
+                },
             )
 
             logger.info("Broadcast notification sent to all users")
@@ -137,7 +139,9 @@ class WebSocketService:
             channel_layer = get_channel_layer()
 
             if not channel_layer:
-                logger.warning("Channel layer not configured. WebSocket notifications not sent.")
+                logger.warning(
+                    "Channel layer not configured. WebSocket notifications not sent."
+                )
                 return 0
 
             sent_count = 0
@@ -176,15 +180,19 @@ class WebSocketService:
                             {
                                 "type": "notification_message",
                                 "notification": notification_data,
-                            }
+                            },
                         )
                         sent_count += 1
 
                     except Exception as e:
-                        logger.error(f"Error sending WebSocket notification {notification.id}: {str(e)}")
+                        logger.error(
+                            f"Error sending WebSocket notification {notification.id}: {str(e)}"
+                        )
                         continue
 
-            logger.info(f"Bulk sent {sent_count} WebSocket notifications to {len(user_notifications)} users")
+            logger.info(
+                f"Bulk sent {sent_count} WebSocket notifications to {len(user_notifications)} users"
+            )
             return sent_count
 
         except Exception as e:
@@ -192,7 +200,12 @@ class WebSocketService:
             return 0
 
     @staticmethod
-    def bulk_send_push(users: Union[List[User], Any], title: str, message: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
+    def bulk_send_push(
+        users: Union[List[User], Any],
+        title: str,
+        message: str,
+        data: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
         """
         Send push notifications to multiple users efficiently
         Uses FCM topics or batch sending for better performance
@@ -203,8 +216,8 @@ class WebSocketService:
         try:
 
             # Get all active device tokens for these users
-            if hasattr(users, 'values_list'):
-                user_ids = list(users.values_list('id', flat=True))
+            if hasattr(users, "values_list"):
+                user_ids = list(users.values_list("id", flat=True))
             else:
                 user_ids = [u.id for u in users]
 
@@ -216,7 +229,7 @@ class WebSocketService:
                 return {"success": 0, "failure": 0, "errors": ["No active devices"]}
 
             # Get all device tokens
-            tokens = list(devices.values_list('registration_id', flat=True))
+            tokens = list(devices.values_list("registration_id", flat=True))
 
             # Use FCM batch send
             result = FCMService.send_to_tokens(
@@ -226,7 +239,9 @@ class WebSocketService:
                 data=data,
             )
 
-            logger.info(f"Bulk push sent to {len(user_ids)} users: {result['success']} succeeded, {result['failure']} failed")
+            logger.info(
+                f"Bulk push sent to {len(user_ids)} users: {result['success']} succeeded, {result['failure']} failed"
+            )
             return result
 
         except Exception as e:

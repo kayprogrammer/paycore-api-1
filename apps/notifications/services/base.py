@@ -44,7 +44,9 @@ class NotificationService:
         """
         try:
             if not user.in_app_enabled:
-                logger.info(f"Skipping in-app notification for user {user.id} - disabled in preferences")
+                logger.info(
+                    f"Skipping in-app notification for user {user.id} - disabled in preferences"
+                )
                 return None
 
             notification = Notification.objects.create(
@@ -64,12 +66,17 @@ class NotificationService:
             update_fields = ["updated_at"]
             # Send push notification if enabled
             if send_push and user.push_enabled:
-                FCMService.send_to_user(user, title, message, {
-                    "notification_id": str(notification.id),
-                    "notification_type": notification_type,
-                    "action_url": action_url or "",
-                    **(action_data or {})
-                })
+                FCMService.send_to_user(
+                    user,
+                    title,
+                    message,
+                    {
+                        "notification_id": str(notification.id),
+                        "notification_type": notification_type,
+                        "action_url": action_url or "",
+                        **(action_data or {}),
+                    },
+                )
                 notification.sent_via_push = True
                 notification.push_sent_at = timezone.now()
                 update_fields.extend(["sent_via_push", "push_sent_at"])
@@ -99,8 +106,7 @@ class NotificationService:
     ) -> Optional[Notification]:
         try:
             template = NotificationTemplate.objects.get_or_none(
-                name=template_name,
-                is_active=True
+                name=template_name, is_active=True
             )
 
             if not template:
@@ -124,13 +130,21 @@ class NotificationService:
             return None
 
     @staticmethod
-    async def get_user_notifications(user: User, filters, page_params) -> Dict[str, Any]:
+    async def get_user_notifications(
+        user: User, filters, page_params
+    ) -> Dict[str, Any]:
         query &= Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        notifications = Notification.objects.filter(user=user).filter(query).order_by("-created_at")
+        notifications = (
+            Notification.objects.filter(user=user).filter(query).order_by("-created_at")
+        )
         notifications = filters.filter(notifications)
-        unread_count = await Notification.objects.filter(user=user, is_read=False).acount()
+        unread_count = await Notification.objects.filter(
+            user=user, is_read=False
+        ).acount()
 
-        paginated_data = await Paginator.paginate_queryset(notifications, page_params.page, page_params.limit)
+        paginated_data = await Paginator.paginate_queryset(
+            notifications, page_params.page, page_params.limit
+        )
         paginated_data["unread"] = unread_count
         return paginated_data
 
@@ -138,10 +152,14 @@ class NotificationService:
     async def mark_as_read(user: User, payload: MarkNotificationsReadSchema) -> int:
         notification_ids = payload.notification_ids
         filters = {} if len(notification_ids) < 1 else {"id__in": notification_ids}
-        return await Notification.objects.filter(user=user, is_read=False, **filters).aupdate(is_read=True, read_at=timezone.now())
+        return await Notification.objects.filter(
+            user=user, is_read=False, **filters
+        ).aupdate(is_read=True, read_at=timezone.now())
 
     @staticmethod
-    async def delete_notifications(user: User, payload: MarkNotificationsReadSchema) -> bool:
+    async def delete_notifications(
+        user: User, payload: MarkNotificationsReadSchema
+    ) -> bool:
         notification_ids = payload.notification_ids
         filters = {} if len(notification_ids) < 1 else {"id__in": notification_ids}
         await Notification.objects.filter(user=user, is_read=False, **filters).adelete()
@@ -152,12 +170,20 @@ class NotificationService:
 
         # Count by type
         by_type = dict(
-            await sync_to_async(list)(notifications.values("notification_type").annotate(count=Count("id")).values_list("notification_type", "count"))
+            await sync_to_async(list)(
+                notifications.values("notification_type")
+                .annotate(count=Count("id"))
+                .values_list("notification_type", "count")
+            )
         )
 
         # Count by priority
         by_priority = dict(
-            await sync_to_async(list)(notifications.values("priority").annotate(count=Count("id")).values_list("priority", "count"))
+            await sync_to_async(list)(
+                notifications.values("priority")
+                .annotate(count=Count("id"))
+                .values_list("priority", "count")
+            )
         )
 
         return {
@@ -230,7 +256,9 @@ class NotificationService:
             )
             created_count = len(created_notifications)
 
-            logger.info(f"Bulk created {created_count} notifications for {len(users_list)} users")
+            logger.info(
+                f"Bulk created {created_count} notifications for {len(users_list)} users"
+            )
 
             # Prepare updates dict - we'll update everything in one query at the end
             updates = {}
@@ -245,8 +273,8 @@ class NotificationService:
                     data={
                         "notification_type": notification_type,
                         "action_url": action_url or "",
-                        **(action_data or {})
-                    }
+                        **(action_data or {}),
+                    },
                 )
 
                 if push_results.get("success", 0) > 0:

@@ -27,18 +27,15 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
 
     # Notifications
     push_enabled = models.BooleanField(
-        default=True,
-        help_text="Receive push notifications"
+        default=True, help_text="Receive push notifications"
     )
     in_app_enabled = models.BooleanField(
-        default=True,
-        help_text="Receive in-app notifications"
+        default=True, help_text="Receive in-app notifications"
     )
     email_enabled = models.BooleanField(
-        default=True,
-        help_text="Receive email notifications"
+        default=True, help_text="Receive email notifications"
     )
-    
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
     objects = CustomUserManager()
