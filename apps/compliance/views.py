@@ -40,7 +40,7 @@ from apps.accounts.models import User
 from apps.compliance.tasks import KYCWebhookTasks
 import json
 
-compliance_router = Router(tags=["Compliance"])
+compliance_router = Router(tags=["Compliance (22)"])
 
 
 # ==================== KYC ENDPOINTS ====================

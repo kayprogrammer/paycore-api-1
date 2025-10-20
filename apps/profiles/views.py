@@ -10,7 +10,7 @@ from apps.profiles.schemas import (
 from apps.profiles.models import Country
 from asgiref.sync import sync_to_async
 
-profiles_router = Router(tags=["Profiles"])
+profiles_router = Router(tags=["Profiles (3)"])
 
 
 @profiles_router.get(
@@ -52,7 +52,7 @@ async def update_user(
     """,
     response=CountryListResponseSchema,
 )
-async def list_countries(request, filters: CountryFilterSchema = Query(...)):
+async def list_countries(request, filters: CountryFilterSchema):
     filtered_countries = filters.filter(Country.objects.filter(is_active=True))
     countries = await sync_to_async(list)(filtered_countries)
     return CustomResponse.success(

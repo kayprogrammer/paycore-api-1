@@ -16,7 +16,7 @@ from apps.cards.schemas import (
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 
-card_router = Router(tags=["Cards"])
+card_router = Router(tags=["Cards (12)"])
 
 
 # =============== CARD MANAGEMENT ENDPOINTS ===============

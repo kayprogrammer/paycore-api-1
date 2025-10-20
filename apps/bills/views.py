@@ -15,7 +15,7 @@ from apps.bills.services.bill_manager import BillManager
 from apps.bills.models import BillProvider, BillPackage
 from asgiref.sync import sync_to_async
 
-bill_router = Router(tags=["Bill Payments"])
+bill_router = Router(tags=["Bill Payments (7)"])
 
 
 # ============================================================================

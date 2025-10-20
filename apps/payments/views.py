@@ -27,7 +27,7 @@ from apps.payments.models import Payment
 from apps.wallets.schemas import CurrencySchema
 
 
-payment_router = Router(tags=["Payments"])
+payment_router = Router(tags=["Payments (16)"])
 
 
 # ==================== PAYMENT LINKS ====================

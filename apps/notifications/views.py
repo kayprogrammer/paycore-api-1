@@ -11,7 +11,7 @@ from apps.notifications.schemas import (
 )
 from apps.notifications.services import NotificationService
 
-notification_router = Router(tags=["Notifications"])
+notification_router = Router(tags=["Notifications (4)"])
 
 
 # ============= Notification Endpoints =============

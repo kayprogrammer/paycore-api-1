@@ -24,7 +24,7 @@ from apps.investments.models import InvestmentType, RiskLevel
 from apps.investments.models import InvestmentProduct
 from asgiref.sync import sync_to_async
 
-investment_router = Router(tags=["Investments"])
+investment_router = Router(tags=["Investments (10)"])
 
 
 # ==================== INVESTMENT PRODUCTS ====================

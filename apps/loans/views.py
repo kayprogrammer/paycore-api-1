@@ -31,7 +31,7 @@ from apps.loans.services.credit_score_service import CreditScoreService
 from apps.loans.services.auto_repayment_service import AutoRepaymentService
 
 
-loan_router = Router(tags=["Loans"])
+loan_router = Router(tags=["Loans (20)"])
 
 
 # ==================== LOAN PRODUCTS ====================

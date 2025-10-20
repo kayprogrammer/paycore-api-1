@@ -20,7 +20,7 @@ django_asgi_app = get_asgi_application()
 # Import channels and routing after Django is initialized
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
-from apps.notifications.consumers import NotificationAuthMiddleware
+from apps.notifications.middlewares import NotificationAuthMiddleware
 from apps.notifications.routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter(

@@ -21,7 +21,7 @@ from apps.support.services.ticket_manager import TicketManager
 from apps.support.models import FAQ
 from asgiref.sync import sync_to_async
 
-support_router = Router(tags=["Support"])
+support_router = Router(tags=["Support (9)"])
 
 
 # ==================== TICKETS ====================
@@ -150,7 +150,7 @@ async def get_ticket_stats(request):
     response={200: FAQListDataResponseSchema},
     auth=AuthUser(),
 )
-async def list_faqs(request, filters: FAQFilterSchema = Query(...)):
+async def list_faqs(request, filters: FAQFilterSchema):
     queryset = filters.filter(FAQ.objects.filter(is_published=True))
     faqs = await sync_to_async(list)(queryset.order_by("order", "-created_at"))
     return CustomResponse.success("FAQs retrieved successfully", faqs)

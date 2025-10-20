@@ -24,7 +24,7 @@ from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 from apps.wallets.models import Wallet
 
-transaction_router = Router(tags=["Transactions"])
+transaction_router = Router(tags=["Transactions (11)"])
 
 
 # =============== TRANSACTION ENDPOINTS ===============
@@ -82,8 +82,8 @@ async def initiate_transfer(request, data: InitiateTransferSchema):
 )
 async def list_transactions(
     request,
-    filters: Query[TransactionFilterSchema] = Query(...),
-    page_params: Query[PaginationQuerySchema] = Query(...),
+    filters: TransactionFilterSchema = Query(...),
+    page_params: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
     result = await TransactionOperations.list_user_transactions(
@@ -117,8 +117,8 @@ async def get_transaction(request, transaction_id: UUID):
 async def get_wallet_transactions(
     request,
     wallet_id: UUID,
-    filters: Query[TransactionFilterSchema] = Query(...),
-    page_params: Query[PaginationQuerySchema] = Query(...),
+    filters: TransactionFilterSchema = Query(...),
+    page_params: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
     wallet = await Wallet.objects.aget_or_none(wallet_id=wallet_id, user=user)
@@ -240,7 +240,7 @@ async def create_dispute(request, transaction_id: UUID, data: CreateDisputeSchem
 async def list_disputes(
     request,
     status: DisputeStatus = None,
-    page_params: Query[PaginationQuerySchema] = Query(...),
+    page_params: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
 

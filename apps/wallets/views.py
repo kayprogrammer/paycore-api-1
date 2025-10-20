@@ -31,7 +31,7 @@ from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
 from apps.common.exceptions import RequestError, ErrorCode
 
-wallet_router = Router(tags=["Wallets"])
+wallet_router = Router(tags=["Wallets (19)"])
 
 
 # =============== WALLET MANAGEMENT ENDPOINTS ===============

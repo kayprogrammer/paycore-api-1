@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-webhook_router = Router(tags=["Card Webhooks"])
+webhook_router = Router(tags=["Card Webhooks (2)"])
 
 
 @webhook_router.post("/webhooks/flutterwave", auth=None)

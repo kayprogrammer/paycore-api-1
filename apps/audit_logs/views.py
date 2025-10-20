@@ -19,7 +19,7 @@ from apps.audit_logs.schemas import (
 )
 from apps.common.exceptions import NotFoundError, RequestError, ErrorCode
 
-audit_router = Router(tags=["Audit Logs"])
+audit_router = Router(tags=["Audit Logs (3)"])
 
 
 @audit_router.get(
@@ -34,7 +34,7 @@ audit_router = Router(tags=["Audit Logs"])
 )
 async def get_audit_logs(
     request,
-    filters: AuditLogFilterSchema = Query(...),
+    filters: AuditLogFilterSchema,
     pagination: PaginationQuerySchema = Query(...),
 ):
     user = request.auth

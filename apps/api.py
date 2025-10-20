@@ -65,7 +65,7 @@ class HealthCheckResponse(Schema):
     message: str
 
 
-@api.get("/api/v1/healthcheck/", response=HealthCheckResponse, tags=["HealthCheck"])
+@api.get("/api/v1/healthcheck/", response=HealthCheckResponse, tags=["HealthCheck (1)"])
 async def healthcheck(request):
     return {"message": "pong"}
 

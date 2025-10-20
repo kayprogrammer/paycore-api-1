@@ -10,24 +10,24 @@ from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, Respons
 
 
 class AuditLogFilterSchema(FilterSchema):
-    event_type: Optional[EventType] = Field(None, description="Filter by event type")
-    event_category: Optional[EventCategory] = Field(
-        None, description="Filter by event category"
+    event_type: Optional[str] = Field(default=None, description="Filter by event type")
+    event_category: Optional[str] = Field(
+        default=None, description="Filter by event category"
     )
-    severity: Optional[SeverityLevel] = Field(
-        None, description="Filter by severity level"
+    severity: Optional[str] = Field(
+        default=None, description="Filter by severity level"
     )
-    user_id: Optional[UUID] = Field(None, description="Filter by user ID")
-    resource_type: Optional[str] = Field(None, description="Filter by resource type")
-    resource_id: Optional[str] = Field(None, description="Filter by resource ID")
-    ip_address: Optional[str] = Field(None, description="Filter by IP address")
-    start_date: Optional[datetime] = Field(None, description="Filter by start date")
-    end_date: Optional[datetime] = Field(None, description="Filter by end date")
+    user_id: Optional[UUID] = Field(default=None, description="Filter by user ID")
+    resource_type: Optional[str] = Field(default=None, description="Filter by resource type")
+    resource_id: Optional[str] = Field(default=None, description="Filter by resource ID")
+    ip_address: Optional[str] = Field(default=None, description="Filter by IP address")
+    start_date: Optional[datetime] = Field(default=None, description="Filter by start date")
+    end_date: Optional[datetime] = Field(default=None, description="Filter by end date")
     is_compliance_event: Optional[bool] = Field(
-        None, description="Filter compliance events"
+        default=None, description="Filter compliance events"
     )
     is_suspicious: Optional[bool] = Field(
-        None, description="Filter suspicious activities"
+        default=None, description="Filter suspicious activities"
     )
 
     def filter_is_suspicious(self, value: bool) -> Q:

@@ -25,7 +25,7 @@ from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
 from apps.notifications.services.fcm import FCMService
 
-auth_router = Router(tags=["Auth"])
+auth_router = Router(tags=["Auth (13)"])
 
 
 @auth_router.post(
