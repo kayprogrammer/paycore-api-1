@@ -1,3 +1,4 @@
+from fcm_django.models import DeviceType
 from pydantic import field_validator, Field, EmailStr
 from apps.common.schemas import BaseSchema, ResponseSchema
 
@@ -33,6 +34,8 @@ class LoginUserSchema(EmailSchema):
 
 class LoginMfaSchema(EmailSchema):
     otp: int = Field(..., example=123456)
+    device_token: str | None = Field(None, description="FCM device token for push notifications")
+    device_type: DeviceType | None = Field(None, description="Device type: ios, android, web")
 
 
 TOKEN_EXAMPLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
@@ -42,6 +45,8 @@ class TokenSchema(BaseSchema):
     token: str = Field(
         None, example=TOKEN_EXAMPLE
     )  # use for token refresh and google login (id_token)
+    device_token: str | None = Field(None, description="FCM device token for push notifications")
+    device_type: DeviceType | None = Field(None, description="Device type: ios, android, web")
 
 
 # RESPONSE SCHEMAS
@@ -68,6 +73,8 @@ class BiometricsLoginSchema(BaseSchema):
     email: EmailStr = Field(..., example="johndoe@example.com")
     trust_token: str = Field(..., example="trust_token_abc123")
     device_id: str = Field(..., example="device_12345")
+    device_token: str | None = Field(None, description="FCM device token for push notifications")
+    device_type: str | None = Field(None, description="Device type: ios, android, web")
 
 
 class BiometricsResponseDataSchema(BaseSchema):

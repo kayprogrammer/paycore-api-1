@@ -1,5 +1,8 @@
 from pathlib import Path
 from decouple import config
+import json
+import firebase_admin
+from firebase_admin import credentials
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -36,6 +39,8 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "django_celery_results",
     "django_prometheus",
+    "channels",
+    "fcm_django",
 ]
 
 LOCAL_APPS = [
@@ -417,3 +422,62 @@ CARD_PROVIDERS_TEST_MODE = config("CARD_PROVIDERS_TEST_MODE", default=True, cast
 # Wise Configuration (Future use)
 WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default="")
 WISE_LIVE_API_KEY = config("WISE_LIVE_API_KEY", default="")
+
+# Django Channels Configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(config("REDIS_HOST", default="localhost"), config("REDIS_PORT", default=6379, cast=int))],
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    },
+}
+
+# Firebase Admin SDK Configuration
+
+FIREBASE_APP = None
+FIREBASE_CREDENTIALS_JSON = config("FIREBASE_CREDENTIALS_JSON", default="")
+FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default="")
+
+# Initialize Firebase Admin SDK
+if FIREBASE_CREDENTIALS_JSON and FIREBASE_CREDENTIALS_JSON.strip():
+    # Option 1: Using JSON string from environment variable (Production)
+    try:
+        cred_dict = json.loads(FIREBASE_CREDENTIALS_JSON)
+        cred = credentials.Certificate(cred_dict)
+        FIREBASE_APP = firebase_admin.initialize_app(cred)
+        print("✓ Firebase initialized from environment variable")
+    except json.JSONDecodeError as e:
+        print(f"✗ Failed to parse Firebase JSON credentials: {e}")
+    except Exception as e:
+        print(f"✗ Failed to initialize Firebase from JSON: {e}")
+elif FIREBASE_CREDENTIALS_PATH and FIREBASE_CREDENTIALS_PATH.strip():
+    # Option 2: Using JSON file path (Development)
+    try:
+        import os
+        service_account_path = os.path.join(BASE_DIR, FIREBASE_CREDENTIALS_PATH)
+        if os.path.exists(service_account_path):
+            cred = credentials.Certificate(service_account_path)
+            FIREBASE_APP = firebase_admin.initialize_app(cred)
+            print(f"✓ Firebase initialized from file: {FIREBASE_CREDENTIALS_PATH}")
+        else:
+            print(f"✗ Firebase credentials file not found: {service_account_path}")
+    except Exception as e:
+        print(f"✗ Failed to initialize Firebase from file: {e}")
+else:
+    print("⚠ Firebase credentials not configured. Push notifications will not work.")
+
+# FCM Django Settings
+FCM_DJANGO_SETTINGS = {
+    "DEFAULT_FIREBASE_APP": FIREBASE_APP,
+    "APP_VERBOSE_NAME": "PayCore",
+    "ONE_DEVICE_PER_USER": True,
+    "DELETE_INACTIVE_DEVICES": True,
+    "TIMEOUT": 30,
+}
+
+# Notification Settings
+NOTIFICATION_RETENTION_DAYS = config("NOTIFICATION_RETENTION_DAYS", default=90, cast=int)
+SITE_URL = config("SITE_URL", default="http://localhost:8000")

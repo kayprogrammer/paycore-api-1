@@ -1,12 +1,4 @@
-from uuid import UUID
 from ninja import File, Form, Query, Router, UploadedFile
-from apps.accounts.auth import AuthAdmin
-from apps.common.exceptions import (
-    ErrorCode,
-    NotFoundError,
-    RequestError,
-    ValidationError,
-)
 from apps.common.responses import CustomResponse
 from apps.common.utils import set_dict_attr
 from apps.profiles.schemas import (

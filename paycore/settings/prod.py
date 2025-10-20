@@ -2,6 +2,8 @@ from .base import *
 
 DEBUG = False
 
+GLOBAL_FCM_TOPIC_NAME = "Paycore_global"
+
 CELERY_BROKER_USE_SSL = True
 CELERY_SSL_KEYFILE = ""
 CELERY_SSL_CERTFILE = ""

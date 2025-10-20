@@ -25,6 +25,20 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     access = models.TextField(editable=False, null=True)
     refresh = models.TextField(editable=False, null=True)
 
+    # Notifications
+    push_enabled = models.BooleanField(
+        default=True,
+        help_text="Receive push notifications"
+    )
+    in_app_enabled = models.BooleanField(
+        default=True,
+        help_text="Receive in-app notifications"
+    )
+    email_enabled = models.BooleanField(
+        default=True,
+        help_text="Receive email notifications"
+    )
+    
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
     objects = CustomUserManager()

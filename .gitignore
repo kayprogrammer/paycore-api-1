@@ -61,6 +61,11 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Firebase credentials
+fcm.json
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+
 # Flask stuff:
 instance/
 .webassets-cache

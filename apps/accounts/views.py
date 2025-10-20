@@ -23,6 +23,7 @@ from apps.accounts.schemas import (
 from apps.common.exceptions import ErrorCode, RequestError, ValidationError
 from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
+from apps.notifications.services.fcm import FCMService
 
 auth_router = Router(tags=["Auth"])
 
@@ -271,6 +272,9 @@ async def login_complete(request, data: LoginMfaSchema, response: HttpResponse):
     user.otp_code, user.otp_expires_at = None, None
     await user.asave()
 
+    if data.device_token and data.device_type:
+        await FCMService.register_device(user, data.device_token, data.device_type)
+
     # Create secure tokens
     access_token, refresh_token = await Authentication.create_tokens_for_user(user)
 
@@ -360,6 +364,10 @@ async def google_login(request, data: TokenSchema, response: HttpResponse):
     user = await Authentication.store_google_user(
         user_data["email"], user_data["name"], user_data.get("picture")
     )
+
+    # Register FCM device and subscribe to global topic if provided
+    if data.device_token and data.device_type:
+        await FCMService.register_device(user, data.device_token, data.device_type)
 
     # Create secure tokens using our enhanced system
     access_token, refresh_token = await Authentication.create_tokens_for_user(user)
@@ -458,6 +466,11 @@ async def biometrics_login(
             err_msg=error_msg or "Invalid biometrics credentials",
             status_code=401,
         )
+
+    # Register FCM device and subscribe to global topic if provided
+    if data.device_token and data.device_type:
+        from apps.notifications.services.fcm import FCMService
+        FCMService.register_device(user, data.device_token, data.device_type)
 
     # Create access and refresh tokens
     access_token, refresh_token = await Authentication.create_tokens_for_user(user)
