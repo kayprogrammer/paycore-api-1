@@ -222,7 +222,7 @@ class FCMService:
             logger.info(f"Device {action} for user {user.id}: {device_type}")
 
             # Subscribe user to global FCM topic
-            subscription_result = FCMService.subscribe_to_topic(
+            subscription_result = await FCMService.subscribe_to_topic(
                 user, settings.GLOBAL_FCM_TOPIC_NAME
             )
 

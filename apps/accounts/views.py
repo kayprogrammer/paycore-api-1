@@ -234,7 +234,7 @@ async def login_initiate(request, data: LoginUserSchema):
         Web clients receive refresh token as HTTP-only cookie.
     """,
     response={200: TokensResponseSchema},
-    throttle=AnonRateThrottle("3/15m"),
+    throttle=AnonRateThrottle("100/15m"),
 )
 async def login_complete(request, data: LoginMfaSchema, response: HttpResponse):
     email = data.email

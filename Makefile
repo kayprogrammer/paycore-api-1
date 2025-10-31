@@ -36,7 +36,10 @@ mig: # run with "make mig" or "make mig app='app'"
 
 init:
 	python manage.py gen
-	
+
+upc:
+	python manage.py upsert_countries
+
 test:
 	pytest --disable-warnings -vv -x
 

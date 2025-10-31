@@ -6,7 +6,6 @@ Production-grade monitoring for fintech applications
 import logging
 import time
 from datetime import datetime, UTC
-from celery import signals
 from celery.signals import (
     task_prerun,
     task_postrun,

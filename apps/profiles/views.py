@@ -52,7 +52,7 @@ async def update_user(
     """,
     response=CountryListResponseSchema,
 )
-async def list_countries(request, filters: CountryFilterSchema):
+async def list_countries(request, filters: CountryFilterSchema = Query(...)):
     filtered_countries = filters.filter(Country.objects.filter(is_active=True))
     countries = await sync_to_async(list)(filtered_countries)
     return CustomResponse.success(
