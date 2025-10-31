@@ -15,7 +15,7 @@ from apps.common.exceptions import (
     NotFoundError,
     RequestError,
     ErrorCode,
-    ValidationError,
+    BodyValidationError,
 )
 from apps.payments.schemas import CreateInvoiceSchema, UpdateInvoiceSchema
 
@@ -36,7 +36,7 @@ class InvoiceManager:
             wallet_id=data.wallet_id, user=user
         )
         if not wallet:
-            raise ValidationError("wallet_id", "Wallet not found")
+            raise BodyValidationError("wallet_id", "Wallet not found")
 
         subtotal = sum(item.quantity * item.unit_price for item in data.items)
         total_amount = subtotal + data.tax_amount - data.discount_amount

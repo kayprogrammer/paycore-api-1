@@ -9,7 +9,7 @@ from apps.accounts.models import User
 from apps.common.decorators import aatomic
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -55,15 +55,15 @@ class AutoRepaymentService:
             wallet_id=data.wallet_id, user=user
         )
         if not wallet:
-            raise ValidationError("wallet_id", "Wallet not found")
+            raise BodyValidationError("wallet_id", "Wallet not found")
 
         if wallet.currency_id != loan.wallet.currency_id:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id", f"Wallet currency must be {loan.wallet.currency.code}"
             )
 
         if not data.auto_pay_full_amount and not data.custom_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "custom_amount",
                 "Custom amount is required when auto_pay_full_amount is False",
             )
@@ -124,10 +124,10 @@ class AutoRepaymentService:
                 wallet_id=data.wallet_id, user=user
             )
             if not wallet:
-                raise ValidationError("wallet_id", "Wallet not found")
+                raise BodyValidationError("wallet_id", "Wallet not found")
 
             if wallet.currency_id != loan.wallet.currency_id:
-                raise ValidationError(
+                raise BodyValidationError(
                     "wallet_id", f"Wallet currency must be {loan.wallet.currency.code}"
                 )
 
@@ -139,7 +139,7 @@ class AutoRepaymentService:
 
         # Validate custom amount if auto_pay_full_amount is False
         if not auto_repayment.auto_pay_full_amount and not auto_repayment.custom_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "custom_amount",
                 "Custom amount is required when auto_pay_full_amount is False",
             )

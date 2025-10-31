@@ -5,7 +5,7 @@ from uuid import UUID
 from datetime import date, datetime
 from decimal import Decimal
 
-from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema
+from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 from apps.compliance.models import (
     KYCVerification,
     KYCDocument,
@@ -44,15 +44,17 @@ class CreateKYCSchema(BaseSchema):
     city: str = Field(..., max_length=100)
     state: str = Field(..., max_length=100)
     postal_code: str = Field(..., max_length=20)
-    country: str = Field(
-        ..., min_length=2, max_length=2, description="ISO 3166-1 alpha-2"
+    country_id: UUID = Field(
+        ..., description="Country ID from profiles.Country"
     )
 
     # Identity document
     document_type: DocumentType
     document_number: str = Field(..., max_length=100)
     document_expiry_date: Optional[date] = None
-    document_issuing_country: str = Field(..., min_length=2, max_length=2)
+    document_issuing_country_id: UUID = Field(
+        ..., description="Country ID from profiles.Country"
+    )
 
     notes: Optional[str] = None
 
@@ -93,32 +95,7 @@ class KYCVerificationSchema(ModelSchema):
 
     class Meta:
         model = KYCVerification
-        fields = [
-            "kyc_id",
-            "level",
-            "status",
-            "first_name",
-            "last_name",
-            "middle_name",
-            "date_of_birth",
-            "nationality",
-            "address_line_1",
-            "address_line_2",
-            "city",
-            "state",
-            "postal_code",
-            "country",
-            "document_type",
-            "document_number",
-            "document_expiry_date",
-            "document_issuing_country",
-            "reviewed_at",
-            "rejection_reason",
-            "expires_at",
-            "created_at",
-            "updated_at",
-        ]
-
+        exclude = ["id", "deleted_at"]
 
 class KYCVerificationListSchema(BaseSchema):
     kyc_id: UUID
@@ -146,6 +123,11 @@ class KYCVerificationListDataResponseSchema(BaseSchema):
 class KYCVerificationPaginatedDataResponseSchema(PaginatedResponseDataSchema):
     data: List[KYCVerificationListSchema] = Field(..., alias="items")
 
+class KYCVerificationsResponseSchema(ResponseSchema):
+    data: KYCVerificationPaginatedDataResponseSchema
+
+class KYCLevelSchema(BaseSchema):
+    level: KYCLevel = Field(None, description="KYC level: tier_1, tier_2, tier_3", example="tier_1")
 
 # ==================== AML SCHEMAS ====================
 class CreateAMLCheckSchema(BaseSchema):

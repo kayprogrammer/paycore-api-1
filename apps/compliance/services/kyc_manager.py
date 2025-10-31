@@ -1,11 +1,9 @@
-from decimal import Decimal
 from django.utils import timezone
-from django.db.models import Q
 from typing import Optional
 
 from apps.accounts.models import User
 from apps.common.decorators import aatomic
-from apps.common.exceptions import NotFoundError, RequestError, ErrorCode
+from apps.common.exceptions import BodyValidationError, NotFoundError, RequestError, ErrorCode
 from apps.compliance.models import (
     KYCVerification,
     KYCDocument,
@@ -16,6 +14,9 @@ from apps.compliance.schemas import CreateKYCSchema, UpdateKYCStatusSchema
 from apps.common.schemas import PaginationQuerySchema
 from apps.common.paginators import Paginator
 from asgiref.sync import sync_to_async
+from apps.profiles.models import Country
+from apps.wallets.services.wallet_manager import WalletManager
+from apps.wallets.schemas import CreateWalletSchema
 
 
 class KYCManager:
@@ -24,6 +25,19 @@ class KYCManager:
     @staticmethod
     @aatomic
     async def submit_kyc(user: User, data: CreateKYCSchema) -> KYCVerification:
+        # Validate country
+        country = await Country.objects.aget_or_none(id=data.country_id)
+        if not country:
+            raise BodyValidationError("country_id", "Country not found")
+
+        document_issuing_country = await Country.objects.aget_or_none(
+            id=data.document_issuing_country_id
+        )
+        if not document_issuing_country:
+            raise BodyValidationError(
+                "document_issuing_country_id", "Document issuing country not found"
+            )
+            
         existing_kyc = await KYCVerification.objects.filter(
             user=user,
             level=data.level,
@@ -41,34 +55,24 @@ class KYCManager:
                     f"You already have a pending {data.level} verification",
                 )
 
+        data_to_create = data.model_dump(exclude_unset=True, exclude=["country_id", "document_issuing_country_id"])
         # Create KYC verification
         kyc = await KYCVerification.objects.acreate(
             user=user,
-            level=data.level,
-            status=KYCStatus.PENDING,
-            first_name=data.first_name,
-            last_name=data.last_name,
-            middle_name=data.middle_name or "",
-            date_of_birth=data.date_of_birth,
-            nationality=data.nationality,
-            address_line_1=data.address_line_1,
-            address_line_2=data.address_line_2 or "",
-            city=data.city,
-            state=data.state,
-            postal_code=data.postal_code,
-            country=data.country,
-            document_type=data.document_type,
-            document_number=data.document_number,
-            document_expiry_date=data.document_expiry_date,
-            document_issuing_country=data.document_issuing_country,
-            notes=data.notes or "",
+            country=country,
+            document_issuing_country=document_issuing_country,
+            **data_to_create,
         )
+        user.first_name = kyc.first_name
+        user.last_name = kyc.last_name
+        await user.asave()
 
+        kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget(kyc_id=kyc.kyc_id)
         return kyc
 
     @staticmethod
     async def get_kyc(user: User, kyc_id) -> KYCVerification:
-        kyc = await KYCVerification.objects.select_related("user").aget_or_none(
+        kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget_or_none(
             kyc_id=kyc_id, user=user
         )
         if not kyc:
@@ -79,15 +83,12 @@ class KYCManager:
     async def list_user_kyc(
         user: User,
         status: Optional[str] = None,
-        page_params: PaginationQuerySchema = None,
     ):
         queryset = KYCVerification.objects.filter(user=user).select_related("user")
         if status:
-            queryset = queryset.filter(status=status)
-        queryset = queryset.order_by("-created_at")
-        return await Paginator.paginate_queryset(
-            queryset, page_params.page, page_params.limit
-        )
+            queryset = queryset.filter(status__icontains=status)
+        kycs = await sync_to_async(list)(queryset.order_by("-created_at"))
+        return kycs
 
     @staticmethod
     async def get_user_current_kyc_level(user: User) -> Optional[str]:
@@ -103,15 +104,14 @@ class KYCManager:
     async def update_kyc_status(
         admin_user: User, kyc_id, data: UpdateKYCStatusSchema
     ) -> KYCVerification:
-        kyc = await KYCVerification.objects.select_related("user").aget_or_none(
+        kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget_or_none(
             kyc_id=kyc_id
         )
         if not kyc:
             raise NotFoundError("KYC verification not found")
         if data.status == KYCStatus.REJECTED and not data.rejection_reason:
-            raise RequestError(
-                ErrorCode.VALIDATION_ERROR,
-                "Rejection reason is required when rejecting KYC",
+            raise BodyValidationError(
+                "rejection_reason", "Rejection reason is required when rejecting KYC"
             )
 
         kyc.status = data.status
@@ -134,6 +134,25 @@ class KYCManager:
                 "updated_at",
             ]
         )
+
+        # Automatically create NGN wallet when KYC is approved
+        if data.status == KYCStatus.APPROVED:
+            # Check if user already has an NGN wallet
+            existing_ngn_wallets = await WalletManager.get_user_wallets(
+                user=kyc.user, currency_code="NGN"
+            )
+
+            if not existing_ngn_wallets:
+                # Create NGN wallet for the user
+                wallet_data = CreateWalletSchema(
+                    currency_code="NGN",
+                    name="NGN Wallet",
+                    wallet_type="main",
+                    is_default=True,
+                    description="Auto-created upon KYC approval for fiat transactions",
+                )
+                await WalletManager.create_wallet(user=kyc.user, data=wallet_data)
+
         return kyc
 
     @staticmethod
@@ -147,9 +166,8 @@ class KYCManager:
             queryset = queryset.filter(status=status)
         if level:
             queryset = queryset.filter(level=level)
-        queryset = queryset.order_by("-created_at")
         return await Paginator.paginate_queryset(
-            queryset, page_params.page, page_params.limit
+            queryset.order_by("-created_at"), page_params.page, page_params.limit
         )
 
     @staticmethod

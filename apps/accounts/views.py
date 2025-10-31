@@ -20,7 +20,7 @@ from apps.accounts.schemas import (
     TokensResponseSchema,
     VerifyOtpSchema,
 )
-from apps.common.exceptions import ErrorCode, RequestError, ValidationError
+from apps.common.exceptions import BodyValidationError, ErrorCode, RequestError
 from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
 from apps.notifications.services.fcm import FCMService
@@ -38,7 +38,7 @@ async def register(request, data: RegisterUserSchema):
     # Check for existing user
     existing_user = await User.objects.aget_or_none(email=data.email)
     if existing_user:
-        raise ValidationError("email", "Email already registered!")
+        raise BodyValidationError("email", "Email already registered!")
 
     # Create user
     user = await User.objects.acreate_user(**data.model_dump())

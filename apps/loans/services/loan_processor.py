@@ -19,7 +19,7 @@ from apps.wallets.models import Wallet
 from apps.transactions.models import Transaction, TransactionType, TransactionStatus
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -112,20 +112,20 @@ class LoanProcessor:
             wallet_id=data.wallet_id, user=user
         )
         if not payer_wallet:
-            raise ValidationError("wallet_id", "Wallet not found")
+            raise BodyValidationError("wallet_id", "Wallet not found")
 
         if payer_wallet.currency_id != loan.wallet.currency_id:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id", f"Wallet currency must be {loan.wallet.currency.code}"
             )
 
         if data.amount <= 0:
-            raise ValidationError(
+            raise BodyValidationError(
                 "amount", "Repayment amount must be greater than zero"
             )
 
         if payer_wallet.balance < data.amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "amount",
                 f"Insufficient balance. Available: {payer_wallet.balance} {payer_wallet.currency.code}",
             )
@@ -135,7 +135,7 @@ class LoanProcessor:
                 schedule_id=data.schedule_id, loan=loan
             )
             if not schedule:
-                raise ValidationError("schedule_id", "Repayment schedule not found")
+                raise BodyValidationError("schedule_id", "Repayment schedule not found")
         else:
             # Get next pending/overdue schedule
             schedule = (

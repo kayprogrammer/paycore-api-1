@@ -104,7 +104,7 @@ class RequestError(Exception):
         super().__init__()
 
 
-class ValidationError(RequestError):
+class BodyValidationError(RequestError):
     """
     For field errors that aren't controlled directly in the schemas but needs to be called or validated manually in the endpoints
     """

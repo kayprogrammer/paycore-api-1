@@ -6,7 +6,7 @@ import httpx
 from django.conf import settings
 
 from .base import BaseCardProvider
-from apps.common.exceptions import RequestError, ErrorCode, ValidationError
+from apps.common.exceptions import RequestError, ErrorCode, BodyValidationError
 
 
 class SudoCardProvider(BaseCardProvider):
@@ -62,14 +62,14 @@ class SudoCardProvider(BaseCardProvider):
         Documentation: https://docs.sudo.africa/reference/create-card
         """
         if not self.supports_currency(currency_code):
-            raise ValidationError(
+            raise BodyValidationError(
                 "currency_code",
                 f"Sudo does not support {currency_code} cards. "
                 f"Supported: {', '.join(self.SUPPORTED_CURRENCIES)}",
             )
 
         if not self.supports_card_type(card_type):
-            raise ValidationError("card_type", f"Sudo only supports virtual cards")
+            raise BodyValidationError("card_type", f"Sudo only supports virtual cards")
 
         payload = {
             "type": card_brand.lower(),  # visa, mastercard

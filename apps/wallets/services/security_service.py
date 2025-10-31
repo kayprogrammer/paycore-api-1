@@ -11,7 +11,7 @@ from apps.common.exceptions import (
     NotFoundError,
     RequestError,
     ErrorCode,
-    ValidationError,
+    BodyValidationError,
 )
 
 
@@ -38,16 +38,16 @@ class WalletSecurityService:
         # Check PIN if required or provided
         if wallet.requires_pin or pin:
             if not pin:
-                raise ValidationError("pin", "PIN is required for this wallet")
+                raise BodyValidationError("pin", "PIN is required for this wallet")
 
             if not wallet.pin_hash or not check_password(pin, wallet.pin_hash):
-                raise ValidationError("pin", "Invalid PIN")
+                raise BodyValidationError("pin", "Invalid PIN")
             auth_methods_used.append("pin")
 
         # Check biometric authentication if required or provided
         if wallet.requires_biometric or biometric_token:
             if not biometric_token or not device_id:
-                raise ValidationError(
+                raise BodyValidationError(
                     "biometric_token",
                     "Biometric token and device ID are required for this wallet",
                 )
@@ -57,7 +57,7 @@ class WalletSecurityService:
             )
 
             if not auth_user or auth_user.id != user.id:
-                raise ValidationError("biometric_token", "Invalid biometric token")
+                raise BodyValidationError("biometric_token", "Invalid biometric token")
             auth_methods_used.append("biometric")
 
         # Generate transaction authorization token
@@ -175,12 +175,12 @@ class WalletSecurityService:
         # Verify current PIN if disabling PIN or if PIN is currently required
         if wallet.requires_pin and (disable_pin or disable_biometric):
             if not current_pin:
-                raise ValidationError(
+                raise BodyValidationError(
                     "current_pin", "Current PIN required to modify security settings"
                 )
 
             if not check_password(current_pin, wallet.pin_hash):
-                raise ValidationError("current_pin", "Invalid current PIN")
+                raise BodyValidationError("current_pin", "Invalid current PIN")
         security_features_disabled = []
 
         # Disable PIN
@@ -218,10 +218,10 @@ class WalletSecurityService:
 
         # Verify PINS
         if not wallet.pin_hash or not check_password(current_pin, wallet.pin_hash):
-            raise ValidationError("current_pin", "Invalid current PIN")
+            raise BodyValidationError("current_pin", "Invalid current PIN")
 
         if current_pin == new_pin:
-            raise ValidationError(
+            raise BodyValidationError(
                 "new_pin", "New PIN must be different from current PIN"
             )
 

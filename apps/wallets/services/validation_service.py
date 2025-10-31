@@ -2,11 +2,7 @@ from decimal import Decimal
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
 from typing import List, Dict, Any, Optional, Tuple
-import re
-import uuid
-
-from apps.common.exceptions import RequestError, ErrorCode
-
+import re, uuid
 
 class WalletValidationService:
     """Service for comprehensive wallet validation and error handling"""

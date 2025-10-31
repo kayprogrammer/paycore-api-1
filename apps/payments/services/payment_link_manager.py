@@ -9,7 +9,7 @@ from apps.payments.models import PaymentLink, PaymentLinkStatus
 from apps.wallets.models import Wallet
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -30,17 +30,17 @@ class PaymentLinkManager:
             raise NotFoundError("Wallet not found")
 
         if data.is_amount_fixed and not data.amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "amount", "Amount is required when is_amount_fixed is True"
             )
 
         if not data.is_amount_fixed:
             if not data.min_amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "min_amount", "Min amount is required for flexible amounts"
                 )
             if data.max_amount and data.max_amount < data.min_amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "max_amount", "Max amount must be greater than min amount"
                 )
 

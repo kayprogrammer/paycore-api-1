@@ -11,7 +11,7 @@ from apps.accounts.models import User
 from apps.common.decorators import aatomic
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -91,7 +91,7 @@ class InvestmentManager:
             raise NotFoundError("Wallet not found")
 
         if wallet.currency_id != product.currency_id:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id", f"Wallet currency must be {product.currency.code}"
             )
 

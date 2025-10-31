@@ -1,23 +1,15 @@
 import time
-from uuid import UUID
 from decimal import Decimal
-from django.db import transaction as db_transaction
-from django.utils import timezone
-
-from apps.accounts.models import User
 from apps.common.decorators import aatomic
 from apps.payments.models import (
     Payment,
     PaymentStatus,
-    PaymentLink,
-    Invoice,
     InvoiceStatus,
 )
 from apps.wallets.models import Wallet
 from apps.transactions.models import Transaction, TransactionType, TransactionStatus
 from apps.common.exceptions import (
-    NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -48,17 +40,17 @@ class PaymentProcessor:
             amount = link.amount
         else:
             if not data.amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "amount", "Amount is required for this payment link"
                 )
             amount = data.amount
 
             if link.min_amount and amount < link.min_amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "amount", f"Amount must be at least {link.min_amount}"
                 )
             if link.max_amount and amount > link.max_amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "amount", f"Amount cannot exceed {link.max_amount}"
                 )
 
@@ -66,9 +58,9 @@ class PaymentProcessor:
             wallet_id=data.wallet_id
         )
         if not payer_wallet:
-            raise ValidationError("wallet_id", "Wallet not found")
+            raise BodyValidationError("wallet_id", "Wallet not found")
         if payer_wallet.currency_id != link.wallet.currency_id:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id", "Wallet currency must match payment link currency"
             )
 
@@ -79,7 +71,7 @@ class PaymentProcessor:
 
         # Check balance
         if payer_wallet.balance < total_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id",
                 f"Insufficient balance. Required: {total_amount}, Available: {payer_wallet.balance}",
             )
@@ -161,7 +153,7 @@ class PaymentProcessor:
 
         amount = data.amount if data.amount else invoice.amount_due
         if amount > invoice.amount_due:
-            raise ValidationError(
+            raise BodyValidationError(
                 "amount",
                 f"Amount cannot exceed invoice due amount of {invoice.amount_due}",
             )
@@ -170,10 +162,10 @@ class PaymentProcessor:
             wallet_id=data.wallet_id
         )
         if not payer_wallet:
-            raise ValidationError("wallet_id", "Wallet not found")
+            raise BodyValidationError("wallet_id", "Wallet not found")
 
         if payer_wallet.currency_id != invoice.wallet.currency_id:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id", "Wallet currency must match invoice currency"
             )
 
@@ -182,7 +174,7 @@ class PaymentProcessor:
         total_amount = amount
 
         if payer_wallet.balance < total_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id",
                 f"Insufficient balance. Required: {total_amount}, Available: {payer_wallet.balance}",
             )

@@ -20,7 +20,7 @@ from apps.common.exceptions import (
     RequestError,
     ErrorCode,
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
 )
 from apps.common.decorators import aatomic
 from django.contrib.auth.hashers import check_password
@@ -46,34 +46,34 @@ class TransactionOperations:
             "currency", "user"
         ).aget_or_none(wallet_id=from_wallet_id, user=user)
         if not from_wallet:
-            raise ValidationError("from_wallet_id", "Source wallet not found")
+            raise BodyValidationError("from_wallet_id", "Source wallet not found")
 
         to_wallet = await Wallet.objects.select_related(
             "currency", "user"
         ).aget_or_none(wallet_id=to_wallet_id)
         if not to_wallet:
-            raise ValidationError("to_wallet_id", "Destination wallet not found")
+            raise BodyValidationError("to_wallet_id", "Destination wallet not found")
 
         if from_wallet.status != WalletStatus.ACTIVE:
-            raise ValidationError("from_wallet_id", "Source wallet is not active")
+            raise BodyValidationError("from_wallet_id", "Source wallet is not active")
 
         if to_wallet.status != WalletStatus.ACTIVE:
-            raise ValidationError("to_wallet_id", "Destination wallet is not active")
+            raise BodyValidationError("to_wallet_id", "Destination wallet is not active")
 
         # Verify PIN if wallet requires it or if PIN is provided
         if from_wallet.requires_pin or pin:
             if not pin:
-                raise ValidationError("pin", "PIN is required for this wallet")
+                raise BodyValidationError("pin", "PIN is required for this wallet")
 
             if not from_wallet.pin_hash or not check_password(
                 pin, from_wallet.pin_hash
             ):
-                raise ValidationError("pin", "Invalid PIN")
+                raise BodyValidationError("pin", "Invalid PIN")
 
         # Verify biometric if wallet requires it or if token is provided
         if from_wallet.requires_biometric or biometric_token:
             if not biometric_token or not device_id:
-                raise ValidationError(
+                raise BodyValidationError(
                     "biometric_token",
                     "Biometric authentication required for this wallet",
                 )
@@ -84,7 +84,7 @@ class TransactionOperations:
             )
 
             if not auth_user or auth_user.id != user.id:
-                raise ValidationError(
+                raise BodyValidationError(
                     "biometric_token", "Invalid biometric authentication"
                 )
 

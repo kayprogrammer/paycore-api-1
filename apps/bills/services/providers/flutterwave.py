@@ -7,7 +7,7 @@ from django.conf import settings
 from apps.bills.services.providers.base import BaseBillPaymentProvider
 from apps.common.exceptions import (
     RequestError,
-    ValidationError,
+    BodyValidationError,
     NotFoundError,
     ErrorCode,
 )
@@ -85,7 +85,7 @@ class FlutterwaveBillProvider(BaseBillPaymentProvider):
 
                 if response.status_code != 200 or data.get("status") != "success":
                     logger.error(f"Flutterwave validation failed: {data}")
-                    raise ValidationError(
+                    raise BodyValidationError(
                         "customer_id", data.get("message", "Customer validation failed")
                     )
 

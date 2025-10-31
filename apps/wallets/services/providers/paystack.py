@@ -6,7 +6,7 @@ import httpx
 from django.conf import settings
 
 from .base import BaseAccountProvider
-from apps.common.exceptions import RequestError, ErrorCode, ValidationError
+from apps.common.exceptions import RequestError, ErrorCode, BodyValidationError
 
 
 class PaystackAccountProvider(BaseAccountProvider):
@@ -56,7 +56,7 @@ class PaystackAccountProvider(BaseAccountProvider):
         Documentation: https://paystack.com/docs/api/dedicated-virtual-account/#create
         """
         if not self.supports_currency(currency_code):
-            raise ValidationError(
+            raise BodyValidationError(
                 "currency_code",
                 f"Paystack does not support {currency_code}. Only NGN is supported.",
             )

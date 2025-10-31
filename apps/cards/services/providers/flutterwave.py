@@ -6,7 +6,7 @@ import httpx
 from django.conf import settings
 
 from .base import BaseCardProvider
-from apps.common.exceptions import RequestError, ErrorCode, ValidationError
+from apps.common.exceptions import RequestError, ErrorCode, BodyValidationError
 
 
 class FlutterwaveCardProvider(BaseCardProvider):
@@ -60,7 +60,7 @@ class FlutterwaveCardProvider(BaseCardProvider):
         Documentation: https://developer.flutterwave.com/docs/virtual-cards/create
         """
         if not self.supports_currency(currency_code):
-            raise ValidationError(
+            raise BodyValidationError(
                 "currency_code",
                 f"Flutterwave does not support {currency_code} cards. Supported: {', '.join(self.SUPPORTED_CURRENCIES)}",
             )

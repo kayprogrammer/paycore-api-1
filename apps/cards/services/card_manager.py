@@ -8,7 +8,7 @@ from apps.common.exceptions import (
     ErrorCode,
     NotFoundError,
     RequestError,
-    ValidationError,
+    BodyValidationError,
 )
 from apps.cards.schemas import CreateCardSchema, UpdateCardSchema
 from apps.cards.services.providers.factory import CardProviderFactory
@@ -36,7 +36,7 @@ class CardManager:
             raise NotFoundError(err_msg="Wallet not found")
 
         if wallet.currency.code != data.currency_code:
-            raise ValidationError(
+            raise BodyValidationError(
                 "currency_code",
                 f"Card currency must match wallet currency ({wallet.currency.code})",
             )
@@ -139,10 +139,10 @@ class CardManager:
         card = await CardManager.get_card(user, card_id)
 
         if card.is_frozen:
-            raise ValidationError("card", "Card is already frozen")
+            raise BodyValidationError("card", "Card is already frozen")
 
         if card.status == CardStatus.BLOCKED:
-            raise ValidationError("card", "Cannot freeze a blocked card")
+            raise BodyValidationError("card", "Cannot freeze a blocked card")
 
         test_mode = CardProviderFactory.get_test_mode_setting()
         provider = CardProviderFactory.get_provider(

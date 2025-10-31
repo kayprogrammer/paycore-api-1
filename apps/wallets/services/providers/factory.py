@@ -5,7 +5,7 @@ from .base import BaseAccountProvider
 from .internal import InternalAccountProvider
 from .paystack import PaystackAccountProvider
 from apps.wallets.models import AccountProvider
-from apps.common.exceptions import ValidationError
+from apps.common.exceptions import BodyValidationError
 
 
 class AccountProviderFactory:
@@ -80,7 +80,7 @@ class AccountProviderFactory:
         provider_class = provider_map.get(provider_type)
 
         if not provider_class:
-            raise ValidationError(
+            raise BodyValidationError(
                 "provider",
                 f"Provider '{provider_type}' is not implemented. "
                 f"Available providers: {list(provider_map.keys())}",

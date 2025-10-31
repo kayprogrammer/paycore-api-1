@@ -5,18 +5,14 @@ from asgiref.sync import sync_to_async
 import uuid
 
 from apps.accounts.models import User
-from apps.common.decorators import aatomic
 from apps.wallets.models import Wallet, WalletStatus
 from apps.common.exceptions import (
     NotFoundError,
     RequestError,
     ErrorCode,
-    ValidationError,
 )
-from apps.wallets.schemas import HoldFundsSchema, InternalTransferSchema, TransferSchema
-from apps.wallets.services.wallet_manager import WalletManager
 from apps.transactions.services import TransactionService
-from apps.transactions.models import Transaction
+from apps.wallets.schemas import HoldFundsSchema
 
 
 class WalletOperations:

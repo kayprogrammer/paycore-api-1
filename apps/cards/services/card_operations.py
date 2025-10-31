@@ -15,7 +15,7 @@ from apps.transactions.models import (
 )
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -52,15 +52,15 @@ class CardOperations:
         wallet = card.wallet
 
         if wallet.requires_pin and not pin:
-            raise ValidationError("pin", "Wallet PIN is required")
+            raise BodyValidationError("pin", "Wallet PIN is required")
 
         if wallet.requires_pin:
             is_valid = await WalletSecurityService.verify_pin(wallet, pin)
             if not is_valid:
-                raise ValidationError("pin", "Invalid PIN")
+                raise BodyValidationError("pin", "Invalid PIN")
 
         if amount > wallet.available_balance:
-            raise ValidationError("amount", "Insufficient wallet balance")
+            raise BodyValidationError("amount", "Insufficient wallet balance")
 
         balance_before = wallet.available_balance
 

@@ -19,7 +19,7 @@ from apps.loans.models import (
 from apps.wallets.models import Wallet
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -95,7 +95,7 @@ class LoanManager:
             )
 
         if repayment_frequency not in product.allowed_repayment_frequencies:
-            raise ValidationError(
+            raise BodyValidationError(
                 "repayment_frequency",
                 f"Repayment frequency must be one of: {', '.join(product.allowed_repayment_frequencies)}",
             )
@@ -169,10 +169,10 @@ class LoanManager:
             wallet_id=data.wallet_id, user=user
         )
         if not wallet:
-            raise ValidationError("wallet_id", "Wallet not found")
+            raise BodyValidationError("wallet_id", "Wallet not found")
 
         if wallet.currency_id != product.currency_id:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_id", f"Wallet currency must be {product.currency.code}"
             )
 
@@ -214,26 +214,26 @@ class LoanManager:
 
         if product.requires_collateral:
             if not data.collateral_type or data.collateral_type == CollateralType.NONE:
-                raise ValidationError(
+                raise BodyValidationError(
                     "collateral_type", "This loan product requires collateral"
                 )
             if not data.collateral_value or data.collateral_value <= 0:
-                raise ValidationError(
+                raise BodyValidationError(
                     "collateral_value", "Collateral value is required"
                 )
 
         if product.requires_guarantor:
             if not data.guarantor_name or not data.guarantor_phone:
-                raise ValidationError(
+                raise BodyValidationError(
                     "guarantor_name", "This loan product requires a guarantor name"
                 )
             if not data.guarantor_phone:
-                raise ValidationError(
+                raise BodyValidationError(
                     "guarantor_phone",
                     "This loan product requires a guarantor phone number",
                 )
             if not data.guarantor_email:
-                raise ValidationError(
+                raise BodyValidationError(
                     "guarantor_email",
                     "This loan product requires a guarantor email address",
                 )
@@ -302,13 +302,13 @@ class LoanManager:
         approved_amount = data.approved_amount or loan.requested_amount
 
         if approved_amount < loan.loan_product.min_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "approved_amount",
                 f"Approved amount must be at least {loan.loan_product.min_amount}",
             )
 
         if approved_amount > loan.loan_product.max_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "approved_amount",
                 f"Approved amount cannot exceed {loan.loan_product.max_amount}",
             )

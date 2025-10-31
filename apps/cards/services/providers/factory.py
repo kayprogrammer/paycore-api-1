@@ -5,7 +5,7 @@ from .base import BaseCardProvider
 from .flutterwave import FlutterwaveCardProvider
 from .sudo import SudoCardProvider
 from apps.cards.models import CardProvider
-from apps.common.exceptions import ValidationError
+from apps.common.exceptions import BodyValidationError
 
 
 class CardProviderFactory:
@@ -45,7 +45,7 @@ class CardProviderFactory:
         provider_type = cls.CURRENCY_PROVIDER_MAP.get(currency_code)
 
         if not provider_type:
-            raise ValidationError(
+            raise BodyValidationError(
                 "currency_code",
                 f"No card provider supports {currency_code} cards. "
                 f"Supported currencies: {', '.join(cls.CURRENCY_PROVIDER_MAP.keys())}",
@@ -58,13 +58,13 @@ class CardProviderFactory:
                 if currency_code in ["USD", "NGN"] and cls._is_sudo_enabled():
                     provider_type = CardProvider.SUDO
                 else:
-                    raise ValidationError(
+                    raise BodyValidationError(
                         "provider",
                         f"Flutterwave is not configured. Please add credentials to settings.",
                     )
         elif provider_type == CardProvider.SUDO:
             if not cls._is_sudo_enabled():
-                raise ValidationError(
+                raise BodyValidationError(
                     "provider",
                     f"Sudo is not configured. Please add credentials to settings.",
                 )
@@ -99,7 +99,7 @@ class CardProviderFactory:
         provider_class = provider_map.get(provider_type)
 
         if not provider_class:
-            raise ValidationError(
+            raise BodyValidationError(
                 "provider",
                 f"Provider '{provider_type}' is not implemented. "
                 f"Available providers: {list(provider_map.keys())}",

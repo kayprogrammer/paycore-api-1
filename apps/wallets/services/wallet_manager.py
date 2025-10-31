@@ -11,7 +11,7 @@ from apps.common.exceptions import (
     NotFoundError,
     RequestError,
     ErrorCode,
-    ValidationError,
+    BodyValidationError,
 )
 from asgiref.sync import sync_to_async
 
@@ -48,7 +48,7 @@ class WalletManager:
             code=data.currency_code, is_active=True
         )
         if not currency:
-            raise ValidationError(
+            raise BodyValidationError(
                 "currency_code", f"Currency {data.currency_code} not found or inactive"
             )
 
@@ -67,7 +67,7 @@ class WalletManager:
             wallet_type=data.wallet_type,
         )
         if existing_wallet:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet_type",
                 f"User already has a {data.wallet_type} wallet for {currency.code}",
             )

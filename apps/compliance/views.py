@@ -10,6 +10,8 @@ from apps.common.schemas import PaginationQuerySchema
 logger = logging.getLogger(__name__)
 from apps.compliance.schemas import (
     CreateKYCSchema,
+    KYCLevelSchema,
+    KYCVerificationsResponseSchema,
     UpdateKYCStatusSchema,
     KYCVerificationDataResponseSchema,
     KYCVerificationListDataResponseSchema,
@@ -17,20 +19,16 @@ from apps.compliance.schemas import (
     CreateAMLCheckSchema,
     UpdateAMLReviewSchema,
     AMLCheckDataResponseSchema,
-    AMLCheckListDataResponseSchema,
     AMLCheckPaginatedDataResponseSchema,
     CreateSanctionsScreeningSchema,
     UpdateSanctionsReviewSchema,
     SanctionsScreeningDataResponseSchema,
-    SanctionsScreeningListDataResponseSchema,
     SanctionsScreeningPaginatedDataResponseSchema,
     TransactionMonitoringDataResponseSchema,
-    TransactionMonitoringListDataResponseSchema,
     TransactionMonitoringPaginatedDataResponseSchema,
     ResolveMonitoringAlertSchema,
     CreateComplianceReportSchema,
     ComplianceReportDataResponseSchema,
-    ComplianceReportListDataResponseSchema,
     ComplianceReportPaginatedDataResponseSchema,
     ComplianceStatisticsDataResponseSchema,
 )
@@ -85,9 +83,9 @@ async def get_kyc_verification(request, kyc_id: UUID):
 
 
 @compliance_router.get(
-    "/kyc/current-level",
+    "/kyc/level/current-level",
     summary="Get current KYC level",
-    response={200: dict},
+    response={200: KYCLevelSchema},
     auth=AuthUser(),
 )
 async def get_current_kyc_level(request):
@@ -104,7 +102,7 @@ async def get_current_kyc_level(request):
 @compliance_router.get(
     "/admin/kyc/list",
     summary="List all KYC verifications (Admin)",
-    response={200: KYCVerificationPaginatedDataResponseSchema},
+    response={200: KYCVerificationsResponseSchema},
     auth=AuthAdmin(),
 )
 async def list_all_kyc_verifications(

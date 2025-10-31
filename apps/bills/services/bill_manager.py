@@ -19,7 +19,7 @@ from apps.wallets.models import Wallet
 from apps.transactions.models import Transaction, TransactionType, TransactionStatus
 from apps.common.exceptions import (
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
     RequestError,
     ErrorCode,
 )
@@ -55,7 +55,7 @@ class BillManager:
         if not package:
             raise NotFoundError("package", "Bill package not found")
         if not package.is_active:
-            raise ValidationError("package", "This package is currently unavailable")
+            raise BodyValidationError("package", "This package is currently unavailable")
         return package
 
     @staticmethod
@@ -114,27 +114,27 @@ class BillManager:
         )
 
         if not wallet:
-            raise ValidationError("wallet", "Wallet not found")
+            raise BodyValidationError("wallet", "Wallet not found")
 
         package = None
         if package_id:
             package = await BillManager.get_package(package_id)
             if package.provider_id != provider.id:
-                raise ValidationError(
+                raise BodyValidationError(
                     "package", "Package does not belong to this provider"
                 )
             amount = package.amount
         elif amount is None:
-            raise ValidationError("amount", "Amount or package_id is required")
+            raise BodyValidationError("amount", "Amount or package_id is required")
 
         # Validate amount range
         if provider.supports_amount_range:
             if provider.min_amount and amount < provider.min_amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "amount", f"Amount must be at least {provider.min_amount}"
                 )
             if provider.max_amount and amount > provider.max_amount:
-                raise ValidationError(
+                raise BodyValidationError(
                     "amount", f"Amount cannot exceed {provider.max_amount}"
                 )
 
@@ -144,7 +144,7 @@ class BillManager:
 
         # Check wallet balance
         if wallet.balance < total_amount:
-            raise ValidationError(
+            raise BodyValidationError(
                 "wallet",
                 f"Insufficient balance. Required: {total_amount}, Available: {wallet.balance}",
             )

@@ -11,7 +11,7 @@ from apps.common.exceptions import (
     RequestError,
     ErrorCode,
     NotFoundError,
-    ValidationError,
+    BodyValidationError,
 )
 
 
@@ -44,7 +44,7 @@ class DepositService:
         ).aexists()
 
         if duplicate:
-            raise ValidationError(
+            raise BodyValidationError(
                 "external_reference", "This deposit has already been processed"
             )
 

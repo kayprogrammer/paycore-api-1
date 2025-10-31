@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.common.models import BaseModel
 from apps.accounts.models import User
+from apps.profiles.models import Country
 
 
 class KYCStatus(models.TextChoices):
@@ -70,15 +71,17 @@ class KYCVerification(BaseModel):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
-    country = models.CharField(
-        max_length=2, help_text="ISO 3166-1 alpha-2 country code"
+    country = models.ForeignKey(
+        Country, on_delete=models.CASCADE, related_name="kyc_verifications"
     )
 
     # Identity document
     document_type = models.CharField(max_length=20, choices=DocumentType.choices)
     document_number = models.CharField(max_length=100)
     document_expiry_date = models.DateField(null=True, blank=True)
-    document_issuing_country = models.CharField(max_length=2)
+    document_issuing_country = models.ForeignKey(
+        Country, on_delete=models.CASCADE, related_name="issuer_kyc_verifications"
+    )
 
     # Review
     reviewed_by = models.ForeignKey(
