@@ -3,7 +3,12 @@ from typing import Optional
 
 from apps.accounts.models import User
 from apps.common.decorators import aatomic
-from apps.common.exceptions import BodyValidationError, NotFoundError, RequestError, ErrorCode
+from apps.common.exceptions import (
+    BodyValidationError,
+    NotFoundError,
+    RequestError,
+    ErrorCode,
+)
 from apps.compliance.models import (
     KYCVerification,
     KYCDocument,
@@ -37,7 +42,7 @@ class KYCManager:
             raise BodyValidationError(
                 "document_issuing_country_id", "Document issuing country not found"
             )
-            
+
         existing_kyc = await KYCVerification.objects.filter(
             user=user,
             level=data.level,
@@ -55,7 +60,9 @@ class KYCManager:
                     f"You already have a pending {data.level} verification",
                 )
 
-        data_to_create = data.model_dump(exclude_unset=True, exclude=["country_id", "document_issuing_country_id"])
+        data_to_create = data.model_dump(
+            exclude_unset=True, exclude=["country_id", "document_issuing_country_id"]
+        )
         # Create KYC verification
         kyc = await KYCVerification.objects.acreate(
             user=user,
@@ -68,13 +75,19 @@ class KYCManager:
         user.dob = kyc.date_of_birth
         await user.asave()
 
-        kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget(kyc_id=kyc.kyc_id)
+        kyc = (
+            await KYCVerification.objects.select_related("user")
+            .prefetch_related("documents")
+            .aget(kyc_id=kyc.kyc_id)
+        )
         return kyc
 
     @staticmethod
     async def get_kyc(user: User, kyc_id) -> KYCVerification:
-        kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget_or_none(
-            kyc_id=kyc_id, user=user
+        kyc = (
+            await KYCVerification.objects.select_related("user")
+            .prefetch_related("documents")
+            .aget_or_none(kyc_id=kyc_id, user=user)
         )
         if not kyc:
             raise NotFoundError("KYC verification not found")
@@ -105,8 +118,10 @@ class KYCManager:
     async def update_kyc_status(
         admin_user: User, kyc_id, data: UpdateKYCStatusSchema
     ) -> KYCVerification:
-        kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget_or_none(
-            kyc_id=kyc_id
+        kyc = (
+            await KYCVerification.objects.select_related("user")
+            .prefetch_related("documents")
+            .aget_or_none(kyc_id=kyc_id)
         )
         if not kyc:
             raise NotFoundError("KYC verification not found")

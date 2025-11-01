@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from typing import List, Dict, Any, Optional, Tuple
 import re, uuid
 
+
 class WalletValidationService:
     """Service for comprehensive wallet validation and error handling"""
 

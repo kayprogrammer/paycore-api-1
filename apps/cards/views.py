@@ -1,8 +1,9 @@
 from uuid import UUID
-from ninja import Router
+from ninja import Query, Router
 
 from apps.cards.services import CardManager, CardOperations
 from apps.cards.schemas import (
+    CardTransactionListResponseSchema,
     CreateCardSchema,
     UpdateCardSchema,
     FundCardSchema,
@@ -41,7 +42,9 @@ card_router = Router(tags=["Cards (12)"])
 )
 async def create_card(request, data: CreateCardSchema):
     card = await CardManager.create_card(request.auth, data)
-    return 201, CustomResponse.success(message="Card created successfully", data=card)
+    return CustomResponse.success(
+        message="Card created successfully", data=card, status_code=201
+    )
 
 
 @card_router.get(
@@ -58,7 +61,7 @@ async def create_card(request, data: CreateCardSchema):
 )
 async def list_cards(request, status: str = None, card_type: str = None):
     cards = await CardManager.get_user_cards(
-        request.user, status=status, card_type=card_type
+        request.auth, status=status, card_type=card_type
     )
     return CustomResponse.success(message="Cards retrieved successfully", data=cards)
 
@@ -75,7 +78,7 @@ async def list_cards(request, status: str = None, card_type: str = None):
     response={200: CardDataResponseSchema},
 )
 async def get_card(request, card_id: UUID):
-    card = await CardManager.get_card(request.user, card_id)
+    card = await CardManager.get_card(request.auth, card_id)
     return CustomResponse.success(
         message="Card details retrieved successfully", data=card
     )
@@ -94,7 +97,7 @@ async def get_card(request, card_id: UUID):
     response={200: CardDataResponseSchema},
 )
 async def update_card(request, card_id: UUID, data: UpdateCardSchema):
-    card = await CardManager.update_card(request.user, card_id, data)
+    card = await CardManager.update_card(request.auth, card_id, data)
     return CustomResponse.success(message="Card updated successfully", data=card)
 
 
@@ -117,7 +120,7 @@ async def update_card(request, card_id: UUID, data: UpdateCardSchema):
 )
 async def fund_card(request, card_id: UUID, data: FundCardSchema):
     result = await CardOperations.fund_card(
-        user=request.user,
+        user=request.auth,
         card_id=card_id,
         amount=data.amount,
         pin=str(data.pin) if data.pin else None,
@@ -143,7 +146,7 @@ async def fund_card(request, card_id: UUID, data: FundCardSchema):
     response={200: CardDataResponseSchema},
 )
 async def freeze_card(request, card_id: UUID):
-    card = await CardManager.freeze_card(request.user, card_id)
+    card = await CardManager.freeze_card(request.auth, card_id)
     return CustomResponse.success(message="Card frozen successfully", data=card)
 
 
@@ -156,7 +159,7 @@ async def freeze_card(request, card_id: UUID):
     response={200: CardDataResponseSchema},
 )
 async def unfreeze_card(request, card_id: UUID):
-    card = await CardManager.unfreeze_card(request.user, card_id)
+    card = await CardManager.unfreeze_card(request.auth, card_id)
     return CustomResponse.success(message="Card unfrozen successfully", data=card)
 
 
@@ -178,7 +181,7 @@ async def unfreeze_card(request, card_id: UUID):
     response={200: CardDataResponseSchema},
 )
 async def block_card(request, card_id: UUID):
-    card = await CardManager.block_card(request.user, card_id)
+    card = await CardManager.block_card(request.auth, card_id)
     return CustomResponse.success(message="Card blocked permanently", data=card)
 
 
@@ -193,7 +196,7 @@ async def block_card(request, card_id: UUID):
     response={200: CardDataResponseSchema},
 )
 async def activate_card(request, card_id: UUID):
-    card = await CardManager.activate_card(request.user, card_id)
+    card = await CardManager.activate_card(request.auth, card_id)
     return CustomResponse.success(message="Card activated successfully", data=card)
 
 
@@ -210,7 +213,7 @@ async def activate_card(request, card_id: UUID):
 )
 async def update_card_controls(request, card_id: UUID, data: CardControlsSchema):
     update_data = UpdateCardSchema(**data.model_dump())
-    card = await CardManager.update_card(request.user, card_id, update_data)
+    card = await CardManager.update_card(request.auth, card_id, update_data)
     return CustomResponse.success(
         message="Card controls updated successfully", data=card
     )
@@ -228,13 +231,13 @@ async def update_card_controls(request, card_id: UUID, data: CardControlsSchema)
         - Card funding
         - Refunds and reversals
     """,
-    response={200: CardTransactionListDataResponseSchema},
+    response={200: CardTransactionListResponseSchema},
 )
 async def get_card_transactions(
-    request, card_id: UUID, page_params: PaginationQuerySchema
+    request, card_id: UUID, page_params: PaginationQuerySchema = Query(...)
 ):
     result = await CardOperations.get_card_transactions(
-        user=request.user, card_id=card_id, page_params=page_params
+        user=request.auth, card_id=card_id, page_params=page_params
     )
     return CustomResponse.success(
         message="Card transactions retrieved successfully", data=result
@@ -256,5 +259,5 @@ async def get_card_transactions(
     response={200: ResponseSchema},
 )
 async def delete_card(request, card_id: UUID):
-    await CardManager.delete_card(request.user, card_id)
+    await CardManager.delete_card(request.auth, card_id)
     return CustomResponse.success(message="Card deleted successfully")

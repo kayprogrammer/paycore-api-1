@@ -58,7 +58,9 @@ class TransactionOperations:
             raise BodyValidationError("from_wallet_id", "Source wallet is not active")
 
         if to_wallet.status != WalletStatus.ACTIVE:
-            raise BodyValidationError("to_wallet_id", "Destination wallet is not active")
+            raise BodyValidationError(
+                "to_wallet_id", "Destination wallet is not active"
+            )
 
         # Verify PIN if wallet requires it or if PIN is provided
         if from_wallet.requires_pin or pin:

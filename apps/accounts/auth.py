@@ -284,6 +284,7 @@ class AuthUser(HttpBearer):
             )
         return user
 
+
 class AuthKycUser(HttpBearer):
     async def authenticate(self, request, token):
         if not token:
@@ -301,9 +302,12 @@ class AuthKycUser(HttpBearer):
                 status_code=401,
             )
         # If you've not done kyc, you can't access this resource
-        if not await KYCVerification.objects.filter(user=user, status=KYCStatus.APPROVED).aexists():
+        if not await KYCVerification.objects.filter(
+            user=user, status=KYCStatus.APPROVED
+        ).aexists():
             raise RequestError(
-                ErrorCode.KYC_REQUIRED, "KYC verification is required to access this resource"
+                ErrorCode.KYC_REQUIRED,
+                "KYC verification is required to access this resource",
             )
         return user
 

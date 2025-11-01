@@ -26,6 +26,7 @@ class CardStatus(models.TextChoices):
 
 
 class CardProvider(models.TextChoices):
+    INTERNAL = "internal", "Internal"
     FLUTTERWAVE = "flutterwave", "Flutterwave"
     SUDO = "sudo", "Sudo"
     STRIPE = "stripe", "Stripe"

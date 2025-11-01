@@ -2,6 +2,7 @@ from typing import Optional
 from django.conf import settings
 
 from .base import BaseCardProvider
+from .internal import InternalCardProvider
 from .flutterwave import FlutterwaveCardProvider
 from .sudo import SudoCardProvider
 from apps.cards.models import CardProvider
@@ -16,10 +17,14 @@ class CardProviderFactory:
     provider instances based on currency and configuration.
 
     Strategy:
-    1. USD → Flutterwave or Sudo (based on preference)
-    2. NGN → Flutterwave or Sudo (both support NGN)
-    3. GBP → Flutterwave
-    4. EUR → None (no provider supports EUR cards yet)
+    1. USD → Flutterwave (if configured) → Sudo (if configured) → Internal (fallback)
+    2. NGN → Flutterwave (if configured) → Sudo (if configured) → Internal (fallback)
+    3. GBP → Flutterwave (if configured) → Internal (fallback)
+    4. Other currencies → Internal (fallback)
+
+    The Internal provider serves as a universal fallback when external providers
+    are unavailable or not configured, allowing development to continue without
+    external dependencies.
 
     Usage:
         provider = CardProviderFactory.get_provider_for_currency("USD", test_mode=True)
@@ -37,19 +42,23 @@ class CardProviderFactory:
 
     @classmethod
     def get_provider_for_currency(
-        cls, currency_code: str, test_mode: bool = False
+        cls,
+        currency_code: str,
+        test_mode: bool = False,
+        internal: bool = settings.USE_CARD_INTERNAL,
     ) -> BaseCardProvider:
         currency_code = currency_code.upper()
+
+        # If internal provider is requested, return it immediately
+        if internal:
+            return InternalCardProvider(test_mode=test_mode)
 
         # Get configured provider for this currency
         provider_type = cls.CURRENCY_PROVIDER_MAP.get(currency_code)
 
         if not provider_type:
-            raise BodyValidationError(
-                "currency_code",
-                f"No card provider supports {currency_code} cards. "
-                f"Supported currencies: {', '.join(cls.CURRENCY_PROVIDER_MAP.keys())}",
-            )
+            # Fallback to internal provider for unsupported currencies
+            provider_type = CardProvider.INTERNAL
 
         # Check if provider is enabled in settings
         if provider_type == CardProvider.FLUTTERWAVE:
@@ -58,16 +67,12 @@ class CardProviderFactory:
                 if currency_code in ["USD", "NGN"] and cls._is_sudo_enabled():
                     provider_type = CardProvider.SUDO
                 else:
-                    raise BodyValidationError(
-                        "provider",
-                        f"Flutterwave is not configured. Please add credentials to settings.",
-                    )
+                    # Fallback to internal provider
+                    provider_type = CardProvider.INTERNAL
         elif provider_type == CardProvider.SUDO:
             if not cls._is_sudo_enabled():
-                raise BodyValidationError(
-                    "provider",
-                    f"Sudo is not configured. Please add credentials to settings.",
-                )
+                # Fallback to internal provider
+                provider_type = CardProvider.INTERNAL
 
         return cls.get_provider(provider_type, test_mode)
 
@@ -89,6 +94,7 @@ class CardProviderFactory:
             ValidationError: If provider type is invalid or not implemented
         """
         provider_map = {
+            CardProvider.INTERNAL: InternalCardProvider,
             CardProvider.FLUTTERWAVE: FlutterwaveCardProvider,
             CardProvider.SUDO: SudoCardProvider,
             # Future providers

@@ -195,5 +195,5 @@ COUNTRIES_DATA = [
     {"name": "Vietnam", "code": "VN", "currency_code": "VND"},
     {"name": "Yemen", "code": "YE", "currency_code": "YER"},
     {"name": "Zambia", "code": "ZM", "currency_code": "ZMW"},
-    {"name": "Zimbabwe", "code": "ZW", "currency_code": "ZWL"}
+    {"name": "Zimbabwe", "code": "ZW", "currency_code": "ZWL"},
 ]

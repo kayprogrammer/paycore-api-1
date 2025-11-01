@@ -2,10 +2,11 @@ from uuid import UUID
 from decimal import Decimal
 from typing import Optional, List
 from datetime import datetime
+from ninja import ModelSchema
 from pydantic import Field
 
-from apps.cards.models import CardBrand, CardType
-from apps.common.schemas import BaseSchema, ResponseSchema
+from apps.cards.models import Card, CardBrand, CardType
+from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 from apps.common.doc_examples import UUID_EXAMPLE, DATE_EXAMPLE
 
 
@@ -74,53 +75,10 @@ class CardControlsSchema(BaseSchema):
 
 
 # =============== RESPONSE SCHEMAS ===============
-class CardResponseSchema(BaseSchema):
-    card_id: UUID
-    wallet_id: UUID
-    user_id: UUID
-    card_type: str
-    card_brand: str
-
-    # Masked card details
-    masked_number: str
-    card_holder_name: str
-    expiry_month: int
-    expiry_year: int
-
-    # Provider info
-    card_provider: str
-    is_test_mode: bool
-
-    # Limits and controls
-    spending_limit: Optional[Decimal]
-    daily_limit: Optional[Decimal]
-    monthly_limit: Optional[Decimal]
-
-    # Status
-    status: str
-    is_frozen: bool
-    is_expired: bool
-    can_transact: bool
-
-    # Usage tracking
-    total_spent: Decimal
-    daily_spent: Decimal
-    monthly_spent: Decimal
-    last_used_at: Optional[datetime]
-
-    # Controls
-    allow_online_transactions: bool
-    allow_atm_withdrawals: bool
-    allow_international_transactions: bool
-
-    # Metadata
-    nickname: Optional[str]
-    created_for_merchant: Optional[str]
-    billing_address: Optional[BillingAddressSchema]
-
-    # Timestamps
-    created_at: datetime
-    updated_at: datetime
+class CardResponseSchema(ModelSchema):
+    class Meta:
+        model = Card
+        exclude = ["user", "wallet", "id", "deleted_at", "cvv"]
 
 
 class CardDetailsResponseSchema(CardResponseSchema):
@@ -172,12 +130,14 @@ class CardDataResponseSchema(ResponseSchema):
 
 class CardListDataResponseSchema(ResponseSchema):
     data: List[CardListItemSchema]
-    pagination: Optional[dict] = None
 
 
-class CardTransactionListDataResponseSchema(ResponseSchema):
-    data: List[CardTransactionSchema]
-    pagination: Optional[dict] = None
+class CardTransactionListDataResponseSchema(PaginatedResponseDataSchema):
+    transactions: List[CardTransactionSchema] = Field(..., alias="items")
+
+
+class CardTransactionListResponseSchema(ResponseSchema):
+    data: CardTransactionListDataResponseSchema
 
 
 class FundCardDataResponseSchema(ResponseSchema):

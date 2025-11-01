@@ -44,9 +44,7 @@ class CreateKYCSchema(BaseSchema):
     city: str = Field(..., max_length=100)
     state: str = Field(..., max_length=100)
     postal_code: str = Field(..., max_length=20)
-    country_id: UUID = Field(
-        ..., description="Country ID from profiles.Country"
-    )
+    country_id: UUID = Field(..., description="Country ID from profiles.Country")
 
     # Identity document
     document_type: DocumentType
@@ -97,6 +95,7 @@ class KYCVerificationSchema(ModelSchema):
         model = KYCVerification
         exclude = ["id", "deleted_at"]
 
+
 class KYCVerificationListSchema(BaseSchema):
     kyc_id: UUID
     user: UserSchema
@@ -123,11 +122,16 @@ class KYCVerificationListDataResponseSchema(BaseSchema):
 class KYCVerificationPaginatedDataResponseSchema(PaginatedResponseDataSchema):
     data: List[KYCVerificationListSchema] = Field(..., alias="items")
 
+
 class KYCVerificationsResponseSchema(ResponseSchema):
     data: KYCVerificationPaginatedDataResponseSchema
 
+
 class KYCLevelSchema(BaseSchema):
-    level: KYCLevel = Field(None, description="KYC level: tier_1, tier_2, tier_3", example="tier_1")
+    level: KYCLevel = Field(
+        None, description="KYC level: tier_1, tier_2, tier_3", example="tier_1"
+    )
+
 
 # ==================== AML SCHEMAS ====================
 class CreateAMLCheckSchema(BaseSchema):

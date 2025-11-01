@@ -55,7 +55,9 @@ class BillManager:
         if not package:
             raise NotFoundError("package", "Bill package not found")
         if not package.is_active:
-            raise BodyValidationError("package", "This package is currently unavailable")
+            raise BodyValidationError(
+                "package", "This package is currently unavailable"
+            )
         return package
 
     @staticmethod
