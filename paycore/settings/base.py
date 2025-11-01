@@ -419,7 +419,7 @@ SUDO_WEBHOOK_SECRET = config("SUDO_WEBHOOK_SECRET", default=None)
 # Card Provider Settings
 # Set to True to use test/sandbox mode, False for production
 CARD_PROVIDERS_TEST_MODE = config("CARD_PROVIDERS_TEST_MODE", default=True, cast=bool)
-USE_CARD_INTERNAL = config("USE_CARD_INTERNAL", default=False, cast=bool)
+USE_INTERNAL_PROVIDER = config("USE_INTERNAL_PROVIDER", default=False, cast=bool)
 # Wise Configuration (Future use)
 WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default=None)
 WISE_LIVE_API_KEY = config("WISE_LIVE_API_KEY", default=None)

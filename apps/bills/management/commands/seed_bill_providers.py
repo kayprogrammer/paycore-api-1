@@ -9,10 +9,6 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS("Seeding bill payment providers..."))
 
-        # Clear existing data (optional)
-        # BillPackage.objects.all().delete()
-        # BillProvider.objects.all().delete()
-
         # ============================================================================
         # AIRTIME PROVIDERS
         # ============================================================================
