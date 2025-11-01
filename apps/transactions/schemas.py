@@ -1,4 +1,5 @@
 from uuid import UUID
+from ninja import FilterSchema
 from pydantic import Field
 from decimal import Decimal
 from typing import Optional, List
@@ -16,14 +17,14 @@ from apps.transactions.models import (
 
 
 # =============== FILTER SCHEMAS ===============
-class TransactionFilterSchema(BaseSchema):
+class TransactionFilterSchema(FilterSchema):
     transaction_type: Optional[TransactionType] = None
     status: Optional[TransactionStatus] = None
     direction: Optional[TransactionDirection] = None
-    start_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE)
-    end_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE)
-    min_amount: Optional[Decimal] = Field(None, example=10.00, ge=0)
-    max_amount: Optional[Decimal] = Field(None, example=1000.00, ge=0)
+    start_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE, q=["created_at__gte"])
+    end_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE, q=["created_at__lte"])
+    min_amount: Optional[Decimal] = Field(None, example=10.00, ge=0, q=["net_amount__gte"])
+    max_amount: Optional[Decimal] = Field(None, example=1000.00, ge=0, q=["net_amount__lte"])
     search: Optional[str] = Field(
         None,
         example="payment",
@@ -95,18 +96,6 @@ class ResolveDisputeSchema(BaseSchema):
     )
     refund_amount: Optional[Decimal] = Field(None, example=50.00, ge=0)
 
-
-class TransactionFilterSchema(BaseSchema):
-    transaction_type: Optional[TransactionType] = None
-    status: Optional[TransactionStatus] = None
-    direction: Optional[TransactionDirection] = None
-    start_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE)
-    end_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE)
-    min_amount: Optional[Decimal] = Field(None, example=10.00, ge=0)
-    max_amount: Optional[Decimal] = Field(None, example=1000.00, ge=0)
-    search: Optional[str] = Field(None, example="payment")
-
-
 # =============== RESPONSE SCHEMAS ===============
 class TransactionFeeSchema(BaseSchema):
     fee_type: str = Field(..., example="processing")
@@ -119,7 +108,7 @@ class TransactionSchema(BaseSchema):
     transaction_id: UUID = Field(..., example=UUID_EXAMPLE)
     transaction_type: TransactionType
     status: TransactionStatus
-    direction: TransactionDirection
+    direction: TransactionDirection = None
     amount: Decimal = Field(..., example=100.50)
     fee_amount: Decimal = Field(..., example=2.50)
     net_amount: Decimal = Field(..., example=98.00)
@@ -194,13 +183,8 @@ class TransactionReceiptSchema(BaseSchema):
     timestamp: datetime = Field(..., example=DATE_EXAMPLE)
 
 
-class PaginatedTransactionsSchema(BaseSchema):
+class PaginatedTransactionsSchema(PaginatedResponseDataSchema):
     transactions: List[TransactionSchema] = Field(..., alias="items")
-    total: int = Field(..., example=150)
-    page: int = Field(..., example=1)
-    limit: int = Field(..., example=20)
-    total_pages: int = Field(..., example=8)
-
 
 # =============== API RESPONSE WRAPPERS ===============
 class TransactionResponseSchema(ResponseSchema):

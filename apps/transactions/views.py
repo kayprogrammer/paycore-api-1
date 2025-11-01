@@ -54,21 +54,11 @@ transaction_router = Router(tags=["Transactions (11)"])
         All fee details are itemized in the transaction record.
     """,
     response={200: TransactionReceiptResponseSchema},
-    throttle=AuthRateThrottle("30/m"),
+    throttle=AuthRateThrottle("100/m"),
 )
 async def initiate_transfer(request, data: InitiateTransferSchema):
     user = request.auth
-    result = await TransactionOperations.initiate_transfer(
-        user=user,
-        from_wallet_id=data.from_wallet_id,
-        to_wallet_id=data.to_wallet_id,
-        amount=data.amount,
-        description=data.description,
-        reference=data.reference,
-        pin=data.pin,
-        biometric_token=data.biometric_token,
-        device_id=data.device_id,
-    )
+    result = await TransactionOperations.initiate_transfer(user=user, **data.model_dump())
     return CustomResponse.success(
         message="Transfer completed successfully", data=result
     )
@@ -125,7 +115,7 @@ async def get_wallet_transactions(
     if not wallet:
         raise NotFoundError("Wallet not found")
     result = await TransactionOperations.list_user_transactions(
-        user, filters, page_params, wallet_id=wallet_id
+        user, filters, page_params, wallet_id=wallet.id
     )
     return CustomResponse.success(
         message="Wallet transactions retrieved successfully", data=result

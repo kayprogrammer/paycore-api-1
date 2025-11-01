@@ -56,7 +56,7 @@ class Transaction(BaseModel):
         choices=TransactionStatus.choices,
         default=TransactionStatus.PENDING,
     )
-    direction = models.CharField(max_length=20, choices=TransactionDirection.choices)
+    direction = models.CharField(max_length=20, choices=TransactionDirection.choices, default=TransactionDirection.INTERNAL)
 
     # Amount and Currency
     amount = models.DecimalField(max_digits=20, decimal_places=8)

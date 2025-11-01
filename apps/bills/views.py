@@ -11,7 +11,6 @@ from apps.bills.schemas import (
     CustomerValidationResponseSchema,
     ValidateCustomerSchema,
     CreateBillPaymentSchema,
-    BillPaymentSchema,
 )
 from apps.bills.services.bill_manager import BillManager
 

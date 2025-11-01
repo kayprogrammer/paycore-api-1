@@ -211,6 +211,8 @@ class TransactionOperations:
 
         return {
             "transaction_id": transaction.transaction_id,
+            "transaction_type": transaction.transaction_type,
+            "currency_code": from_wallet.currency.code,
             "amount": amount,
             "fee_amount": fee_amount,
             "total_amount": total_amount,
@@ -246,9 +248,6 @@ class TransactionOperations:
                 403,
             )
 
-        transaction.fees = await sync_to_async(list)(
-            transaction.fees.values("fee_type", "amount", "percentage", "description")
-        )
         transaction.has_dispute = await transaction.disputes.aexists()
         transaction.can_dispute = (
             transaction.status == TransactionStatus.COMPLETED
