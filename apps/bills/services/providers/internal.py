@@ -1,3 +1,4 @@
+import asyncio
 import random
 import time
 from typing import Dict, Any
@@ -80,7 +81,6 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
         Always returns valid for development purposes.
         """
         # Add small delay to simulate API call
-        import asyncio
         await asyncio.sleep(0.1)
 
         customer_name = self._generate_customer_name(customer_id)
@@ -125,7 +125,6 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
         Always succeeds and returns realistic response data.
         """
         # Add small delay to simulate API call
-        import asyncio
         await asyncio.sleep(0.2)
 
         provider_reference = self._generate_provider_reference()
@@ -172,7 +171,6 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
 
         Always returns successful status.
         """
-        import asyncio
         await asyncio.sleep(0.05)
 
         return {

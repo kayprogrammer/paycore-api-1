@@ -52,6 +52,11 @@ class AccountProviderFactory:
         """
         currency_code = currency_code.upper()
 
+        # Check if internal provider should be used globally
+        use_internal = getattr(settings, "USE_INTERNAL_PROVIDER", False)
+        if use_internal:
+            return cls.get_provider(AccountProvider.INTERNAL, test_mode)
+
         # Get configured provider for this currency
         provider_type = cls.CURRENCY_PROVIDER_MAP.get(
             currency_code, AccountProvider.INTERNAL

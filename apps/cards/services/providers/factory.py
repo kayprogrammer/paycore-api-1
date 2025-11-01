@@ -42,16 +42,14 @@ class CardProviderFactory:
 
     @classmethod
     def get_provider_for_currency(
-        cls,
-        currency_code: str,
-        test_mode: bool = False,
-        internal: bool = settings.USE_CARD_INTERNAL,
+        cls, currency_code: str, test_mode: bool = False
     ) -> BaseCardProvider:
         currency_code = currency_code.upper()
 
-        # If internal provider is requested, return it immediately
-        if internal:
-            return InternalCardProvider(test_mode=test_mode)
+        # Check if internal provider should be used globally
+        use_internal = getattr(settings, "USE_INTERNAL_PROVIDER", False)
+        if use_internal:
+            return cls.get_provider(CardProvider.INTERNAL, test_mode)
 
         # Get configured provider for this currency
         provider_type = cls.CURRENCY_PROVIDER_MAP.get(currency_code)

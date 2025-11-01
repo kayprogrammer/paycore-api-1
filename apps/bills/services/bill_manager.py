@@ -23,7 +23,9 @@ from apps.common.exceptions import (
     RequestError,
     ErrorCode,
 )
+from django.conf import settings
 from apps.bills.services.providers.flutterwave import FlutterwaveBillProvider
+from apps.bills.services.providers.internal import InternalBillPaymentProvider
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,21 @@ logger = logging.getLogger(__name__)
 
 class BillManager:
     """Bill payment management service"""
+
+    @staticmethod
+    def _get_payment_gateway(test_mode: bool = True):
+        """
+        Get the appropriate bill payment gateway based on settings.
+
+        Returns:
+            Internal provider if USE_INTERNAL_PROVIDER is True, else Flutterwave
+        """
+        use_internal = getattr(settings, "USE_INTERNAL_PROVIDER", False)
+
+        if use_internal:
+            return InternalBillPaymentProvider(test_mode=test_mode)
+        else:
+            return FlutterwaveBillProvider(test_mode=test_mode)
 
     @staticmethod
     async def get_provider(provider_id: UUID) -> BillProvider:
@@ -85,7 +102,7 @@ class BillManager:
         customer_id: str,
     ) -> Dict[str, Any]:
         provider = await BillManager.get_provider(provider_id)
-        gateway = FlutterwaveBillProvider(test_mode=True)  # TODO: Get from settings
+        gateway = BillManager._get_payment_gateway(test_mode=True)
         try:
             validation_result = await gateway.validate_customer(
                 provider_code=provider.provider_code,
@@ -198,7 +215,7 @@ class BillManager:
 
         # Process payment with gateway
         try:
-            gateway = FlutterwaveBillProvider(test_mode=True)  # TODO: Get from settings
+            gateway = BillManager._get_payment_gateway(test_mode=True)
 
             payment_result = await gateway.process_payment(
                 provider_code=provider.provider_code,

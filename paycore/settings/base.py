@@ -419,6 +419,11 @@ SUDO_WEBHOOK_SECRET = config("SUDO_WEBHOOK_SECRET", default=None)
 # Card Provider Settings
 # Set to True to use test/sandbox mode, False for production
 CARD_PROVIDERS_TEST_MODE = config("CARD_PROVIDERS_TEST_MODE", default=True, cast=bool)
+
+# Use Internal Providers Globally
+# When True: Uses internal providers for wallets, cards, and bills (no external API calls)
+# When False: Uses external providers (Paystack, Flutterwave, Sudo, etc.)
+# Perfect for development when external providers aren't configured
 USE_INTERNAL_PROVIDER = config("USE_INTERNAL_PROVIDER", default=False, cast=bool)
 # Wise Configuration (Future use)
 WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default=None)
