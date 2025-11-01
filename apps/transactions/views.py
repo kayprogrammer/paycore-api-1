@@ -4,6 +4,7 @@ from ninja.throttling import AuthRateThrottle
 
 from apps.common.exceptions import NotFoundError
 from apps.transactions.schemas import (
+    BanksResponseSchema,
     InitiateTransferSchema,
     InitiateDepositSchema,
     InitiateWithdrawalSchema,
@@ -18,9 +19,13 @@ from apps.transactions.schemas import (
     DisputeListResponseSchema,
     DisputeStatus,
 )
+from apps.transactions.services.providers.withdrawal_factory import (
+    WithdrawalProviderFactory,
+)
 from apps.transactions.services.transaction_operations import TransactionOperations
 from apps.transactions.services.dispute_service import DisputeService
 from apps.transactions.services.deposit_manager import DepositManager
+from apps.transactions.services.withdrawal_manager import WithdrawalManager
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 from apps.wallets.models import Wallet
@@ -59,7 +64,9 @@ transaction_router = Router(tags=["Transactions (11)"])
 )
 async def initiate_transfer(request, data: InitiateTransferSchema):
     user = request.auth
-    result = await TransactionOperations.initiate_transfer(user=user, **data.model_dump())
+    result = await TransactionOperations.initiate_transfer(
+        user=user, **data.model_dump()
+    )
     return CustomResponse.success(
         message="Transfer completed successfully", data=result
     )
@@ -172,9 +179,12 @@ async def initiate_deposit(request, data: InitiateDepositSchema):
     )
 
     return CustomResponse.success(
-        message="Deposit initiated successfully" if payment_info["status"] == "pending"
-                else "Deposit completed successfully",
-        data=transaction
+        message=(
+            "Deposit initiated successfully"
+            if payment_info["status"] == "pending"
+            else "Deposit completed successfully"
+        ),
+        data=transaction,
     )
 
 
@@ -195,20 +205,10 @@ async def verify_deposit(request, reference: str):
     transaction = await DepositManager.verify_and_complete_deposit(reference=reference)
 
     # Check if transaction belongs to user
-    if transaction.user_id != user.id:
+    if transaction.to_user_id != user.id:
         raise NotFoundError("Transaction not found")
-
     return CustomResponse.success(
-        message=f"Deposit {transaction.status}",
-        data={
-            "transaction_id": str(transaction.transaction_id),
-            "reference": transaction.external_reference,
-            "amount": float(transaction.amount),
-            "currency": transaction.currency.code,
-            "status": transaction.status,
-            "provider": transaction.provider,
-            "completed_at": transaction.completed_at.isoformat() if transaction.completed_at else None,
-        },
+        message=f"Deposit {transaction.status}", data=transaction
     )
 
 
@@ -216,28 +216,143 @@ async def verify_deposit(request, reference: str):
     "/withdrawal/initiate",
     summary="Initiate a withdrawal",
     description="""
-        Initiate a withdrawal from wallet to external account.
-        Requires PIN verification and sufficient balance.
+        Initiate a withdrawal from wallet to bank account.
+
+        Supports multiple payment providers:
+        - Internal: Instant completion for testing (when USE_INTERNAL_PROVIDER=True)
+        - Paystack: Bank transfers for NGN (Nigerian banks)
+        - Flutterwave: Coming soon (multi-currency support)
+
+        **Requirements:**
+        - Active wallet with sufficient balance
+        - PIN verification (if wallet requires PIN)
+        - Valid bank account details (account_number, bank_code, account_name)
+
+        **Process:**
+        1. Validates wallet and balance
+        2. Verifies PIN if required
+        3. Creates withdrawal transaction
+        4. Initiates transfer with provider
+        5. Debits wallet immediately
+        6. Returns withdrawal status and details
     """,
     response={200: TransactionResponseSchema},
     throttle=AuthRateThrottle("10/m"),
 )
 async def initiate_withdrawal(request, data: InitiateWithdrawalSchema):
-    """Initiate a withdrawal (placeholder - integrate with payout service)"""
+    """Initiate a withdrawal to bank account using configured provider"""
     user = request.auth
 
-    # This is a placeholder - integrate with actual payout service
-    # Verify wallet, balance, PIN, etc.
+    transaction, withdrawal_info = await WithdrawalManager.initiate_withdrawal(
+        user=user,
+        wallet_id=data.wallet_id,
+        amount=data.amount,
+        account_details=data.account_details,
+        pin=str(data.pin) if data.pin else None,
+        description=data.description,
+    )
 
     return CustomResponse.success(
-        message="Withdrawal initiated successfully. Processing payout.",
-        data={
-            "transaction_id": "pending",
-            "amount": data.amount,
-            "destination": data.destination,
-            "status": "processing",
-            "estimated_completion": "1-3 business days",
-        },
+        message=(
+            "Withdrawal initiated successfully"
+            if withdrawal_info["status"] == "pending"
+            else "Withdrawal completed successfully"
+        ),
+        data=transaction,
+    )
+
+
+@transaction_router.post(
+    "/withdrawal/verify",
+    summary="Verify a withdrawal",
+    description="""
+        Verify and update withdrawal transaction status.
+
+        Can be used for:
+        - Manual verification after webhook
+        - Polling for status updates
+        - Confirming completion
+
+        Automatically refunds wallet if withdrawal failed.
+    """,
+    response={200: TransactionResponseSchema},
+    throttle=AuthRateThrottle("20/m"),
+)
+async def verify_withdrawal(
+    request, transaction_id: UUID = None, reference: str = None
+):
+    """Verify withdrawal status and update transaction"""
+    user = request.auth
+
+    transaction = await WithdrawalManager.verify_and_complete_withdrawal(
+        transaction_id=transaction_id, reference=reference
+    )
+
+    # Verify user owns the transaction
+    if transaction.from_user_id != user.id:
+        raise NotFoundError("Transaction not found")
+
+    return CustomResponse.success(
+        message="Withdrawal verification complete", data=transaction
+    )
+
+
+@transaction_router.get(
+    "/withdrawal/banks",
+    summary="Get list of banks for withdrawals",
+    description="""
+        Get list of supported banks for withdrawals.
+
+        Optionally filter by currency code.
+        Returns bank name, code, and currency.
+    """,
+    response={200: BanksResponseSchema},
+    throttle=AuthRateThrottle("30/m"),
+)
+async def get_withdrawal_banks(request, currency_code: str = "NGN"):
+    """Get list of banks for withdrawals"""
+    test_mode = WithdrawalProviderFactory.get_test_mode_setting()
+    provider = WithdrawalProviderFactory.get_provider_for_currency(
+        currency_code, test_mode=test_mode
+    )
+    banks = await provider.get_banks(currency_code=currency_code)
+
+    return CustomResponse.success(
+        message=f"Retrieved {len(banks)} banks for {currency_code}",
+        data={"currency": currency_code, "banks": banks, "count": len(banks)},
+    )
+
+
+@transaction_router.post(
+    "/withdrawal/verify-account",
+    summary="Verify bank account number",
+    description="""
+        Verify bank account number and resolve account name.
+
+        Uses provider's account resolution API to confirm:
+        - Account number is valid
+        - Account name matches
+        - Bank details are correct
+
+        Required for withdrawal verification.
+    """,
+    response={200: ResponseSchema},
+    throttle=AuthRateThrottle("10/m"),
+)
+async def verify_bank_account(
+    request, account_number: str, bank_code: str, currency_code: str = "NGN"
+):
+    test_mode = WithdrawalProviderFactory.get_test_mode_setting()
+    provider = WithdrawalProviderFactory.get_provider_for_currency(
+        currency_code, test_mode=test_mode
+    )
+
+    account_info = await provider.verify_account_number(
+        account_number=account_number, bank_code=bank_code
+    )
+
+    return CustomResponse.success(
+        message="Account verified successfully", data=account_info
     )
 
 
@@ -298,18 +413,3 @@ async def get_dispute(request, dispute_id: UUID):
     return CustomResponse.success(
         message="Dispute details retrieved successfully", data=result
     )
-
-
-@transaction_router.post(
-    "/disputes/{dispute_id}/evidence",
-    summary="Add evidence to dispute",
-    description="Add supporting evidence to an existing dispute",
-    response=ResponseSchema,
-    throttle=AuthRateThrottle("10/m"),
-)
-async def add_dispute_evidence(request, dispute_id: UUID, evidence: dict):
-    user = request.auth
-    await DisputeService.add_evidence_to_dispute(
-        user=user, dispute_id=dispute_id, evidence=evidence
-    )
-    return CustomResponse.success(message="Evidence added successfully")

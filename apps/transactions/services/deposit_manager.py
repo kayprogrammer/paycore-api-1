@@ -11,6 +11,7 @@ from apps.common.decorators import aatomic
 from apps.common.exceptions import BodyValidationError, RequestError, ErrorCode
 from django.utils import timezone
 
+
 class DepositManager:
     """Service for managing deposit transactions"""
 
@@ -93,7 +94,9 @@ class DepositManager:
 
             # Update transaction with provider info (serialize decimals)
             serialized_payment_info = serialize_for_json(payment_info)
-            transaction.metadata = transaction.metadata | {"provider_response": serialized_payment_info} 
+            transaction.metadata = transaction.metadata | {
+                "provider_response": serialized_payment_info
+            }
 
             # If internal provider (instant completion)
             if payment_info["status"] == "completed":
@@ -138,20 +141,25 @@ class DepositManager:
         transaction = None
         if transaction_id:
             transaction = await Transaction.objects.select_related(
-                "wallet__currency", "user"
+                "to_wallet__currency", "to_user"
             ).aget_or_none(transaction_id=transaction_id)
         elif reference:
             transaction = await Transaction.objects.select_related(
-                "wallet__currency", "user"
+                "to_wallet__currency", "to_user"
             ).aget_or_none(external_reference=reference)
         else:
-            raise BodyValidationError("transaction", "Transaction ID or reference required")
+            raise BodyValidationError(
+                "transaction", "Transaction ID or reference required"
+            )
 
         if not transaction:
             raise BodyValidationError("transaction", "Transaction not found")
 
         # Skip if already completed or failed
-        if transaction.status in [TransactionStatus.COMPLETED, TransactionStatus.FAILED]:
+        if transaction.status in [
+            TransactionStatus.COMPLETED,
+            TransactionStatus.FAILED,
+        ]:
             return transaction
 
         # Get provider and verify
@@ -175,7 +183,9 @@ class DepositManager:
                 transaction.status = TransactionStatus.COMPLETED
                 transaction.from_balance_after = wallet.balance
                 transaction.completed_at = timezone.now()
-                transaction.metadata = transaction.metadata | {"provider_response": serialize_for_json(verification_result)}
+                transaction.metadata = transaction.metadata | {
+                    "provider_response": serialize_for_json(verification_result)
+                }
 
             elif verification_result["status"] == "failed":
                 transaction.status = TransactionStatus.FAILED

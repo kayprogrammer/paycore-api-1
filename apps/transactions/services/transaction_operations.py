@@ -3,7 +3,6 @@ from typing import Optional, Dict, Any
 from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg
 from uuid import UUID
-from asgiref.sync import sync_to_async
 
 from apps.accounts.auth import Authentication
 from apps.accounts.models import User

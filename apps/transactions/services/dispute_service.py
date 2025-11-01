@@ -122,8 +122,8 @@ class DisputeService:
     @staticmethod
     async def list_user_disputes(
         user: User,
-        page_params: PaginationQuerySchema,
         status: Optional[DisputeStatus] = None,
+        page_params: PaginationQuerySchema = None,
     ) -> Dict[str, Any]:
 
         filters = (

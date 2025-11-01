@@ -21,10 +21,18 @@ class TransactionFilterSchema(FilterSchema):
     transaction_type: Optional[TransactionType] = None
     status: Optional[TransactionStatus] = None
     direction: Optional[TransactionDirection] = None
-    start_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE, q=["created_at__gte"])
-    end_date: Optional[datetime] = Field(None, example=DATE_EXAMPLE, q=["created_at__lte"])
-    min_amount: Optional[Decimal] = Field(None, example=10.00, ge=0, q=["net_amount__gte"])
-    max_amount: Optional[Decimal] = Field(None, example=1000.00, ge=0, q=["net_amount__lte"])
+    start_date: Optional[datetime] = Field(
+        None, example=DATE_EXAMPLE, q=["created_at__gte"]
+    )
+    end_date: Optional[datetime] = Field(
+        None, example=DATE_EXAMPLE, q=["created_at__lte"]
+    )
+    min_amount: Optional[Decimal] = Field(
+        None, example=10.00, ge=0, q=["net_amount__gte"]
+    )
+    max_amount: Optional[Decimal] = Field(
+        None, example=1000.00, ge=0, q=["net_amount__lte"]
+    )
     search: Optional[str] = Field(
         None,
         example="payment",
@@ -95,6 +103,7 @@ class ResolveDisputeSchema(BaseSchema):
         ..., min_length=10, example="Dispute resolved in favor of customer"
     )
     refund_amount: Optional[Decimal] = Field(None, example=50.00, ge=0)
+
 
 # =============== RESPONSE SCHEMAS ===============
 class TransactionFeeSchema(BaseSchema):
@@ -186,6 +195,13 @@ class TransactionReceiptSchema(BaseSchema):
 class PaginatedTransactionsSchema(PaginatedResponseDataSchema):
     transactions: List[TransactionSchema] = Field(..., alias="items")
 
+
+class BankSchema(BaseSchema):
+    name: str = Field(..., example="Bank of America")
+    code: str = Field(..., example="BOA")
+    currency: str = Field(..., example="USD")
+
+
 # =============== API RESPONSE WRAPPERS ===============
 class TransactionResponseSchema(ResponseSchema):
     data: TransactionSchema
@@ -217,3 +233,13 @@ class DisputePaginatedDataSchema(PaginatedResponseDataSchema):
 
 class DisputeListResponseSchema(ResponseSchema):
     data: DisputePaginatedDataSchema
+
+
+class BankListResponseDataSchema(BaseSchema):
+    currency: str = Field(..., example="USD")
+    banks: List[BankSchema]
+    count: int
+
+
+class BanksResponseSchema(ResponseSchema):
+    data: BankListResponseDataSchema

@@ -1,9 +1,11 @@
 from decimal import Decimal
 
+
 def set_dict_attr(obj, data):
     for attr, value in data.items():
         setattr(obj, attr, value)
     return obj
+
 
 def serialize_for_json(obj):
     if isinstance(obj, dict):

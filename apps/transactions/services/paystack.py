@@ -62,7 +62,7 @@ class PaystackDepositProvider(BaseDepositProvider):
         currency_code: str,
         reference: str,
         callback_url: str = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Initialize Paystack transaction.

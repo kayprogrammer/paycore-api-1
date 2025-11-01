@@ -53,7 +53,7 @@ class InternalDepositProvider(BaseDepositProvider):
         currency_code: str,
         reference: str,
         callback_url: str = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Initiate internal deposit (instant completion for testing).
