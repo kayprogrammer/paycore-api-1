@@ -17,6 +17,7 @@ class UserUpdateSchema(BaseSchema):
     bio: str = Field(
         ..., example="Senior Backend Engineer | Django Ninja", max_length=200
     )
+    phone: str = Field(..., example="+2348012345678", max_length=20)
     push_enabled: bool = Field(..., example=True)
     in_app_enabled: bool = Field(..., example=True)
     email_enabled: bool = Field(..., example=True)

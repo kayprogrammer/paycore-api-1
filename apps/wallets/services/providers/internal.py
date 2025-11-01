@@ -1,7 +1,6 @@
 from typing import Dict, Any, Optional
 from decimal import Decimal
-import random
-import time
+import random, time, asyncio
 
 from .base import BaseAccountProvider
 from apps.wallets.models import Wallet
@@ -12,17 +11,29 @@ class InternalAccountProvider(BaseAccountProvider):
     """
     Internal account provider for currencies without external provider support.
 
-    Used for USD, EUR, GBP and other currencies where we manage account numbers
+    Used for USD, EUR, GBP, NGN and other currencies where we manage account numbers
     internally without external payment gateway integration.
+
+    This provider is production-ready and serves as a fallback when external
+    providers (like Paystack) are unavailable or not configured.
+
+    Features:
+    - Generates unique account numbers (10 digits starting with 90)
+    - Supports all major currencies
+    - No external API dependencies
+    - Immediate account creation
 
     Account Number Format: 90XXXXXXXX (10 digits starting with 90)
     """
 
     SUPPORTED_CURRENCIES = [
-        "USD",
-        "EUR",
-        "GBP",
-        "NGN",
+        "NGN",  # Nigerian Naira
+        "USD",  # US Dollar
+        "EUR",  # Euro
+        "GBP",  # British Pound
+        "KES",  # Kenyan Shilling
+        "GHS",  # Ghanaian Cedi
+        "ZAR",  # South African Rand
     ]  # Can support any currency internally
 
     def __init__(self, test_mode: bool = False):
@@ -37,9 +48,18 @@ class InternalAccountProvider(BaseAccountProvider):
         currency_code: str,
         **kwargs,
     ) -> Dict[str, Any]:
+        """
+        Create an internal virtual account.
+
+        Generates a unique account number and returns account details immediately
+        without requiring external API calls.
+        """
+        # Add small delay to simulate realistic API behavior
+        await asyncio.sleep(0.05)
+
         # Generate unique account number
         account_number = await self._generate_account_number()
-        account_name = f"{user_first_name} {user_last_name}".strip()
+        account_name = f"{user_first_name} {user_last_name}".strip().upper()
 
         # Bank name is always PayCore for internal accounts
         bank_name = "PayCore"
@@ -54,6 +74,9 @@ class InternalAccountProvider(BaseAccountProvider):
                 "currency": currency_code,
                 "test_mode": self.test_mode,
                 "created_by": user_email,
+                "phone": user_phone,
+                "created_at": time.time(),
+                "account_type": "internal_virtual_account",
             },
         }
 

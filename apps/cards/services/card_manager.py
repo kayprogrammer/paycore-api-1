@@ -28,6 +28,10 @@ class CardManager:
         - NGN → Flutterwave or Sudo
         - GBP → Flutterwave
         """
+        if not user.phone:
+            raise RequestError(
+                ErrorCode.NOT_ALLOWED, "Update your phone number first in profile"
+            )
         # Get and validate wallet
         wallet = await Wallet.objects.select_related("currency", "user").aget_or_none(
             wallet_id=data.wallet_id, user=user
@@ -50,13 +54,14 @@ class CardManager:
             user_email=user.email,
             user_first_name=user.first_name or "",
             user_last_name=user.last_name or "",
-            user_phone=getattr(user, "phone", ""),
+            user_phone=user.phone,
             currency_code=wallet.currency.code,
             card_type=data.card_type,
             card_brand=data.card_brand,
             billing_address=(
                 data.billing_address.model_dump() if data.billing_address else None
             ),
+            date_of_birth=user.dob.strftime("%Y-%m-%d") if user.dob else None,
         )
 
         card = await Card.objects.acreate(

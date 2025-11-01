@@ -26,21 +26,21 @@ card_router = Router(tags=["Cards (12)"])
     description="""
         Create a new virtual or physical card linked to a wallet.
 
-        **Card Types:**
+        Card Types:
         - `virtual`: Digital card for online transactions
         - `physical`: Physical card for ATM/POS (coming soon)
 
-        **Card Brands:**
+        Card Brands:
         - `visa`: Visa card
         - `mastercard`: Mastercard
         - `verve`: Verve (NGN only)
 
-        **Note:** Cards are created in INACTIVE status. You must activate them before use.
+        Note: Cards are created in INACTIVE status. You must activate them before use.
     """,
     response={201: CreateCardDataResponseSchema},
 )
 async def create_card(request, data: CreateCardSchema):
-    card = await CardManager.create_card(request.user, data)
+    card = await CardManager.create_card(request.auth, data)
     return 201, CustomResponse.success(message="Card created successfully", data=card)
 
 

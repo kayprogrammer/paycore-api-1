@@ -1,3 +1,4 @@
+import random
 from typing import Dict, Any, Optional
 from decimal import Decimal
 import hashlib
@@ -51,6 +52,7 @@ class FlutterwaveCardProvider(BaseCardProvider):
         card_type: str,
         card_brand: str,
         billing_address: Optional[Dict[str, str]] = None,
+        date_of_birth: Optional[str] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -65,6 +67,9 @@ class FlutterwaveCardProvider(BaseCardProvider):
                 f"Flutterwave does not support {currency_code} cards. Supported: {', '.join(self.SUPPORTED_CURRENCIES)}",
             )
 
+        gender = random.choice(["male", "female"])
+        title = "Mr" if gender == "male" else "Mrs"
+
         payload = {
             "currency": currency_code,
             "amount": kwargs.get("initial_amount", 0),
@@ -72,6 +77,13 @@ class FlutterwaveCardProvider(BaseCardProvider):
             "billing_name": f"{user_first_name} {user_last_name}",
             "billing_email": user_email,
             "billing_phone": user_phone,
+            "first_name": user_first_name,
+            "last_name": user_last_name,
+            "email": user_email,
+            "phone": user_phone,
+            "title": title,
+            "gender": gender,
+            "date_of_birth": date_of_birth,
         }
 
         if billing_address:

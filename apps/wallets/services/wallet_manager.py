@@ -6,6 +6,7 @@ import random
 
 from apps.accounts.models import User
 from apps.common.utils import set_dict_attr
+from apps.compliance.models import KYCStatus, KYCVerification
 from apps.wallets.models import Wallet, Currency, WalletStatus
 from apps.common.exceptions import (
     NotFoundError,

@@ -9,6 +9,8 @@ from google.oauth2 import id_token
 from ninja.security import HttpBearer
 import jwt, secrets
 
+from apps.compliance.models import KYCStatus, KYCVerification
+
 ALGORITHM = "HS256"
 
 
@@ -279,6 +281,29 @@ class AuthUser(HttpBearer):
                 err_code=ErrorCode.INVALID_TOKEN,
                 err_msg="Auth Token is Invalid or Expired!",
                 status_code=401,
+            )
+        return user
+
+class AuthKycUser(HttpBearer):
+    async def authenticate(self, request, token):
+        if not token:
+            raise RequestError(
+                err_code=ErrorCode.INVALID_AUTH,
+                err_msg="Auth Bearer not provided!",
+                status_code=401,
+            )
+
+        user = await Authentication.retrieve_user_from_token(token)
+        if not user:
+            raise RequestError(
+                err_code=ErrorCode.INVALID_TOKEN,
+                err_msg="Auth Token is Invalid or Expired!",
+                status_code=401,
+            )
+        # If you've not done kyc, you can't access this resource
+        if not await KYCVerification.objects.filter(user=user, status=KYCStatus.APPROVED).aexists():
+            raise RequestError(
+                ErrorCode.KYC_REQUIRED, "KYC verification is required to access this resource"
             )
         return user
 

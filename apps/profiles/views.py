@@ -1,4 +1,6 @@
 from ninja import File, Form, Query, Router, UploadedFile
+from apps.accounts.models import User
+from apps.common.exceptions import BodyValidationError
 from apps.common.responses import CustomResponse
 from apps.common.utils import set_dict_attr
 from apps.profiles.schemas import (
@@ -38,6 +40,9 @@ async def update_user(
     request, data: Form[UserUpdateSchema], avatar: File[UploadedFile] = None
 ):
     user = request.auth
+    phone_already_used = await User.objects.filter(phone=data.phone).exclude(id=user.id).aexists()
+    if phone_already_used:
+        raise BodyValidationError("phone", "Phone number already used")
     user = set_dict_attr(user, data.model_dump())
     user.avatar = avatar
     await user.asave()

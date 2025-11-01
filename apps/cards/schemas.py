@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from pydantic import Field
 
+from apps.cards.models import CardBrand, CardType
 from apps.common.schemas import BaseSchema, ResponseSchema
 from apps.common.doc_examples import UUID_EXAMPLE, DATE_EXAMPLE
 
@@ -24,14 +25,14 @@ class CreateCardSchema(BaseSchema):
     wallet_id: UUID = Field(
         ..., example=UUID_EXAMPLE, description="Wallet to link card to"
     )
-    card_type: str = Field(
-        default="virtual",
-        example="virtual",
+    card_type: CardType = Field(
+        default=CardType.VIRTUAL,
+        example=CardType.VIRTUAL,
         description="Card type (virtual or physical)",
     )
-    card_brand: str = Field(
-        default="visa",
-        example="visa",
+    card_brand: CardBrand = Field(
+        default=CardBrand.VISA,
+        example=CardBrand.VISA,
         description="Card brand (visa, mastercard, verve)",
     )
     currency_code: str = Field(..., example="USD", description="Card currency")

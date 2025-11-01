@@ -65,6 +65,7 @@ class KYCManager:
         )
         user.first_name = kyc.first_name
         user.last_name = kyc.last_name
+        user.dob = kyc.date_of_birth
         await user.asave()
 
         kyc = await KYCVerification.objects.select_related("user").prefetch_related("documents").aget(kyc_id=kyc.kyc_id)

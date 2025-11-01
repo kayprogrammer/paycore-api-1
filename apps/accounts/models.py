@@ -10,6 +10,7 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(verbose_name=(_("Email address")), unique=True)
+    phone = models.CharField(max_length=20, null=True, blank=True, unique=True)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     social_avatar = models.CharField(max_length=1000, null=True, blank=True)
     is_email_verified = models.BooleanField(default=False)

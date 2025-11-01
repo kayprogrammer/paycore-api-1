@@ -397,32 +397,32 @@ PAYMENT_PROVIDERS_TEST_MODE = config(
 
 # Paystack Configuration
 # Get your keys from: https://dashboard.paystack.com/#/settings/developers
-PAYSTACK_TEST_SECRET_KEY = config("PAYSTACK_TEST_SECRET_KEY", default="")
-PAYSTACK_TEST_PUBLIC_KEY = config("PAYSTACK_TEST_PUBLIC_KEY", default="")
-PAYSTACK_LIVE_SECRET_KEY = config("PAYSTACK_LIVE_SECRET_KEY", default="")
-PAYSTACK_LIVE_PUBLIC_KEY = config("PAYSTACK_LIVE_PUBLIC_KEY", default="")
+PAYSTACK_TEST_SECRET_KEY = config("PAYSTACK_TEST_SECRET_KEY", default=None)
+PAYSTACK_TEST_PUBLIC_KEY = config("PAYSTACK_TEST_PUBLIC_KEY", default=None)
+PAYSTACK_LIVE_SECRET_KEY = config("PAYSTACK_LIVE_SECRET_KEY", default=None)
+PAYSTACK_LIVE_PUBLIC_KEY = config("PAYSTACK_LIVE_PUBLIC_KEY", default=None)
 
 # Flutterwave Configuration
 # Get your keys from: https://dashboard.flutterwave.com/settings/apis
 # Used for: Virtual cards (USD, NGN, GBP)
-FLUTTERWAVE_TEST_SECRET_KEY = config("FLUTTERWAVE_TEST_SECRET_KEY", default="")
-FLUTTERWAVE_LIVE_SECRET_KEY = config("FLUTTERWAVE_LIVE_SECRET_KEY", default="")
-FLUTTERWAVE_WEBHOOK_SECRET = config("FLUTTERWAVE_WEBHOOK_SECRET", default="")
+FLUTTERWAVE_TEST_SECRET_KEY = config("FLUTTERWAVE_TEST_SECRET_KEY", default=None)
+FLUTTERWAVE_LIVE_SECRET_KEY = config("FLUTTERWAVE_LIVE_SECRET_KEY", default=None)
+FLUTTERWAVE_WEBHOOK_SECRET = config("FLUTTERWAVE_WEBHOOK_SECRET", default=None)
 
 # Sudo Africa Configuration
 # Get your keys from: https://dashboard.sudo.africa/developers/keys
 # Used for: Virtual cards (USD, NGN)
-SUDO_TEST_SECRET_KEY = config("SUDO_TEST_SECRET_KEY", default="")
-SUDO_LIVE_SECRET_KEY = config("SUDO_LIVE_SECRET_KEY", default="")
-SUDO_WEBHOOK_SECRET = config("SUDO_WEBHOOK_SECRET", default="")
+SUDO_TEST_SECRET_KEY = config("SUDO_TEST_SECRET_KEY", default=None)
+SUDO_LIVE_SECRET_KEY = config("SUDO_LIVE_SECRET_KEY", default=None)
+SUDO_WEBHOOK_SECRET = config("SUDO_WEBHOOK_SECRET", default=None)   
 
 # Card Provider Settings
 # Set to True to use test/sandbox mode, False for production
 CARD_PROVIDERS_TEST_MODE = config("CARD_PROVIDERS_TEST_MODE", default=True, cast=bool)
 
 # Wise Configuration (Future use)
-WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default="")
-WISE_LIVE_API_KEY = config("WISE_LIVE_API_KEY", default="")
+WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default=None)
+WISE_LIVE_API_KEY = config("WISE_LIVE_API_KEY", default=None)
 
 # Django Channels Configuration
 CHANNEL_LAYERS = {
@@ -444,8 +444,8 @@ CHANNEL_LAYERS = {
 # Firebase Admin SDK Configuration
 
 FIREBASE_APP = None
-FIREBASE_CREDENTIALS_JSON = config("FIREBASE_CREDENTIALS_JSON", default="")
-FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default="")
+FIREBASE_CREDENTIALS_JSON = config("FIREBASE_CREDENTIALS_JSON", default=None)
+FIREBASE_CREDENTIALS_PATH = config("FIREBASE_CREDENTIALS_PATH", default=None)
 
 # Initialize Firebase Admin SDK
 if FIREBASE_CREDENTIALS_JSON and FIREBASE_CREDENTIALS_JSON.strip():

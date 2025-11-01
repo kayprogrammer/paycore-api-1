@@ -2,7 +2,7 @@ from ninja import NinjaAPI, Schema
 from ninja.responses import Response
 from ninja.errors import ValidationError, AuthenticationError
 from ninja.throttling import AnonRateThrottle, AuthRateThrottle
-from apps.accounts.auth import AuthUser
+from apps.accounts.auth import AuthKycUser, AuthUser
 from apps.common.exceptions import (
     ErrorCode,
     RequestError,
@@ -45,15 +45,15 @@ api = NinjaAPI(
 # Routes Registration
 api.add_router("/api/v1/auth", auth_router)
 api.add_router("/api/v1/profiles", profiles_router, auth=AuthUser())
-api.add_router("/api/v1/wallets", wallet_router, auth=AuthUser())
-api.add_router("/api/v1/cards", card_router, auth=AuthUser())
+api.add_router("/api/v1/wallets", wallet_router, auth=AuthKycUser())
+api.add_router("/api/v1/cards", card_router, auth=AuthKycUser())
 api.add_router("/api/v1/cards", webhook_router)
-api.add_router("/api/v1/bills", bill_router, auth=AuthUser())
-api.add_router("/api/v1/transactions", transaction_router, auth=AuthUser())
+api.add_router("/api/v1/bills", bill_router, auth=AuthKycUser())
+api.add_router("/api/v1/transactions", transaction_router, auth=AuthKycUser())
 api.add_router("/api/v1/payments", payment_router)  # Mixed auth (some public endpoints)
-api.add_router("/api/v1/loans", loan_router, auth=AuthUser())
+api.add_router("/api/v1/loans", loan_router, auth=AuthKycUser())
 api.add_router("/api/v1/support", support_router, auth=AuthUser())
-api.add_router("/api/v1/investments", investment_router, auth=AuthUser())
+api.add_router("/api/v1/investments", investment_router, auth=AuthKycUser())
 api.add_router(
     "/api/v1/compliance", compliance_router
 )  # Mixed auth (user and admin endpoints)
