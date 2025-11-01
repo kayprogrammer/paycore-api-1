@@ -112,7 +112,7 @@ class TransactionSchema(BaseSchema):
     amount: Decimal = Field(..., example=100.50)
     fee_amount: Decimal = Field(..., example=2.50)
     net_amount: Decimal = Field(..., example=98.00)
-    currency_code: str = Field(..., example="USD", alias="from_wallet.currency.code")
+    currency_code: str = Field(None, example="USD", alias="from_wallet.currency.code")
     description: Optional[str] = Field(None, example="Payment for services")
     reference: Optional[str] = Field(None, example="TXN-001")
     from_user_name: Optional[str] = Field(

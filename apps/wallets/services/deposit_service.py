@@ -5,7 +5,7 @@ from datetime import datetime
 
 from apps.wallets.models import Wallet, WalletStatus
 from apps.transactions.models import Transaction, TransactionType, TransactionDirection
-from apps.transactions.services import TransactionService
+from apps.transactions.services.transaction_service import TransactionService
 from apps.common.decorators import aatomic
 from apps.common.exceptions import (
     RequestError,

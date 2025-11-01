@@ -18,8 +18,9 @@ from apps.transactions.schemas import (
     DisputeListResponseSchema,
     DisputeStatus,
 )
-from apps.transactions.transaction_operations import TransactionOperations
-from apps.transactions.dispute_service import DisputeService
+from apps.transactions.services.transaction_operations import TransactionOperations
+from apps.transactions.services.dispute_service import DisputeService
+from apps.transactions.services.deposit_manager import DepositManager
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 from apps.wallets.models import Wallet
@@ -142,26 +143,71 @@ async def get_transaction_stats(request):
     summary="Initiate a deposit",
     description="""
         Initiate a deposit to a wallet.
-        This creates a pending transaction that will be completed when payment is confirmed.
+
+        Supports multiple payment providers:
+        - Internal: Instant completion for testing (when USE_INTERNAL_PROVIDER=True)
+        - Paystack: Card, Bank Transfer, USSD, QR (for NGN)
+        - Flutterwave: Coming soon
+
+        Returns payment URL for external providers or instant completion for internal.
     """,
     response={200: TransactionResponseSchema},
     throttle=AuthRateThrottle("10/m"),
 )
 async def initiate_deposit(request, data: InitiateDepositSchema):
-    """Initiate a deposit (placeholder - integrate with payment gateway)"""
+    """Initiate a deposit using configured payment provider"""
     user = request.auth
 
-    # This is a placeholder - integrate with actual payment gateway
-    # For now, we'll return a pending transaction
+    callback_url = None
+    if request.build_absolute_uri:
+        callback_url = request.build_absolute_uri("/transactions/deposit/verify")
+
+    transaction, payment_info = await DepositManager.initiate_deposit(
+        user=user,
+        wallet_id=data.wallet_id,
+        amount=data.amount,
+        payment_method=data.payment_method,
+        callback_url=callback_url,
+        description=data.description,
+    )
 
     return CustomResponse.success(
-        message="Deposit initiated successfully. Please complete payment.",
+        message="Deposit initiated successfully" if payment_info["status"] == "pending"
+                else "Deposit completed successfully",
+        data=transaction
+    )
+
+
+@transaction_router.get(
+    "/deposit/verify/{reference}",
+    summary="Verify deposit status",
+    description="""
+        Verify the status of a deposit transaction.
+        Can be called after payment to confirm completion.
+    """,
+    response={200: TransactionResponseSchema},
+)
+async def verify_deposit(request, reference: str):
+    """Verify deposit transaction status"""
+    user = request.auth
+
+    # Verify and complete deposit
+    transaction = await DepositManager.verify_and_complete_deposit(reference=reference)
+
+    # Check if transaction belongs to user
+    if transaction.user_id != user.id:
+        raise NotFoundError("Transaction not found")
+
+    return CustomResponse.success(
+        message=f"Deposit {transaction.status}",
         data={
-            "transaction_id": "pending",
-            "amount": data.amount,
-            "payment_method": data.payment_method,
-            "status": "pending",
-            "next_step": "Complete payment via payment gateway",
+            "transaction_id": str(transaction.transaction_id),
+            "reference": transaction.external_reference,
+            "amount": float(transaction.amount),
+            "currency": transaction.currency.code,
+            "status": transaction.status,
+            "provider": transaction.provider,
+            "completed_at": transaction.completed_at.isoformat() if transaction.completed_at else None,
         },
     )
 

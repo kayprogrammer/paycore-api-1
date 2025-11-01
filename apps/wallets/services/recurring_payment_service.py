@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from apps.accounts.models import User
 from apps.wallets.models import RecurringPayment, Wallet, WalletStatus, PaymentFrequency
 from apps.common.exceptions import RequestError, ErrorCode
-from apps.transactions.services import TransactionService
+from apps.transactions.services.transaction_service import TransactionService
 from apps.transactions.models import TransactionType, TransactionDirection
 
 

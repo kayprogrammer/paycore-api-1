@@ -14,7 +14,7 @@ from apps.transactions.models import (
     TransactionStatus,
 )
 from apps.transactions.schemas import TransactionFilterSchema
-from apps.transactions.services import TransactionService
+from apps.transactions.services.transaction_service import TransactionService
 from apps.wallets.models import Wallet, WalletStatus
 from apps.common.exceptions import (
     RequestError,

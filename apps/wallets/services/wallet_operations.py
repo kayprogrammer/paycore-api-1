@@ -5,13 +5,13 @@ from asgiref.sync import sync_to_async
 import uuid
 
 from apps.accounts.models import User
+from apps.transactions.services.transaction_service import TransactionService
 from apps.wallets.models import Wallet, WalletStatus
 from apps.common.exceptions import (
     NotFoundError,
     RequestError,
     ErrorCode,
 )
-from apps.transactions.services import TransactionService
 from apps.wallets.schemas import HoldFundsSchema
 
 
