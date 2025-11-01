@@ -5,8 +5,9 @@ from apps.bills.models import BillCategory, BillPaymentStatus
 from apps.bills.schemas import (
     BillPackageListResponseSchema,
     BillPaymentListResponseSchema,
+    BillPaymentResponseSchema,
     BillProviderListResponseSchema,
-    BillProviderDetailSchema,
+    BillProviderDetailResponseSchema,
     CustomerValidationResponseSchema,
     ValidateCustomerSchema,
     CreateBillPaymentSchema,
@@ -14,7 +15,6 @@ from apps.bills.schemas import (
 )
 from apps.bills.services.bill_manager import BillManager
 
-from apps.common.exceptions import ErrorCode, RequestError
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
 
@@ -38,6 +38,7 @@ bill_router = Router(tags=["Bill Payments (7)"])
 )
 async def list_providers(request, category: str = None):
     providers = await BillManager.list_providers(category=category)
+    print(providers)
     return CustomResponse.success(
         "Bill Providers returned successfully", data=providers
     )
@@ -47,17 +48,12 @@ async def list_providers(request, category: str = None):
     "/providers/{provider_id}",
     description="""
         Get bill provider details including packages.
-
         Returns provider information with available packages.
     """,
-    response=BillProviderDetailSchema,
+    response=BillProviderDetailResponseSchema,
 )
 async def get_provider_detail(request, provider_id: UUID):
     provider = await BillManager.get_provider(provider_id)
-    if not provider.is_available:
-        raise RequestError(
-            err_code=ErrorCode.NOT_ALLOWED, err_msg="Provider is not available"
-        )
     return CustomResponse.success("Bill Provider returned successfully", data=provider)
 
 
@@ -72,10 +68,6 @@ async def get_provider_detail(request, provider_id: UUID):
 )
 async def list_provider_packages(request, provider_id: UUID):
     provider = await BillManager.get_provider(provider_id)
-    if not provider.is_available:
-        raise RequestError(
-            err_code=ErrorCode.NOT_ALLOWED, err_msg="Provider is not available"
-        )
     packages = provider.packages.all()
     return CustomResponse.success("Bill Packages returned successfully", data=packages)
 
@@ -126,7 +118,7 @@ async def validate_customer(request, data: ValidateCustomerSchema):
         - amount: Payment amount (optional if using package)
         - package_id: Package ID for predefined packages (optional)
     """,
-    response={200: BillPaymentListResponseSchema},
+    response={201: BillPaymentResponseSchema},
 )
 async def create_bill_payment(request, data: CreateBillPaymentSchema):
     user = request.auth
@@ -170,7 +162,7 @@ async def list_bill_payments(
         - Provider response
         - Transaction details
     """,
-    response=BillPaymentSchema,
+    response=BillPaymentResponseSchema,
 )
 async def get_bill_payment(request, payment_id: UUID):
     user = request.auth

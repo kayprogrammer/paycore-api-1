@@ -33,15 +33,19 @@ class BillPackageSchema(ModelSchema):
 
 
 class BillProviderDetailSchema(BillProviderSchema):
-    packages: List[BillPackageSchema] = Field(default_factory=list)
+    packages: List[BillPackageSchema]
 
 
 class BillProviderListResponseSchema(ResponseSchema):
-    providers: List[BillProviderSchema] = Field(default_factory=list)
+    data: List[BillProviderSchema]
+
+
+class BillProviderDetailResponseSchema(ResponseSchema):
+    data: BillProviderDetailSchema
 
 
 class BillPackageListResponseSchema(ResponseSchema):
-    packages: List[BillPackageSchema] = Field(default_factory=list)
+    data: List[BillPackageSchema]
 
 
 # ============================================================================
@@ -77,7 +81,7 @@ class CreateBillPaymentSchema(BaseSchema):
         None, max_length=100, description="Nickname for beneficiary"
     )
     pin: Optional[str] = Field(None, description="Transaction PIN")
-    extra_data: Optional[Dict[str, Any]] = Field(...)
+    extra_data: Optional[Dict[str, Any]] = Field(None)
 
 
 class ReprocessBillPaymentSchema(BaseSchema):
@@ -125,6 +129,10 @@ class BillPaymentListPaginatedDataSchema(PaginatedResponseDataSchema):
 
 class BillPaymentListResponseSchema(ResponseSchema):
     data: BillPaymentListPaginatedDataSchema
+
+
+class BillPaymentResponseSchema(ResponseSchema):
+    data: BillPaymentSchema
 
 
 # ============================================================================

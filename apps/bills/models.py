@@ -208,7 +208,7 @@ class BillPayment(BaseModel):
     provider_reference = models.CharField(
         max_length=200, null=True, blank=True, db_index=True
     )
-    provider_response = models.JSONField(default=dict, blank=True)
+    provider_response = models.JSONField(default=dict, blank=True, null=True)
     token = models.CharField(max_length=500, null=True, blank=True)
     token_units = models.CharField(
         max_length=100,
@@ -218,7 +218,7 @@ class BillPayment(BaseModel):
     )
     description = models.TextField(null=True, blank=True)
     extra_data = models.JSONField(
-        default=dict, blank=True, help_text="Additional payment data"
+        default=dict, blank=True, help_text="Additional payment data", null=True
     )
     completed_at = models.DateTimeField(null=True, blank=True)
     failed_at = models.DateTimeField(null=True, blank=True)

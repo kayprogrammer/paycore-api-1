@@ -5,6 +5,7 @@ from typing import Dict, Any
 from decimal import Decimal
 
 from .base import BaseBillPaymentProvider
+from apps.bills.models import BillProvider, BillPackage, BillCategory
 
 
 class InternalBillPaymentProvider(BaseBillPaymentProvider):
@@ -12,41 +13,35 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
     Internal bill payment provider for development and fallback purposes.
 
     This provider simulates bill payments without making external API calls.
+    Uses actual BillProvider and BillPackage data from the database that was
+    seeded using the seed_bill_providers management command.
+
     Perfect for:
     - Development when external bill payment providers are not available
     - Testing bill payment workflows without incurring costs
     - Fallback when external providers have issues
 
     Features:
+    - Uses real providers and packages from database
     - Validates customer IDs (mock validation)
     - Simulates successful bill payments
     - Generates realistic tokens for electricity/cable
     - Supports all bill categories
     - No external dependencies
 
-    Categories supported: airtime, data, electricity, cable_tv, internet, betting
+    Note: Make sure to run 'python manage.py seed_bill_providers' first
+    to populate the database with providers and packages.
     """
 
     SUPPORTED_CATEGORIES = [
-        "airtime",
-        "data",
-        "electricity",
-        "cable_tv",
-        "internet",
-        "betting",
-        "education",
-        "insurance",
+        BillCategory.AIRTIME,
+        BillCategory.DATA,
+        BillCategory.ELECTRICITY,
+        BillCategory.CABLE_TV,
+        BillCategory.INTERNET,
+        BillCategory.EDUCATION,
+        BillCategory.INSURANCE,
     ]
-
-    # Mock services for different categories
-    MOCK_SERVICES = {
-        "airtime": ["mtn", "airtel", "glo", "9mobile"],
-        "data": ["mtn-data", "airtel-data", "glo-data", "9mobile-data"],
-        "electricity": ["ekedc", "ikedc", "aedc", "phed", "ibadan-electric"],
-        "cable_tv": ["dstv", "gotv", "startimes", "showmax"],
-        "internet": ["spectranet", "smile", "swift"],
-        "betting": ["bet9ja", "sportybet", "1xbet", "betway"],
-    }
 
     def __init__(self, test_mode: bool = False):
         super().__init__(test_mode)
@@ -68,8 +63,25 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
 
     def _generate_customer_name(self, customer_id: str) -> str:
         """Generate a mock customer name"""
-        first_names = ["John", "Jane", "Ahmed", "Fatima", "Chidi", "Amaka", "Tunde", "Bola"]
-        last_names = ["Smith", "Doe", "Mohammed", "Ibrahim", "Okafor", "Adeyemi", "Williams"]
+        first_names = [
+            "John",
+            "Jane",
+            "Ahmed",
+            "Fatima",
+            "Chidi",
+            "Amaka",
+            "Tunde",
+            "Bola",
+        ]
+        last_names = [
+            "Smith",
+            "Doe",
+            "Mohammed",
+            "Ibrahim",
+            "Okafor",
+            "Adeyemi",
+            "Williams",
+        ]
         return f"{random.choice(first_names)} {random.choice(last_names)}"
 
     async def validate_customer(
@@ -94,20 +106,27 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
         }
 
         # Add extra fields for electricity
-        if "electric" in provider_code.lower() or "ekedc" in provider_code.lower():
-            response.update({
-                "customer_type": random.choice(["Prepaid", "Postpaid"]),
-                "address": "123 Mock Street, Lagos",
-                "balance": str(Decimal(random.uniform(0, 5000))),
-            })
+        if "electric" in provider_code.lower() or any(
+            electric in provider_code.lower()
+            for electric in ["ekedc", "ikedc", "aedc", "phed"]
+        ):
+            response.update(
+                {
+                    "customer_type": random.choice(["Prepaid", "Postpaid"]),
+                    "address": "123 Mock Street, Lagos",
+                    "balance": str(Decimal(random.uniform(0, 5000))),
+                }
+            )
 
         # Add extra fields for cable TV
         elif any(tv in provider_code.lower() for tv in ["dstv", "gotv", "startimes"]):
-            response.update({
-                "customer_type": "Active",
-                "current_package": "Premium Package",
-                "renewal_date": "2025-12-31",
-            })
+            response.update(
+                {
+                    "customer_type": "Active",
+                    "current_package": "Premium Package",
+                    "renewal_date": "2025-12-31",
+                }
+            )
 
         return response
 
@@ -117,7 +136,7 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
         customer_id: str,
         amount: Decimal,
         reference: str,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Process bill payment (mock processing).
@@ -147,21 +166,28 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
         }
 
         # Add token for electricity bills
-        if "electric" in provider_code.lower() or any(word in provider_code.lower() for word in ["ekedc", "ikedc", "aedc", "phed"]):
+        if any(
+            electric in provider_code.lower()
+            for electric in ["electric", "ekedc", "ikedc", "aedc", "phed"]
+        ):
             token = self._generate_token(amount)
             # Calculate mock units (rough estimate: 1 Naira = 1 unit)
             units = float(amount)
-            response.update({
-                "token": token,
-                "token_units": f"{units:.2f} kWh",
-            })
+            response.update(
+                {
+                    "token": token,
+                    "token_units": f"{units:.2f} kWh",
+                }
+            )
 
         # Add token for cable TV
         elif any(tv in provider_code.lower() for tv in ["dstv", "gotv", "startimes"]):
-            response.update({
-                "token": "Your subscription has been renewed successfully",
-                "renewal_date": "2026-01-31",
-            })
+            response.update(
+                {
+                    "token": "Your subscription has been renewed successfully",
+                    "renewal_date": "2026-01-31",
+                }
+            )
 
         return response
 
@@ -184,65 +210,94 @@ class InternalBillPaymentProvider(BaseBillPaymentProvider):
         }
 
     def get_available_services(self) -> Dict[str, list]:
-        """Get list of mock available services."""
-        return self.MOCK_SERVICES.copy()
+        """
+        Get list of available services from database.
+
+        Returns providers grouped by category.
+        """
+        providers = BillProvider.objects.filter(is_active=True).values(
+            "category", "name", "slug", "provider_code"
+        )
+
+        # Group by category
+        services = {}
+        for provider in providers:
+            category = provider["category"]
+            if category not in services:
+                services[category] = []
+            services[category].append(
+                {
+                    "name": provider["name"],
+                    "slug": provider["slug"],
+                    "code": provider["provider_code"],
+                }
+            )
+
+        return services
 
     def get_data_bundles(self, provider_code: str) -> list:
-        """Get mock data bundles for a telecom provider."""
+        """
+        Get available data bundles for a telecom provider from database.
+
+        Args:
+            provider_code: Provider code (e.g., "BIL122" for MTN Data)
+
+        Returns:
+            List of data bundles from database
+        """
+        packages = (
+            BillPackage.objects.filter(
+                provider__provider_code=provider_code,
+                provider__category=BillCategory.DATA,
+                is_active=True,
+            )
+            .values("name", "code", "amount", "validity_period")
+            .order_by("display_order")
+        )
+
         return [
             {
-                "name": "100MB Daily",
-                "code": "100mb",
-                "amount": Decimal("100"),
-                "validity": "1 day",
-            },
-            {
-                "name": "1GB Weekly",
-                "code": "1gb",
-                "amount": Decimal("500"),
-                "validity": "7 days",
-            },
-            {
-                "name": "5GB Monthly",
-                "code": "5gb",
-                "amount": Decimal("2000"),
-                "validity": "30 days",
-            },
-            {
-                "name": "10GB Monthly",
-                "code": "10gb",
-                "amount": Decimal("3500"),
-                "validity": "30 days",
-            },
+                "name": pkg["name"],
+                "code": pkg["code"],
+                "amount": pkg["amount"],
+                "validity": pkg["validity_period"],
+            }
+            for pkg in packages
         ]
 
     def get_cable_packages(self, provider_code: str) -> list:
-        """Get mock cable TV packages."""
-        packages = {
-            "dstv": [
-                {"name": "Padi", "code": "padi", "amount": Decimal("2500"), "validity": "30 days"},
-                {"name": "Yanga", "code": "yanga", "amount": Decimal("3500"), "validity": "30 days"},
-                {"name": "Confam", "code": "confam", "amount": Decimal("6000"), "validity": "30 days"},
-                {"name": "Compact", "code": "compact", "amount": Decimal("10500"), "validity": "30 days"},
-                {"name": "Premium", "code": "premium", "amount": Decimal("24500"), "validity": "30 days"},
-            ],
-            "gotv": [
-                {"name": "Lite", "code": "lite", "amount": Decimal("1100"), "validity": "30 days"},
-                {"name": "Jinja", "code": "jinja", "amount": Decimal("2250"), "validity": "30 days"},
-                {"name": "Jolli", "code": "jolli", "amount": Decimal("3300"), "validity": "30 days"},
-                {"name": "Max", "code": "max", "amount": Decimal("4850"), "validity": "30 days"},
-            ],
-            "startimes": [
-                {"name": "Nova", "code": "nova", "amount": Decimal("1200"), "validity": "30 days"},
-                {"name": "Basic", "code": "basic", "amount": Decimal("2100"), "validity": "30 days"},
-                {"name": "Smart", "code": "smart", "amount": Decimal("3000"), "validity": "30 days"},
-            ],
-        }
-        return packages.get(provider_code.lower(), [])
+        """
+        Get available cable TV packages from database.
+
+        Args:
+            provider_code: Cable provider code (e.g., "BIL114" for DSTV)
+
+        Returns:
+            List of cable packages from database
+        """
+        packages = (
+            BillPackage.objects.filter(
+                provider__provider_code=provider_code,
+                provider__category=BillCategory.CABLE_TV,
+                is_active=True,
+            )
+            .values("name", "code", "amount", "validity_period")
+            .order_by("display_order")
+        )
+
+        return [
+            {
+                "name": pkg["name"],
+                "code": pkg["code"],
+                "amount": pkg["amount"],
+                "validity": pkg["validity_period"],
+            }
+            for pkg in packages
+        ]
 
     def supports_category(self, category: str) -> bool:
         """Check if category is supported."""
-        return category.lower() in self.SUPPORTED_CATEGORIES
+        return category in self.SUPPORTED_CATEGORIES
 
     def get_provider_name(self) -> str:
         """Get provider name."""

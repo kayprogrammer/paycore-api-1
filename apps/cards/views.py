@@ -11,7 +11,6 @@ from apps.cards.schemas import (
     CreateCardDataResponseSchema,
     CardDataResponseSchema,
     CardListDataResponseSchema,
-    CardTransactionListDataResponseSchema,
     FundCardDataResponseSchema,
 )
 from apps.common.responses import CustomResponse

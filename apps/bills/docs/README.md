@@ -625,7 +625,6 @@ BillProvider.objects.create(
    - Quickteller
 
 2. **New Categories**:
-   - Betting/Gaming wallets
    - Government services (FRSC, NIN)
    - Insurance premiums
    - Loan repayments

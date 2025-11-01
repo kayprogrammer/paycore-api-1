@@ -72,7 +72,7 @@ class BillManager:
             .afirst()
         )
         if not package:
-            raise NotFoundError("package", "Bill package not found")
+            raise BodyValidationError("package", "Bill package not found")
         if not package.is_active:
             raise BodyValidationError(
                 "package", "This package is currently unavailable"
@@ -196,11 +196,10 @@ class BillManager:
 
         # Create transaction record
         transaction = await Transaction.objects.acreate(
-            user=user,
-            wallet=wallet,
+            from_user=user,
+            from_wallet=wallet,
             transaction_type=TransactionType.BILL_PAYMENT,
             amount=total_amount,
-            currency=wallet.currency,
             status=TransactionStatus.PENDING,
             from_balance_before=balance_before,
             from_balance_after=balance_after,
@@ -248,10 +247,8 @@ class BillManager:
 
             # Update transaction status
             transaction.status = TransactionStatus.COMPLETED
-            transaction.provider_response = payment_result
-            await transaction.asave(
-                update_fields=["status", "provider_response", "updated_at"]
-            )
+            transaction.metadata = bill_payment.provider_response
+            await transaction.asave(update_fields=["status", "metadata", "updated_at"])
 
             # Save beneficiary if requested
             if kwargs.get("save_beneficiary") and kwargs.get("beneficiary_nickname"):
@@ -333,7 +330,7 @@ class BillManager:
             queryset = queryset.filter(category=category)
         if status:
             queryset = queryset.filter(status=status)
-        paginated_data = Paginator.paginate_queryset(
+        paginated_data = await Paginator.paginate_queryset(
             queryset.order_by("-created_at"), page_params.page, page_params.limit
         )
         return paginated_data
