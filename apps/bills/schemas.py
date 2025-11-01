@@ -3,9 +3,10 @@ from decimal import Decimal
 from datetime import date, datetime
 from uuid import UUID
 
-from ninja import Field
+from ninja import Field, ModelSchema
 
-from apps.common.schemas import BaseSchema
+from apps.bills.models import BillPackage, BillPayment, BillProvider
+from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 
 
 # ============================================================================
@@ -13,39 +14,33 @@ from apps.common.schemas import BaseSchema
 # ============================================================================
 
 
-class BillProviderSchema(BaseSchema):
-    provider_id: UUID
-    name: str
-    slug: str
-    category: str
-    provider_code: str
-    is_active: bool
-    is_available: bool
-    logo_url: Optional[str] = None
-    description: Optional[str] = None
-    supports_amount_range: bool
-    min_amount: Optional[Decimal] = None
-    max_amount: Optional[Decimal] = None
-    fee_type: str
-    fee_amount: Decimal
-    fee_cap: Optional[Decimal] = None
+class BillProviderSchema(ModelSchema):
+    class Meta:
+        model = BillProvider
+        exclude = [
+            "id",
+            "deleted_at",
+            "requires_customer_validation",
+            "validation_fields",
+            "extra_fields",
+        ]
 
 
-class BillPackageSchema(BaseSchema):
-    package_id: UUID
-    name: str
-    code: str
-    amount: Decimal
-    description: Optional[str] = None
-    validity_period: Optional[str] = None
-    benefits: List[str] = Field(default_factory=list)
-    is_popular: bool
-    is_active: bool
+class BillPackageSchema(ModelSchema):
+    class Meta:
+        model = BillPackage
+        exclude = ["id", "deleted_at", "display_order"]
 
 
 class BillProviderDetailSchema(BillProviderSchema):
-    """Detailed bill provider with packages"""
+    packages: List[BillPackageSchema] = Field(default_factory=list)
 
+
+class BillProviderListResponseSchema(ResponseSchema):
+    providers: List[BillProviderSchema] = Field(default_factory=list)
+
+
+class BillPackageListResponseSchema(ResponseSchema):
     packages: List[BillPackageSchema] = Field(default_factory=list)
 
 
@@ -104,33 +99,32 @@ class CustomerValidationSchema(BaseSchema):
     extra_info: Dict[str, Any] = Field(default_factory=dict)
 
 
-class BillPaymentSchema(BaseSchema):
-    payment_id: UUID
+class CustomerValidationResponseSchema(ResponseSchema):
+    data: CustomerValidationSchema
+
+
+class BillPaymentSchema(ModelSchema):
     provider: BillProviderSchema
     package: Optional[BillPackageSchema] = None
-    category: str
-    amount: Decimal
-    fee_amount: Decimal
-    total_amount: Decimal
-    customer_id: str
-    customer_name: Optional[str] = None
-    status: str
-    token: Optional[str] = None
-    token_units: Optional[str] = None
-    provider_reference: Optional[str] = None
-    description: Optional[str] = None
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-    failed_at: Optional[datetime] = None
-    failure_reason: Optional[str] = None
+
+    class Meta:
+        model = BillPayment
+        exclude = [
+            "id",
+            "deleted_at",
+            "save_beneficiary",
+            "extra_data",
+            "wallet",
+            "user",
+        ]
 
 
-class BillPaymentListSchema(BaseSchema):
-    payments: List[BillPaymentSchema]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+class BillPaymentListPaginatedDataSchema(PaginatedResponseDataSchema):
+    payments: List[BillPaymentSchema] = Field(alias="items")
+
+
+class BillPaymentListResponseSchema(ResponseSchema):
+    data: BillPaymentListPaginatedDataSchema
 
 
 # ============================================================================

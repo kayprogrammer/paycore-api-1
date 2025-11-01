@@ -34,7 +34,9 @@ class BillManager:
 
     @staticmethod
     async def get_provider(provider_id: UUID) -> BillProvider:
-        provider = await BillProvider.objects.aget_or_none(provider_id=provider_id)
+        provider = await BillProvider.objects.prefetch_related("packages").aget_or_none(
+            provider_id=provider_id
+        )
         if not provider:
             raise NotFoundError("Bill provider not found")
         if not provider.is_active:
