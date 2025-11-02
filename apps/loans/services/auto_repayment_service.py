@@ -2,9 +2,6 @@
 Auto-repayment service for managing automatic loan repayments
 """
 
-from django.utils import timezone
-from django.db import transaction as db_transaction
-
 from apps.accounts.models import User
 from apps.common.decorators import aatomic
 from apps.common.exceptions import (
@@ -20,6 +17,7 @@ from apps.loans.models import (
 )
 from apps.loans.schemas import EnableAutoRepaymentSchema, UpdateAutoRepaymentSchema
 from apps.wallets.models import Wallet
+from apps.common.utils import set_dict_attr
 
 
 class AutoRepaymentService:
@@ -133,7 +131,7 @@ class AutoRepaymentService:
 
             auto_repayment.wallet = wallet
 
-        data_to_update = data.model_dump(exclude_unset=True)
+        data_to_update = data.model_dump(exclude_unset=True, exclude=["wallet_id"])
         auto_repayment = set_dict_attr(auto_repayment, data_to_update)
         update_fields = ["updated_at"] + list(data_to_update.keys())
 
@@ -145,12 +143,6 @@ class AutoRepaymentService:
             )
 
         await auto_repayment.asave(update_fields=update_fields)
-
-        # Reload to get updated values
-        auto_repayment = await AutoRepayment.objects.select_related(
-            "wallet", "wallet__currency"
-        ).aget(id=auto_repayment.id)
-
         return auto_repayment
 
     @staticmethod
@@ -167,7 +159,7 @@ class AutoRepaymentService:
             raise NotFoundError("Automatic repayment is not enabled for this loan")
 
         auto_repayment.is_enabled = False
-        auto_repayment.status = AutoRepaymentStatus.DISABLED
+        auto_repayment.status = AutoRepaymentStatus.INACTIVE
         await auto_repayment.asave(update_fields=["is_enabled", "status", "updated_at"])
 
     @staticmethod

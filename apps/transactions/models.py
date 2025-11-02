@@ -22,14 +22,23 @@ class TransactionType(models.TextChoices):
     QR_PAYMENT = "qr_payment", "QR Payment"
     VIRTUAL_CARD = "virtual_card", "Virtual Card"
     ADJUSTMENT = "adjustment", "Adjustment"
+
     # Card transaction types
     CARD_PURCHASE = "card_purchase", "Card Purchase"
     CARD_WITHDRAWAL = "card_withdrawal", "Card ATM Withdrawal"
     CARD_REFUND = "card_refund", "Card Refund"
     CARD_REVERSAL = "card_reversal", "Card Reversal"
     CARD_FUND = "card_fund", "Card Funding"
+
     # Bill payment type
     BILL_PAYMENT = "bill_payment", "Bill Payment"
+
+    # Loan transaction types
+    LOAN_PAYMENT = "loan_payment", "Loan Payment"
+    LOAN_REPAYMENT = "loan_repayment", "Loan Repayment"
+    LOAN_FEE = "loan_fee", "Loan Fee"
+    LOAN_INTEREST = "loan_interest", "Loan Interest"
+    LOAN_PENALTY = "loan_penalty", "Loan Penalty"
 
 
 class TransactionStatus(models.TextChoices):

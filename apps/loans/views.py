@@ -14,7 +14,7 @@ from apps.loans.schemas import (
     LoanCalculationDataResponseSchema,
     LoanProductDataResponseSchema,
     LoanProductListDataResponseSchema,
-    RepaymentScheduleListDataResponseSchema,
+    LoanRepaymentListResponseSchema,
     MakeLoanRepaymentSchema,
     LoanRepaymentDataResponseSchema,
     LoanRepaymentListDataResponseSchema,
@@ -22,6 +22,7 @@ from apps.loans.schemas import (
     LoanSummaryDataResponseSchema,
     LoanDetailsDataResponseSchema,
     EnableAutoRepaymentSchema,
+    RepaymentScheduleListResponseSchema,
     UpdateAutoRepaymentSchema,
     AutoRepaymentDataResponseSchema,
 )
@@ -153,7 +154,7 @@ async def cancel_loan_application(request, application_id: UUID):
 @loan_router.get(
     "/applications/{application_id}/schedule",
     summary="Get repayment schedule",
-    response={200: RepaymentScheduleListDataResponseSchema},
+    response={200: RepaymentScheduleListResponseSchema},
     auth=AuthUser(),
 )
 async def get_repayment_schedule(request, application_id: UUID):
@@ -187,7 +188,7 @@ async def make_loan_repayment(
 @loan_router.get(
     "/applications/{application_id}/repayments",
     summary="Get loan repayments",
-    response={200: LoanRepaymentListDataResponseSchema},
+    response={200: LoanRepaymentListResponseSchema},
     auth=AuthUser(),
 )
 async def get_loan_repayments(
@@ -198,7 +199,7 @@ async def get_loan_repayments(
         user, application_id, page_params
     )
     return CustomResponse.success(
-        "Repayments retrieved successfully", repayments_paginated_data
+        "Repayments retrieved successfully", data=repayments_paginated_data
     )
 
 

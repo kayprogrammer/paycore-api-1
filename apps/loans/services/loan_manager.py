@@ -164,7 +164,6 @@ class LoanManager:
                 ErrorCode.LOAN_PRODUCT_INACTIVE,
                 "This loan product is no longer available",
             )
-
         wallet = await Wallet.objects.select_related("currency").aget_or_none(
             wallet_id=data.wallet_id, user=user
         )
@@ -205,7 +204,7 @@ class LoanManager:
                 f"Your credit score ({credit_score.score}) is below the minimum requirement ({product.min_credit_score})",
             )
 
-        account_age_days = (timezone.now().date() - user.date_joined.date()).days
+        account_age_days = (timezone.now().date() - user.created_at.date()).days
         if account_age_days < product.min_account_age_days:
             raise RequestError(
                 ErrorCode.ACCOUNT_AGE_INSUFFICIENT,
@@ -238,14 +237,13 @@ class LoanManager:
                     "This loan product requires a guarantor email address",
                 )
 
+        data_to_dump = data.model_dump(exclude=["wallet_id", "loan_product_id"])
+
         loan = await LoanApplication.objects.acreate(
             user=user,
             loan_product=product,
             wallet=wallet,
-            requested_amount=data.requested_amount,
             interest_rate=loan_calc["interest_rate"],
-            tenure_months=data.tenure_months,
-            repayment_frequency=data.repayment_frequency,
             processing_fee=loan_calc["processing_fee"],
             total_interest=loan_calc["total_interest"],
             total_repayable=loan_calc["total_repayable"],
@@ -253,14 +251,14 @@ class LoanManager:
             credit_score=credit_score.score,
             credit_score_band=credit_score.score_band,
             status=LoanStatus.PENDING,
-            **data.model_dump(),
+            **data_to_dump,
         )
         return loan
 
     @staticmethod
     async def get_loan_application(user: User, application_id) -> LoanApplication:
         loan = await LoanApplication.objects.select_related(
-            "user", "loan_product", "wallet", "wallet__currency", "reviewed_by"
+            "user", "loan_product", "wallet", "loan_product__currency", "reviewed_by"
         ).aget_or_none(application_id=application_id, user=user)
 
         if not loan:
@@ -272,13 +270,15 @@ class LoanManager:
         user: User, status: str = None, page_params: PaginationQuerySchema = None
     ):
         queryset = LoanApplication.objects.filter(user=user).select_related(
-            "loan_product", "wallet", "wallet__currency"
+            "loan_product", "wallet", "loan_product__currency"
         )
 
         if status:
             queryset = queryset.filter(status=status)
 
-        return await Paginator.paginate_queryset(queryset.order_by("-created_at"))
+        return await Paginator.paginate_queryset(
+            queryset.order_by("-created_at"), page_params.page, page_params.limit
+        )
 
     @staticmethod
     @aatomic

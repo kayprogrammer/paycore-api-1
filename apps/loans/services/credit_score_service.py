@@ -32,7 +32,7 @@ class CreditScoreService:
         )
 
         total_loans = await loans_queryset.acount()
-        active_loans = await loans_queryset.filter(is_active=True).acount()
+        active_loans = await loans_queryset.filter(status=LoanStatus.ACTIVE).acount()
         completed_loans = await loans_queryset.filter(status=LoanStatus.PAID).acount()
         defaulted_loans = await loans_queryset.filter(
             status=LoanStatus.DEFAULTED
@@ -48,7 +48,7 @@ class CreditScoreService:
         total_repaid = financial_stats["total_repaid"]
         current_debt = financial_stats["current_debt"]
 
-        account_age_days = (timezone.now().date() - user.date_joined.date()).days
+        account_age_days = (timezone.now().date() - user.created_at.date()).days
 
         # Calculate component scores (each out of 850)
         payment_history_score = (
@@ -201,7 +201,7 @@ class CreditScoreService:
                 RepaymentStatus.OVERDUE,
                 RepaymentStatus.PARTIAL,
             ],
-        ).aggregate(
+        ).aaggregate(
             total_debt=Sum(
                 "repayment_schedules__outstanding_amount", output_field=DecimalField()
             )

@@ -220,12 +220,8 @@ class RepaymentScheduleSchema(ModelSchema):
         exclude = ["id", "loan", "created_at", "updated_at", "deleted_at"]
 
 
-class RepaymentScheduleListDataResponseSchema(PaginatedResponseDataSchema):
-    data: List[RepaymentScheduleSchema] = Field(..., alias="items")
-
-
 class RepaymentScheduleListResponseSchema(ResponseSchema):
-    data: RepaymentScheduleListDataResponseSchema
+    data: List[RepaymentScheduleSchema]
 
 
 # ============================================================================
@@ -278,7 +274,7 @@ class LoanRepaymentDataResponseSchema(ResponseSchema):
 
 
 class LoanRepaymentListDataResponseSchema(PaginatedResponseDataSchema):
-    data: List[LoanRepaymentListSchema] = Field(..., alias="items")
+    repayments: List[LoanRepaymentListSchema] = Field(..., alias="items")
 
 
 class LoanRepaymentListResponseSchema(ResponseSchema):
@@ -325,9 +321,7 @@ class LoanSummarySchema(BaseSchema):
     credit_score: Optional[int]
     credit_score_band: Optional[str]
 
-    currency: CurrencySchema = Field(
-        ..., description="Currency of the loan", alias="loan_product.currency"
-    )
+    currency: CurrencySchema
 
 
 class LoanSummaryDataResponseSchema(ResponseSchema):

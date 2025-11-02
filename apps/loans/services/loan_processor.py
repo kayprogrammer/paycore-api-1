@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.utils import timezone
-from django.db.models import Sum, F, Case, When, DecimalField, Count, Min
+from django.db.models import Sum, F, Case, When, DecimalField, Count, Min, Q
 from django.db.models.functions import Coalesce
 import secrets
 
@@ -183,13 +183,13 @@ class LoanProcessor:
             f"REPAY-{int(timezone.now().timestamp())}-{secrets.token_urlsafe(8)}"
         )
         transaction = await Transaction.objects.acreate(
-            user=user,
-            wallet=payer_wallet,
+            from_user=user,
+            from_wallet=payer_wallet,
             transaction_type=TransactionType.LOAN_REPAYMENT,
             amount=amount_to_pay,
-            currency=payer_wallet.currency,
-            balance_before=payer_wallet.balance + amount_to_pay,
-            balance_after=payer_wallet.balance,
+            net_amount=amount_to_pay - late_fee_paid,
+            from_balance_before=payer_wallet.balance + amount_to_pay,
+            from_balance_after=payer_wallet.balance,
             reference=transaction_ref,
             status=TransactionStatus.COMPLETED,
             description=f"Loan repayment for installment #{schedule.installment_number}",
@@ -264,7 +264,7 @@ class LoanProcessor:
         )
         if not loan:
             raise NotFoundError("Loan application not found")
-        return Paginator.paginate_queryset(
+        return await Paginator.paginate_queryset(
             LoanRepayment.objects.filter(loan=loan)
             .select_related("wallet", "transaction", "schedule")
             .order_by("-created_at"),
@@ -279,7 +279,7 @@ class LoanProcessor:
         )
 
         total_loans = await loans_q.acount()
-        active_loans = await loans_q.filter(is_active=True).acount()
+        active_loans = await loans_q.filter(status=LoanStatus.ACTIVE).acount()
         completed_loans = await loans_q.filter(status=LoanStatus.PAID).acount()
         rejected_loans = await loans_q.filter(status=LoanStatus.REJECTED).acount()
 
@@ -310,8 +310,8 @@ class LoanProcessor:
         overdue_amount = Decimal("0")
         overdue_count = 0
 
-        active_loan_ids = await loans_q.filter(is_active=True).values_list(
-            "id", flat=True
+        active_loan_ids = await sync_to_async(list)(
+            loans_q.filter(status=LoanStatus.ACTIVE).values_list("id", flat=True)
         )
 
         if active_loan_ids:
@@ -319,7 +319,10 @@ class LoanProcessor:
                 loan_id__in=active_loan_ids
             )
 
-            aggregates = await schedules_qs.aggregate(
+            # Get current date for overdue calculation
+            today = timezone.now().date()
+
+            aggregates = await schedules_qs.aaggregate(
                 outstanding_balance=Sum(
                     Case(
                         When(
@@ -335,11 +338,21 @@ class LoanProcessor:
                 ),
                 overdue_amount=Sum(
                     Case(
-                        When(is_overdue=True, then=F("outstanding_amount")),
+                        When(
+                            ~Q(status=RepaymentStatus.PAID),
+                            due_date__lt=today,
+                            then=F("outstanding_amount"),
+                        ),
                         output_field=DecimalField(),
                     )
                 ),
-                overdue_count=Count(Case(When(is_overdue=True, then=1))),
+                overdue_count=Count(
+                    Case(
+                        When(
+                            ~Q(status=RepaymentStatus.PAID), due_date__lt=today, then=1
+                        )
+                    )
+                ),
                 upcoming_payment_date=Min(
                     Case(
                         When(
@@ -398,7 +411,7 @@ class LoanProcessor:
     @staticmethod
     async def get_loan_details(user: User, application_id) -> dict:
         loan = await LoanApplication.objects.select_related(
-            "user", "loan_product", "wallet", "wallet__currency", "reviewed_by"
+            "user", "loan_product", "wallet", "loan_product__currency", "reviewed_by"
         ).aget_or_none(application_id=application_id, user=user)
 
         if not loan:
