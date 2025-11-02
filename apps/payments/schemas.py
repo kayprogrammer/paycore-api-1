@@ -5,12 +5,13 @@ from decimal import Decimal
 from datetime import datetime, date
 from uuid import UUID
 
-from apps.common.schemas import BaseSchema, ResponseSchema
+from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 from apps.payments.models import (
     Invoice,
     InvoiceStatus,
     MerchantAPIKey,
     Payment,
+    PaymentLink,
     PaymentLinkStatus,
 )
 from apps.wallets.schemas import CurrencySchema
@@ -58,40 +59,24 @@ class UpdatePaymentLinkSchema(BaseSchema):
     )
 
 
-class PaymentLinkSchema(BaseSchema):
-    link_id: UUID
-    title: str
-    description: Optional[str]
-    slug: str
-    url: str  # Full payment URL
-
-    amount: Optional[Decimal]
-    is_amount_fixed: bool
-    min_amount: Optional[Decimal]
-    max_amount: Optional[Decimal]
-    currency: CurrencySchema
-
-    status: PaymentLinkStatus
-    is_single_use: bool
-    expires_at: Optional[datetime]
-    redirect_url: Optional[str]
-
-    logo_url: Optional[str]
-    brand_color: str
-
-    views_count: int
-    payments_count: int
-    total_collected: Decimal
-
-    created_at: datetime
+class PaymentLinkSchema(ModelSchema):
+    class Meta:
+        model = PaymentLink
+        exclude = ["id", "deleted_at", "user", "wallet"]
 
 
 class PaymentLinkDataResponseSchema(ResponseSchema):
     data: PaymentLinkSchema
 
 
-class PaymentLinkListDataResponseSchema(ResponseSchema):
-    data: List[PaymentLinkSchema]
+class PaymentLinkListDataResponseSchema(PaginatedResponseDataSchema):
+    links: List[PaymentLinkSchema] = Field(
+        ..., description="List of payment links", alias="items"
+    )
+
+
+class PaymentLinksResponseSchema(ResponseSchema):
+    data: PaymentLinkListDataResponseSchema
 
 
 # ============================================================================
@@ -163,8 +148,14 @@ class InvoiceDataResponseSchema(ResponseSchema):
     data: InvoiceSchema
 
 
-class InvoiceListDataResponseSchema(ResponseSchema):
-    data: List[InvoiceSchema]
+class InvoiceListDataResponseSchema(PaginatedResponseDataSchema):
+    data: List[InvoiceSchema] = Field(
+        ..., description="List of invoices", alias="items"
+    )
+
+
+class InvoiceListResponseSchema(ResponseSchema):
+    data: InvoiceListDataResponseSchema
 
 
 # ============================================================================
@@ -186,7 +177,7 @@ class MakePaymentSchema(BaseSchema):
 
 
 class PaymentSchema(ModelSchema):
-    currency: CurrencySchema
+    currency: CurrencySchema = Field(..., alias="payer_wallet.currency")
     merchant_name: str = Field(..., alias="merchant_user.full_name")
     invoice_number: Optional[str] = Field(
         None, max_length=200, example="INV-20251010-001", alias="invoice.invoice_number"
@@ -209,8 +200,14 @@ class PaymentDataResponseSchema(ResponseSchema):
     data: PaymentSchema
 
 
-class PaymentListDataResponseSchema(ResponseSchema):
-    data: List[PaymentSchema]
+class PaymentListDataResponseSchema(PaginatedResponseDataSchema):
+    data: List[PaymentSchema] = Field(
+        ..., description="List of payments", alias="items"
+    )
+
+
+class PaymentListResponseSchema(ResponseSchema):
+    data: PaymentListDataResponseSchema
 
 
 # ============================================================================

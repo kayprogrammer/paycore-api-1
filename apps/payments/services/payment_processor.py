@@ -54,9 +54,9 @@ class PaymentProcessor:
                     "amount", f"Amount cannot exceed {link.max_amount}"
                 )
 
-        payer_wallet = await Wallet.objects.select_related("currency").aget_or_none(
-            wallet_id=data.wallet_id
-        )
+        payer_wallet = await Wallet.objects.select_related(
+            "currency", "user"
+        ).aget_or_none(wallet_id=data.wallet_id)
         if not payer_wallet:
             raise BodyValidationError("wallet_id", "Wallet not found")
         if payer_wallet.currency_id != link.wallet.currency_id:
@@ -94,12 +94,12 @@ class PaymentProcessor:
 
         # Create transaction record
         transaction = await Transaction.objects.acreate(
-            user=payer_wallet.user,
-            wallet=payer_wallet,
+            from_user=payer_wallet.user,
+            from_wallet=payer_wallet,
             to_wallet=merchant_wallet,
+            to_user=link.user,
             transaction_type=TransactionType.PAYMENT,
             amount=total_amount,
-            currency=payer_wallet.currency,
             status=TransactionStatus.COMPLETED,
             from_balance_before=balance_before,
             from_balance_after=balance_after,
@@ -158,9 +158,9 @@ class PaymentProcessor:
                 f"Amount cannot exceed invoice due amount of {invoice.amount_due}",
             )
 
-        payer_wallet = await Wallet.objects.select_related("currency").aget_or_none(
-            wallet_id=data.wallet_id
-        )
+        payer_wallet = await Wallet.objects.select_related(
+            "currency", "user"
+        ).aget_or_none(wallet_id=data.wallet_id)
         if not payer_wallet:
             raise BodyValidationError("wallet_id", "Wallet not found")
 
@@ -195,12 +195,12 @@ class PaymentProcessor:
 
         # Create transaction
         transaction = await Transaction.objects.acreate(
-            user=payer_wallet.user,
-            wallet=payer_wallet,
+            from_user=payer_wallet.user,
+            from_wallet=payer_wallet,
+            to_user=invoice.user,
             to_wallet=merchant_wallet,
             transaction_type=TransactionType.PAYMENT,
             amount=total_amount,
-            currency=payer_wallet.currency,
             status=TransactionStatus.COMPLETED,
             from_balance_before=balance_before,
             from_balance_after=balance_after,

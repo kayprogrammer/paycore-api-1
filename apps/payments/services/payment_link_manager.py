@@ -104,7 +104,7 @@ class PaymentLinkManager:
 
         # Update fields
         data_to_update = data.model_dump(exclude_unset=True)
-        update_fields = data_to_update.keys() + ["updated_at"]
+        update_fields = list(data_to_update.keys()) + ["updated_at"]
         link = set_dict_attr(link, data_to_update)
         await link.asave(update_fields=update_fields)
         return link

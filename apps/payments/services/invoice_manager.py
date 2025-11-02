@@ -45,13 +45,13 @@ class InvoiceManager:
 
         data_to_add = data.model_dump(exclude=["wallet_id"])
         items = data_to_add.pop("items")
-
         invoice = await Invoice.objects.acreate(
             user=user,
             wallet=wallet,
             invoice_number=invoice_number,
             amount_due=amount_due,
             subtotal=subtotal,
+            total_amount=total_amount,
             **data_to_add,
         )
 
@@ -59,10 +59,8 @@ class InvoiceManager:
         items_to_create = [
             InvoiceItem(
                 invoice=invoice,
-                description=item.description,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
-                amount=item.quantity * item.unit_price,
+                amount=item.get("quantity", 1) * item.get("unit_price"),
+                **item,
             )
             for item in items
         ]
@@ -144,6 +142,16 @@ class InvoiceManager:
         invoice = set_dict_attr(invoice, data_to_update)
         await invoice.asave(update_fields=update_fields)
         return invoice
+
+    @staticmethod
+    async def delete_invoice(user: User, invoice_id: UUID) -> None:
+        invoice = await InvoiceManager.get_invoice(user, invoice_id)
+        if invoice.status != InvoiceStatus.DRAFT:
+            raise RequestError(
+                ErrorCode.NOT_ALLOWED,
+                "Can only delete draft invoices",
+            )
+        await invoice.adelete()
 
     @staticmethod
     async def mark_invoice_paid(invoice: Invoice, amount_paid: Decimal) -> None:

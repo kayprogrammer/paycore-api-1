@@ -9,6 +9,9 @@ from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
 from apps.payments.schemas import (
     CreatePaymentLinkSchema,
+    InvoiceListResponseSchema,
+    PaymentLinksResponseSchema,
+    PaymentListResponseSchema,
     UpdatePaymentLinkSchema,
     PaymentLinkDataResponseSchema,
     PaymentLinkListDataResponseSchema,
@@ -23,8 +26,7 @@ from apps.payments.schemas import (
 from apps.payments.services.payment_link_manager import PaymentLinkManager
 from apps.payments.services.invoice_manager import InvoiceManager
 from apps.payments.services.payment_processor import PaymentProcessor
-from apps.payments.models import Payment
-from apps.wallets.schemas import CurrencySchema
+from apps.payments.models import Payment, PaymentLinkStatus
 
 
 payment_router = Router(tags=["Payments (16)"])
@@ -48,12 +50,12 @@ async def create_payment_link(request, data: CreatePaymentLinkSchema):
 @payment_router.get(
     "/links/list",
     summary="List payment links",
-    response={200: PaymentLinkListDataResponseSchema},
+    response={200: PaymentLinksResponseSchema},
     auth=AuthUser(),
 )
 async def list_payment_links(
     request,
-    status: Optional[str] = None,
+    status: Optional[PaymentLinkStatus] = None,
     page_params: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
@@ -125,6 +127,7 @@ async def pay_via_link(request, slug: str, data: MakePaymentSchema):
         "payer_wallet",
         "payer_wallet__currency",
         "merchant_wallet",
+        "merchant_user",
         "merchant_wallet__currency",
         "transaction",
     ).aget_or_none(payment_id=payment.payment_id)
@@ -150,7 +153,7 @@ async def create_invoice(request, data: CreateInvoiceSchema):
 @payment_router.get(
     "/invoices/list",
     summary="List invoices",
-    response={200: InvoiceListDataResponseSchema},
+    response={200: InvoiceListResponseSchema},
     auth=AuthUser(),
 )
 async def list_invoices(
@@ -228,6 +231,7 @@ async def pay_invoice(request, invoice_number: str, data: MakePaymentSchema):
         "merchant_wallet",
         "merchant_wallet__currency",
         "transaction",
+        "merchant_user",
     ).aget_or_none(payment_id=payment.payment_id)
     return CustomResponse.success("Payment completed successfully", payment, 201)
 
@@ -236,7 +240,7 @@ async def pay_invoice(request, invoice_number: str, data: MakePaymentSchema):
 @payment_router.get(
     "/payments/list",
     summary="List merchant payments",
-    response={200: PaymentListDataResponseSchema},
+    response={200: PaymentListResponseSchema},
     auth=AuthUser(),
 )
 async def list_merchant_payments(
@@ -249,15 +253,14 @@ async def list_merchant_payments(
         "payer_wallet",
         "payer_wallet__currency",
         "merchant_wallet",
-        "merchant_wallet__currency",
         "payment_link",
         "invoice",
-        "transaction",
+        "merchant_user",
     )
     if status:
         queryset = queryset.filter(status=status)
 
-    paginated_payments_data = await Paginator.paginate(
+    paginated_payments_data = await Paginator.paginate_queryset(
         queryset, page_params.page, page_params.limit
     )
     return CustomResponse.success(
@@ -278,10 +281,9 @@ async def get_payment(request, payment_id: UUID):
         "payer_wallet",
         "payer_wallet__currency",
         "merchant_wallet",
-        "merchant_wallet__currency",
         "payment_link",
         "invoice",
-        "transaction",
+        "merchant_user",
     ).aget_or_none(payment_id=payment_id, merchant_user=user)
 
     if not payment:
