@@ -25,7 +25,7 @@ notification_router = Router(tags=["Notifications (4)"])
 )
 async def get_notifications(
     request,
-    filters: NotificationFilterSchema,
+    filters: NotificationFilterSchema = Query(...),
     page_params: PaginationQuerySchema = Query(...),
 ):
     result = await NotificationService.get_user_notifications(
@@ -40,8 +40,8 @@ async def get_notifications(
     response={200: NotificationStatsResponseSchema},
     auth=AuthUser(),
 )
-def get_notification_stats(request):
-    stats = NotificationService.get_notification_stats(request.auth)
+async def get_notification_stats(request):
+    stats = await NotificationService.get_notification_stats(request.auth)
     return CustomResponse.success("Statistics retrieved successfully", stats)
 
 
@@ -60,5 +60,5 @@ async def mark_notifications_read(request, data: MarkNotificationsReadSchema):
     "", summary="Delete Notification", response={200: dict}, auth=AuthUser()
 )
 async def delete_notifications(request, data: MarkNotificationsReadSchema):
-    await NotificationService.delete_notifications(user=request.auth, data=data)
+    await NotificationService.delete_notifications(user=request.auth, payload=data)
     return CustomResponse.success("Notifications deleted successfully")

@@ -35,7 +35,7 @@ mig: # run with "make mig" or "make mig app='app'"
 	fi
 
 init:
-	python manage.py upsert_countries && python manage.py seed_bill_providers && python manage.py seed_loan_products
+	python manage.py upsert_countries && python manage.py seed_bill_providers && python manage.py seed_loan_products && python manage.py seed_investment_products
 
 upc:
 	python manage.py upsert_countries
@@ -45,6 +45,9 @@ sbp:
 
 slp:
 	python manage.py seed_loan_products
+
+sip:
+	python manage.py seed_investment_products
 
 test:
 	pytest --disable-warnings -vv -x

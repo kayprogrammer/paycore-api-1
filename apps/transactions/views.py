@@ -30,7 +30,7 @@ from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 from apps.wallets.models import Wallet
 
-transaction_router = Router(tags=["Transactions (11)"])
+transaction_router = Router(tags=["Transactions (14)"])
 
 
 # =============== TRANSACTION ENDPOINTS ===============

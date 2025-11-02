@@ -1,10 +1,10 @@
-from ninja import ModelSchema, Schema
+from ninja import FilterSchema, ModelSchema, Schema
 from pydantic import Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
 from fcm_django.models import DeviceType
-from apps.notifications.models import Notification, NotificationPriority
+from apps.notifications.models import Notification, NotificationPriority, NotificationType
 from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 
 
@@ -29,15 +29,14 @@ class MarkNotificationsReadSchema(BaseSchema):
     all: Optional[bool] = False
 
 
-class NotificationFilterSchema(BaseSchema):
-    notification_type: Optional[str]
-    is_read: Optional[bool]
-    priority: Optional[NotificationPriority]
+class NotificationFilterSchema(FilterSchema):
+    notification_type: Optional[NotificationType] = None
+    is_read: Optional[bool] = None
+    priority: Optional[NotificationPriority] = None
 
 
 # Response Schemas
 class NotificationSchema(ModelSchema):
-
     class Meta:
         model = Notification
         exclude = ["deleted_at"]

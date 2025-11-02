@@ -117,12 +117,11 @@ class InvestmentManager:
 
         # Create transaction
         transaction = await Transaction.objects.acreate(
-            transaction_id=Transaction.generate_transaction_id(),
-            user=user,
-            wallet=wallet,
+            from_user=user,
+            from_wallet=wallet,
             transaction_type=TransactionType.INVESTMENT,
             amount=data.amount,
-            currency=wallet.currency,
+            net_amount=data.amount,
             status=TransactionStatus.COMPLETED,
             description=f"Investment in {product.name}",
         )
@@ -188,7 +187,7 @@ class InvestmentManager:
                 )
             )
 
-        await InvestmentReturn.objects.bulk_create(returns_to_create)
+        await InvestmentReturn.objects.abulk_create(returns_to_create)
 
     @staticmethod
     async def get_investment(user: User, investment_id) -> Investment:
@@ -251,12 +250,11 @@ class InvestmentManager:
         await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
         transaction = await Transaction.objects.acreate(
-            transaction_id=Transaction.generate_transaction_id(),
-            user=user,
-            wallet=wallet,
+            to_user=user,
+            to_wallet=wallet,
             transaction_type=TransactionType.INVESTMENT_PAYOUT,
             amount=payout_amount,
-            currency=wallet.currency,
+            net_amount=payout_amount,
             status=TransactionStatus.COMPLETED,
             description=f"Early liquidation of investment {investment.investment_id}",
             metadata={
@@ -378,7 +376,7 @@ class InvestmentManager:
         total_maturity_value = amount + expected_returns
 
         effective_annual_rate = (
-            (expected_returns / amount) * (365 / duration_days) * 100
+            float(expected_returns / amount) * (365 / duration_days) * 100
         )
 
         payout_schedule = []

@@ -40,6 +40,14 @@ class TransactionType(models.TextChoices):
     LOAN_INTEREST = "loan_interest", "Loan Interest"
     LOAN_PENALTY = "loan_penalty", "Loan Penalty"
 
+    # Investment transaction types
+    INVESTMENT = "investment", "Investment"
+    INVESTMENT_REPAYMENT = "investment_repayment", "Investment Repayment"
+    INVESTMENT_FEE = "investment_fee", "Investment Fee"
+    INVESTMENT_INTEREST = "investment_interest", "Investment Interest"
+    INVESTMENT_PENALTY = "investment_penalty", "Investment Penalty"
+    INVESTMENT_PAYOUT = "investment_payout", "Investment Payout"
+
 
 class TransactionStatus(models.TextChoices):
     PENDING = "pending", "Pending"

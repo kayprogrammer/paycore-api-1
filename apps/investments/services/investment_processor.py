@@ -3,6 +3,7 @@ Investment processor service for handling payouts, maturity, and portfolio manag
 """
 
 from decimal import Decimal
+from asgiref.sync import sync_to_async
 from django.utils import timezone
 from django.db.models import Sum, Count, Avg, Q, F
 from typing import Optional

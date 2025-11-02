@@ -34,21 +34,19 @@ audit_router = Router(tags=["Audit Logs (3)"])
 )
 async def get_audit_logs(
     request,
-    filters: AuditLogFilterSchema,
+    filters: AuditLogFilterSchema = Query(...),
     pagination: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
 
-    # Build query
     queryset = AuditLog.objects.all()
 
-    # Non-admin users can only see their own logs
     if not user.is_staff:
         queryset = queryset.filter(user=user)
 
     queryset = filters.filter(queryset)
     paginated_data = await Paginator.paginate_queryset(
-        queryset, pagination.page, pagination.page_size
+        queryset, pagination.page, pagination.limit
     )
     return CustomResponse.success(
         message="Audit logs retrieved successfully", data=paginated_data

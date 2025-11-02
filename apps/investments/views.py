@@ -8,8 +8,8 @@ from apps.common.schemas import PaginationQuerySchema
 from apps.investments.schemas import (
     CreateInvestmentSchema,
     InvestmentDataResponseSchema,
-    InvestmentListDataResponseSchema,
     InvestmentDetailsDataResponseSchema,
+    InvestmentListResponseSchema,
     InvestmentProductDataResponseSchema,
     InvestmentProductListDataResponseSchema,
     LiquidateInvestmentSchema,
@@ -20,8 +20,7 @@ from apps.investments.schemas import (
 )
 from apps.investments.services.investment_manager import InvestmentManager
 from apps.investments.services.investment_processor import InvestmentProcessor
-from apps.investments.models import InvestmentType, RiskLevel
-from apps.investments.models import InvestmentProduct
+from apps.investments.models import InvestmentProduct, InvestmentStatus, InvestmentType, RiskLevel
 from asgiref.sync import sync_to_async
 
 investment_router = Router(tags=["Investments (10)"])
@@ -38,8 +37,8 @@ investment_router = Router(tags=["Investments (10)"])
 )
 async def list_investment_products(
     request,
-    product_type: Optional[str] = None,
-    risk_level: Optional[str] = None,
+    product_type: Optional[InvestmentType] = None,
+    risk_level: Optional[RiskLevel] = None,
     currency_code: Optional[str] = None,
 ):
     queryset = InvestmentProduct.objects.filter(is_active=True).select_related(
@@ -84,7 +83,6 @@ async def calculate_investment(
     amount: float,
     duration_days: int,
 ):
-    """Calculate expected returns and payout schedule for an investment"""
     from decimal import Decimal
 
     calculation = await InvestmentManager.calculate_investment(
@@ -104,7 +102,6 @@ async def calculate_investment(
     auth=AuthUser(),
 )
 async def create_investment(request, data: CreateInvestmentSchema):
-    """Create a new investment"""
     user = request.auth
     investment = await InvestmentManager.create_investment(user, data)
     return CustomResponse.success("Investment created successfully", investment, 201)
@@ -113,15 +110,14 @@ async def create_investment(request, data: CreateInvestmentSchema):
 @investment_router.get(
     "/list",
     summary="List my investments",
-    response={200: InvestmentListDataResponseSchema},
+    response={200: InvestmentListResponseSchema},
     auth=AuthUser(),
 )
 async def list_investments(
     request,
-    status: Optional[str] = None,
+    status: Optional[InvestmentStatus] = None,
     page_params: PaginationQuerySchema = Query(...),
 ):
-    """List user's investments with optional status filter"""
     user = request.auth
     paginated_investments_data = await InvestmentManager.list_investments(
         user, status, page_params

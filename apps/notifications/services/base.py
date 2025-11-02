@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any, List, Union
+from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q, Count, QuerySet
@@ -133,9 +134,9 @@ class NotificationService:
     async def get_user_notifications(
         user: User, filters, page_params
     ) -> Dict[str, Any]:
-        query &= Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+        query = Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
         notifications = (
-            Notification.objects.filter(user=user).filter(query).order_by("-created_at")
+            Notification.objects.filter(user=user).filter(query)
         )
         notifications = filters.filter(notifications)
         unread_count = await Notification.objects.filter(
@@ -143,9 +144,9 @@ class NotificationService:
         ).acount()
 
         paginated_data = await Paginator.paginate_queryset(
-            notifications, page_params.page, page_params.limit
+            notifications.order_by("-created_at"), page_params.page, page_params.limit
         )
-        paginated_data["unread"] = unread_count
+        paginated_data["unread_count"] = unread_count
         return paginated_data
 
     @staticmethod

@@ -16,6 +16,7 @@ from apps.investments.models import (
     InvestmentProduct,
     InvestmentReturn,
     InvestmentPortfolio,
+    InvestmentStatus,
     InvestmentType,
     RiskLevel,
     InterestPayoutFrequency,
@@ -72,7 +73,7 @@ class CreateInvestmentSchema(BaseSchema):
 
 
 class InvestmentSchema(ModelSchema):
-    currency: CurrencySchema = Field(..., description="Investment currency")
+    currency: CurrencySchema = Field(..., description="Investment currency", alias="wallet.currency")
 
     class Meta:
         model = Investment
@@ -81,14 +82,14 @@ class InvestmentSchema(ModelSchema):
 
 class InvestmentListSchema(BaseSchema):
     investment_id: UUID
-    product_name: str
-    product_type: str
+    product_name: str = Field(..., alias="product.name")
+    product_type: str = Field(..., alias="product.product_type")
     principal_amount: Decimal
     expected_returns: Decimal
-    status: str
+    status: InvestmentStatus
     maturity_date: datetime
     days_to_maturity: int
-    currency: CurrencySchema
+    currency: CurrencySchema = Field(..., description="Investment currency", alias="product.currency")
 
 
 class InvestmentDetailsSchema(BaseSchema):
