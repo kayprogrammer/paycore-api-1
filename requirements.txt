@@ -76,3 +76,8 @@ django-prometheus==2.3.1
 channels==4.0.0
 channels-redis==4.1.0
 daphne==4.0.0
+qrcode==8.0
+pillow==11.3.0
+django-autoslug==1.9.9
+django-redis==5.4.0
+hiredis==3.1.0

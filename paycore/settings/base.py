@@ -144,12 +144,25 @@ DATABASES = {
 # Cache configuration for rate limiting
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-snowflake",
-        "TIMEOUT": 300,
-        "OPTIONS": {"MAX_ENTRIES": 1000},
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{config('REDIS_HOST', default='localhost')}:{config('REDIS_PORT', default='6379')}/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PARSER_CLASS": "redis.connection.HiredisParser",
+            "CONNECTION_POOL_CLASS_KWARGS": {
+                "max_connections": 50,
+                "retry_on_timeout": True,
+            },
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+        },
+        "KEY_PREFIX": "paycore",
+        "TIMEOUT": 300,  # Default TTL: 5 minutes
     }
 }
+
+# Cache key prefix for the caching system
+CACHE_KEY_PREFIX = "paycore"
 
 
 # Password validation

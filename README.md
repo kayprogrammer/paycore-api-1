@@ -92,7 +92,7 @@ The Docker setup includes 10 services:
 
 ### Access Dashboards
 
-- **API Documentation**: http://localhost:8000/api/docs
+- **API Documentation**: http://localhost:8000
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
 - **Flower Monitoring**: http://localhost:5555
 
