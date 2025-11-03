@@ -14,11 +14,12 @@ from apps.support.schemas import (
     MessageListResponseSchema,
     FAQListDataResponseSchema,
     RateTicketSchema,
+    TicketListResponseSchema,
     TicketStatsDataResponseSchema,
     FAQFilterSchema,
 )
 from apps.support.services.ticket_manager import TicketManager
-from apps.support.models import FAQ
+from apps.support.models import FAQ, TicketStatus
 from asgiref.sync import sync_to_async
 
 support_router = Router(tags=["Support (9)"])
@@ -43,16 +44,18 @@ async def create_ticket(request, data: CreateTicketSchema):
 @support_router.get(
     "/tickets/list",
     summary="List my tickets",
-    response={200: TicketListDataResponseSchema},
+    response={200: TicketListResponseSchema},
     auth=AuthUser(),
 )
 async def list_tickets(
     request,
-    status: Optional[str] = None,
+    status: Optional[TicketStatus] = None,
     page_params: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
-    paginated_tickets_data = await TicketManager.list_tickets(user, status)
+    paginated_tickets_data = await TicketManager.list_tickets(
+        user, status, page_params
+    )
     return CustomResponse.success(
         "Tickets retrieved successfully", paginated_tickets_data
     )
@@ -132,7 +135,7 @@ async def get_messages(
 
 
 @support_router.get(
-    "/tickets/stats",
+    "/tickets/stats/data",
     summary="Get my ticket statistics",
     response={200: TicketStatsDataResponseSchema},
     auth=AuthUser(),
@@ -150,7 +153,7 @@ async def get_ticket_stats(request):
     response={200: FAQListDataResponseSchema},
     auth=AuthUser(),
 )
-async def list_faqs(request, filters: FAQFilterSchema):
+async def list_faqs(request, filters: FAQFilterSchema = Query(...)):
     queryset = filters.filter(FAQ.objects.filter(is_published=True))
     faqs = await sync_to_async(list)(queryset.order_by("order", "-created_at"))
     return CustomResponse.success("FAQs retrieved successfully", faqs)

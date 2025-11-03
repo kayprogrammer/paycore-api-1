@@ -104,12 +104,11 @@ class SupportTicket(BaseModel):
 
     def save(self, *args, **kwargs):
         if not self.ticket_number:
-            # Generate ticket number: YEAR-SEQUENTIAL
-            last_ticket = (
-                SupportTicket.objects.aggregate(models.Max("id"))["id__max"] or 0
-            )
             year = timezone.now().year
-            self.ticket_number = f"{year}-{last_ticket + 1:06d}"
+            count = SupportTicket.objects.filter(
+                ticket_number__startswith=f"{year}-"
+            ).count()
+            self.ticket_number = f"{year}-{count + 1:06d}"
         super().save(*args, **kwargs)
 
     @property

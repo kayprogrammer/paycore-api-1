@@ -12,8 +12,8 @@ from apps.support.models import (
 from apps.support.schemas import CreateTicketSchema, CreateMessageSchema
 from apps.common.schemas import PaginationQuerySchema
 from apps.common.paginators import Paginator
-from django.db.models import Count, Avg, Q
-from datetime import timedelta
+from django.db.models import Count, Avg, Q, F, ExpressionWrapper, DurationField
+from django.db.models.functions import Extract
 
 
 class TicketManager:
@@ -121,53 +121,50 @@ class TicketManager:
 
     @staticmethod
     async def get_ticket_stats(user: User) -> dict:
-        tickets = SupportTicket.objects.filter(user=user)
-
-        total = await tickets.acount()
-        open_count = await tickets.filter(
-            status__in=[
-                TicketStatus.OPEN,
-                TicketStatus.IN_PROGRESS,
-                TicketStatus.WAITING_AGENT,
-            ]
-        ).acount()
-        resolved = await tickets.filter(status=TicketStatus.RESOLVED).acount()
-        closed = await tickets.filter(status=TicketStatus.CLOSED).acount()
-
-        # Calculate averages
-        response_times = []
-        resolution_times = []
-        ratings = []
-
-        async for ticket in tickets:
-            if ticket.first_response_at:
-                response_delta = ticket.first_response_at - ticket.created_at
-                response_times.append(response_delta.total_seconds() / 60)
-
-            if ticket.resolved_at:
-                resolution_delta = ticket.resolved_at - ticket.created_at
-                resolution_times.append(resolution_delta.total_seconds() / 3600)
-
-            if ticket.satisfaction_rating:
-                ratings.append(ticket.satisfaction_rating)
-
-        avg_response = (
-            sum(response_times) / len(response_times) if response_times else 0
+        stats = await SupportTicket.objects.filter(user=user).aaggregate(
+            total_tickets=Count("id"),
+            open_tickets=Count(
+                "id",
+                filter=Q(
+                    status__in=[
+                        TicketStatus.OPEN,
+                        TicketStatus.IN_PROGRESS,
+                        TicketStatus.WAITING_AGENT,
+                    ]
+                ),
+            ),
+            in_progress_tickets=Count("id", filter=Q(status=TicketStatus.IN_PROGRESS)),
+            resolved_tickets=Count("id", filter=Q(status=TicketStatus.RESOLVED)),
+            closed_tickets=Count("id", filter=Q(status=TicketStatus.CLOSED)),
+            # Average response time in minutes
+            avg_response_minutes=Avg(
+                ExpressionWrapper(
+                    Extract(F("first_response_at") - F("created_at"), "epoch") / 60,
+                    output_field=DurationField(),
+                ),
+                filter=Q(first_response_at__isnull=False),
+            ),
+            # Average resolution time in hours
+            avg_resolution_hours=Avg(
+                ExpressionWrapper(
+                    Extract(F("resolved_at") - F("created_at"), "epoch") / 3600,
+                    output_field=DurationField(),
+                ),
+                filter=Q(resolved_at__isnull=False),
+            ),
+            # Average satisfaction rating
+            satisfaction_average=Avg(
+                "satisfaction_rating", filter=Q(satisfaction_rating__isnull=False)
+            ),
         )
-        avg_resolution = (
-            sum(resolution_times) / len(resolution_times) if resolution_times else 0
-        )
-        avg_rating = sum(ratings) / len(ratings) if ratings else 0
 
         return {
-            "total_tickets": total,
-            "open_tickets": open_count,
-            "in_progress_tickets": await tickets.filter(
-                status=TicketStatus.IN_PROGRESS
-            ).acount(),
-            "resolved_tickets": resolved,
-            "closed_tickets": closed,
-            "avg_response_time_minutes": round(avg_response, 2),
-            "avg_resolution_time_hours": round(avg_resolution, 2),
-            "satisfaction_average": round(avg_rating, 2),
+            "total_tickets": stats["total_tickets"] or 0,
+            "open_tickets": stats["open_tickets"] or 0,
+            "in_progress_tickets": stats["in_progress_tickets"] or 0,
+            "resolved_tickets": stats["resolved_tickets"] or 0,
+            "closed_tickets": stats["closed_tickets"] or 0,
+            "avg_response_time_minutes": round(stats["avg_response_minutes"] or 0, 2),
+            "avg_resolution_time_hours": round(stats["avg_resolution_hours"] or 0, 2),
+            "satisfaction_average": round(stats["satisfaction_average"] or 0, 2),
         }
