@@ -152,8 +152,7 @@ async def get_ticket_stats(request):
     auth=AuthUser(),
 )
 @cacheable(
-    key="faq:list:{{filters}}",
-    hash_params=["filters"],
+    key="faq:list:{{user_id}}",
     ttl=60 * 5,
 )
 async def list_faqs(request, filters: FAQFilterSchema = Query(...)):

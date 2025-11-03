@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from decouple import config
 import json
@@ -150,11 +151,16 @@ DATABASES = {
     }
 }
 
+# Redis details
+REDIS_HOST = config("REDIS_HOST", default="localhost")
+REDIS_PORT = config("REDIS_PORT", default="6379", cast=int)
+REDIS_DB = config("REDIS_DB", default="0", cast=int)
+
 # Cache configuration for rate limiting
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{config('REDIS_HOST', default='localhost')}:{config('REDIS_PORT', default='6379')}/1",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
@@ -263,13 +269,14 @@ LOGGING = {
             "format": '{"level": "%(levelname)s", "timestamp": "%(asctime)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s"}',
         },
         "simple": {
-            "format": "%(levelname)s %(asctime)s %(name)s %(message)s",
+            "()": "logging.Formatter",
+            "format": "\033[32m%(levelname)s\033[0m:     \033[36m%(name)s\033[0m - %(message)s",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "json",
+            "formatter": "simple",
             "stream": "ext://sys.stdout",
         },
         "error_console": {
@@ -451,6 +458,7 @@ USE_INTERNAL_PROVIDER = config("USE_INTERNAL_PROVIDER", default=False, cast=bool
 WISE_TEST_API_KEY = config("WISE_TEST_API_KEY", default=None)
 WISE_LIVE_API_KEY = config("WISE_LIVE_API_KEY", default=None)
 
+
 # Django Channels Configuration
 CHANNEL_LAYERS = {
     "default": {
@@ -458,8 +466,8 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [
                 (
-                    config("REDIS_HOST", default="localhost"),
-                    config("REDIS_PORT", default=6379, cast=int),
+                    REDIS_HOST,
+                    REDIS_PORT,
                 )
             ],
             "capacity": 1500,
@@ -489,8 +497,6 @@ if FIREBASE_CREDENTIALS_JSON and FIREBASE_CREDENTIALS_JSON.strip():
 elif FIREBASE_CREDENTIALS_PATH and FIREBASE_CREDENTIALS_PATH.strip():
     # Option 2: Using JSON file path (Development)
     try:
-        import os
-
         service_account_path = os.path.join(BASE_DIR, FIREBASE_CREDENTIALS_PATH)
         if os.path.exists(service_account_path):
             cred = credentials.Certificate(service_account_path)
