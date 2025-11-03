@@ -65,8 +65,9 @@ python manage.py seed_bill_providers
 python manage.py seed_loan_products
 python manage.py seed_investment_products
 python manage.py seed_faqs
+python manage.py seed_users  # Creates test users with KYC & wallets
 
-# Create superuser
+# Create superuser (optional)
 python manage.py createsuperuser
 
 # Exit container
@@ -94,6 +95,21 @@ The Docker setup includes 10 services:
 - **API Documentation**: http://localhost:8000/api/docs
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
 - **Flower Monitoring**: http://localhost:5555
+
+### Test Credentials
+
+After running `make init` or `make su`, you can use these test accounts:
+
+| Email | Password | PIN | Type | KYC Status | Wallet |
+|-------|----------|-----|------|------------|--------|
+| test@example.com | password123 | 1234 | Regular User | Tier 2 Verified | ₦100,000 NGN |
+| test2@example.com | password123 | 1234 | Staff User | Tier 2 Verified | ₦100,000 NGN |
+
+Both accounts have:
+- Verified email
+- Approved KYC (Tier 2)
+- Active NGN wallet with ₦100,000 balance
+- Default wallet PIN: 1234
 
 ## Docker Commands
 
@@ -279,6 +295,15 @@ make shell
 # Create superuser
 make suser
 
+# Seed commands
+make init                  # Run all seed commands
+make su                    # Seed test users (with KYC & wallets)
+make upc                   # Seed countries
+make sbp                   # Seed bill providers
+make slp                   # Seed loan products
+make sip                   # Seed investment products
+make sf                    # Seed FAQs
+
 # Update requirements
 make ureq
 ```
@@ -377,15 +402,3 @@ make inspect-stats
 # Access Flower UI
 open http://localhost:5555
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is proprietary and confidential.
