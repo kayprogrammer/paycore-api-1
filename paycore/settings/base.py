@@ -1,11 +1,20 @@
 from pathlib import Path
 from decouple import config
 import json
+import warnings
 import firebase_admin
 from firebase_admin import credentials
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Suppress Django ASGI StreamingHttpResponse warning for static files
+# This is a known Django/Django Ninja issue when serving Swagger UI assets
+warnings.filterwarnings(
+    "ignore",
+    message="StreamingHttpResponse must consume synchronous iterators",
+    category=Warning,
+)
 
 
 # Quick-start development settings - unsuitable for production
@@ -148,7 +157,7 @@ CACHES = {
         "LOCATION": f"redis://{config('REDIS_HOST', default='localhost')}:{config('REDIS_PORT', default='6379')}/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PARSER_CLASS": "redis.connection.HiredisParser",
+            "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
             "CONNECTION_POOL_CLASS_KWARGS": {
                 "max_connections": 50,
                 "retry_on_timeout": True,

@@ -50,7 +50,9 @@ class TicketSchema(BaseSchema):
     priority: str
     status: str
     description: str
-    user_email: str = Field(..., description="Email of the customer", alias="user.email")
+    user_email: str = Field(
+        ..., description="Email of the customer", alias="user.email"
+    )
     assigned_to_email: Optional[str] = Field(
         None,
         description="Email of the agent assigned to the ticket",
@@ -99,7 +101,9 @@ class CreateMessageSchema(BaseSchema):
 
 class MessageSchema(BaseSchema):
     message_id: UUID
-    sender_email: str = Field(..., description="Email of the sender", alias="sender.email")
+    sender_email: str = Field(
+        ..., description="Email of the sender", alias="sender.email"
+    )
     message: str
     is_from_customer: bool
     is_read: bool

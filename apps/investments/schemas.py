@@ -73,7 +73,9 @@ class CreateInvestmentSchema(BaseSchema):
 
 
 class InvestmentSchema(ModelSchema):
-    currency: CurrencySchema = Field(..., description="Investment currency", alias="wallet.currency")
+    currency: CurrencySchema = Field(
+        ..., description="Investment currency", alias="wallet.currency"
+    )
 
     class Meta:
         model = Investment
@@ -89,7 +91,9 @@ class InvestmentListSchema(BaseSchema):
     status: InvestmentStatus
     maturity_date: datetime
     days_to_maturity: int
-    currency: CurrencySchema = Field(..., description="Investment currency", alias="product.currency")
+    currency: CurrencySchema = Field(
+        ..., description="Investment currency", alias="product.currency"
+    )
 
 
 class InvestmentDetailsSchema(BaseSchema):

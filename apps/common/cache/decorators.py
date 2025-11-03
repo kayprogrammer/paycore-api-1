@@ -1,7 +1,8 @@
-import functools
-import inspect
-import logging
+import functools, logging, inspect
 from typing import Any, Optional, List, Callable
+
+from django.db.models.base import settings
+from ninja.utils import contribute_operation_callback
 from .manager import CacheManager
 
 logger = logging.getLogger(__name__)
@@ -11,130 +12,166 @@ def cacheable(
     key: str,
     ttl: int = 300,
     hash_params: Optional[List[str]] = None,
-    debug: bool = False,
+    debug: bool = settings.DEBUG,
 ):
     """
-    Decorator to cache function results in Redis with template-based key generation.
+    Decorator to cache Django Ninja API responses in Redis.
+    Automatically integrates with Django Ninja's operation system.
 
     Args:
-        key: Cache key template with placeholders (e.g., 'user:{{user_id}}:posts')
+        key: Cache key template with placeholders (e.g., 'faq:list:{{filters}}')
         ttl: Time-to-live in seconds (default: 300 / 5 minutes)
         hash_params: List of parameter names to hash (e.g., ['filters', 'options'])
         debug: Enable debug logging
 
-    Placeholder syntax:
-        - {{param_name}}: Direct parameter access
-        - {{context.req.user_id}}: Nested access via dot notation
-        - {{filters}}: Parameter that will be hashed if in hash_params
-
     Examples:
         ```python
+        @support_router.get("/faq/list")
         @cacheable(
-            key='user:{{user_id}}:profile',
-            ttl=600
-        )
-        async def get_user_profile(user_id: int):
-            user = await User.objects.aget(id=user_id)
-            return user
-
-        @cacheable(
-            key='loans:products:{{currency_code}}:{{filters}}',
+            key='faq:list:{{filters}}',
             hash_params=['filters'],
-            ttl=1800,
-            debug=True
-        )
-        async def get_loan_products(currency_code: str, filters: dict = None):
-            products = await LoanProduct.objects.filter(
-                currency__code=currency_code
-            ).all()
-            return products
-
-        # With request object (Django Ninja)
-        @cacheable(
-            key='wallets:summary:{{request.user.id}}',
             ttl=300
         )
-        async def get_wallet_summary(request):
-            wallets = await Wallet.objects.filter(user=request.user).all()
-            return wallets
+        async def list_faqs(request, filters: FAQFilterSchema):
+            return CustomResponse.success("FAQs", data)
         ```
     """
 
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs) -> Any:
-            # Build context from function arguments
-            context = _build_context(func, args, kwargs)
+    def decorator(op_func: Callable) -> Callable:
+        """Decorator that integrates with Django Ninja's operation system"""
 
-            # Generate cache key
-            cache_key = CacheManager.build_key(key, context, hash_params)
+        def _apply_cache_decorator(operation):
+            """
+            Apply caching to the operation's run method.
+            This is called after Django Ninja has created the Operation object.
+            """
+            original_run = operation.run
 
-            if debug:
-                logger.info(f"[Cache Debug] Function: {func.__name__}")
-                logger.info(f"[Cache Debug] Key Template: {key}")
-                logger.info(f"[Cache Debug] Resolved Key: {cache_key}")
-                logger.info(f"[Cache Debug] Context: {context}")
+            # Check if this is an async operation
+            import inspect
+            is_async = inspect.iscoroutinefunction(original_run)
 
-            # Try to get from cache
-            cached_value = CacheManager.get(cache_key)
-            if cached_value is not None:
-                if debug:
-                    logger.info(f"[Cache Debug] HIT for {cache_key}")
-                return cached_value
+            if is_async:
+                @functools.wraps(original_run)
+                async def cached_run(request, **kw):
+                    """Async wrapper for operation.run that adds caching"""
+                    # Build context from resolved parameters in kw
+                    context = {}
 
-            if debug:
-                logger.info(f"[Cache Debug] MISS for {cache_key}")
+                    # Add auth info if available
+                    if hasattr(request, "auth") and request.auth:
+                        context["request"] = {
+                            "auth": {
+                                "id": str(getattr(request.auth, "id", None)),
+                                "email": getattr(request.auth, "email", None),
+                            }
+                        }
 
-            # Cache miss - execute function
-            result = await func(*args, **kwargs)
+                    # Add all resolved parameters from kw
+                    for param_name, param_value in kw.items():
+                        # Handle Pydantic/schema objects by converting to dict
+                        if hasattr(param_value, "dict") and callable(param_value.dict):
+                            try:
+                                context[param_name] = param_value.dict()
+                            except:
+                                context[param_name] = param_value
+                        elif hasattr(param_value, "model_dump") and callable(param_value.model_dump):
+                            try:
+                                context[param_name] = param_value.model_dump()
+                            except:
+                                context[param_name] = param_value
+                        else:
+                            context[param_name] = param_value
 
-            # Cache the result
-            CacheManager.set(cache_key, result, ttl)
+                    # Generate cache key
+                    cache_key = CacheManager.build_key(key, context, hash_params)
 
-            if debug:
-                logger.info(f"[Cache Debug] Cached result for {cache_key} (TTL: {ttl}s)")
+                    if debug:
+                        logger.info(f"[Cache] {operation.view_func.__name__} | Key: {cache_key}")
 
-            return result
+                    # Try to get from cache
+                    cached_value = CacheManager.get(cache_key)
+                    if cached_value is not None:
+                        if debug:
+                            logger.info(f"[Cache] HIT: {cache_key}")
+                        return cached_value
 
-        @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs) -> Any:
-            # Build context from function arguments
-            context = _build_context(func, args, kwargs)
+                    if debug:
+                        logger.info(f"[Cache] MISS: {cache_key}")
 
-            # Generate cache key
-            cache_key = CacheManager.build_key(key, context, hash_params)
+                    # Cache miss - execute the original operation.run (await it!)
+                    result = await original_run(request, **kw)
 
-            if debug:
-                logger.info(f"[Cache Debug] Function: {func.__name__}")
-                logger.info(f"[Cache Debug] Key Template: {key}")
-                logger.info(f"[Cache Debug] Resolved Key: {cache_key}")
-                logger.info(f"[Cache Debug] Context: {context}")
+                    # Cache the HttpResponse
+                    if debug:
+                        logger.info(f"[Cache] SET: {cache_key} (TTL: {ttl}s)")
+                    CacheManager.set(cache_key, result, ttl)
 
-            # Try to get from cache
-            cached_value = CacheManager.get(cache_key)
-            if cached_value is not None:
-                if debug:
-                    logger.info(f"[Cache Debug] HIT for {cache_key}")
-                return cached_value
+                    return result
+            else:
+                @functools.wraps(original_run)
+                def cached_run(request, **kw):
+                    """Sync wrapper for operation.run that adds caching"""
+                    # Build context from resolved parameters
+                    context = {}
 
-            if debug:
-                logger.info(f"[Cache Debug] MISS for {cache_key}")
+                    if hasattr(request, "auth") and request.auth:
+                        context["request"] = {
+                            "auth": {
+                                "id": str(getattr(request.auth, "id", None)),
+                                "email": getattr(request.auth, "email", None),
+                            }
+                        }
 
-            # Cache miss - execute function
-            result = func(*args, **kwargs)
+                    for param_name, param_value in kw.items():
+                        if hasattr(param_value, "dict") and callable(param_value.dict):
+                            try:
+                                context[param_name] = param_value.dict()
+                            except:
+                                context[param_name] = param_value
+                        elif hasattr(param_value, "model_dump") and callable(param_value.model_dump):
+                            try:
+                                context[param_name] = param_value.model_dump()
+                            except:
+                                context[param_name] = param_value
+                        else:
+                            context[param_name] = param_value
 
-            # Cache the result
-            CacheManager.set(cache_key, result, ttl)
+                    cache_key = CacheManager.build_key(key, context, hash_params)
 
-            if debug:
-                logger.info(f"[Cache Debug] Cached result for {cache_key} (TTL: {ttl}s)")
+                    if debug:
+                        logger.info(f"[Cache] {operation.view_func.__name__} | Key: {cache_key}")
 
-            return result
+                    cached_value = CacheManager.get(cache_key)
+                    if cached_value is not None:
+                        if debug:
+                            logger.info(f"[Cache] HIT: {cache_key}")
+                        return cached_value
 
-        # Return appropriate wrapper based on function type
-        if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        return sync_wrapper
+                    if debug:
+                        logger.info(f"[Cache] MISS: {cache_key}")
+
+                    result = original_run(request, **kw)
+
+                    if debug:
+                        logger.info(f"[Cache] SET: {cache_key} (TTL: {ttl}s)")
+                    CacheManager.set(cache_key, result, ttl)
+
+                    return result
+
+            # Replace the operation's run method with our cached version
+            operation.run = cached_run
+
+        # Register the cache decorator to be applied when the operation is created
+        # This works exactly like decorate_view does
+        if hasattr(op_func, "_ninja_operation"):
+            # Decorator applied on top of @api.method
+            _apply_cache_decorator(op_func._ninja_operation)
+        else:
+            # Decorator applied below @api.method
+            contribute_operation_callback(op_func, _apply_cache_decorator)
+
+        return op_func
 
     return decorator
 
@@ -147,50 +184,17 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
         patterns: List of cache key patterns to invalidate
         debug: Enable debug logging
 
-    Pattern syntax:
-        - 'user:{{user_id}}:*': Invalidate all keys for a user
-        - 'wallets:{{user_id}}:*': Invalidate all wallet caches for user
-        - 'loans:products:*': Invalidate all loan product caches
-
     Examples:
         ```python
         @invalidate_cache(
             patterns=[
-                'user:{{user_id}}:profile',
-                'wallets:{{user_id}}:*',
-            ]
-        )
-        async def update_user_profile(user_id: int, data: dict):
-            user = await User.objects.aget(id=user_id)
-            for key, value in data.items():
-                setattr(user, key, value)
-            await user.asave()
-            return user
-
-        @invalidate_cache(
-            patterns=[
                 'loans:products:*',
                 'loans:{{user_id}}:applications',
-            ],
-            debug=True
+            ]
         )
         async def create_loan_product(data: dict):
             product = await LoanProduct.objects.acreate(**data)
             return product
-
-        # Invalidate on transaction (Django Ninja)
-        @invalidate_cache(
-            patterns=[
-                'wallets:summary:{{request.user.id}}',
-                'transactions:{{request.user.id}}:recent',
-            ]
-        )
-        async def create_transaction(request, data: dict):
-            transaction = await Transaction.objects.acreate(
-                user=request.user,
-                **data
-            )
-            return transaction
         ```
     """
 
@@ -201,7 +205,10 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
             result = await func(*args, **kwargs)
 
             # Build context from function arguments
-            context = _build_context(func, args, kwargs)
+            sig = inspect.signature(func)
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+            context = dict(bound_args.arguments)
 
             # Invalidate all matching patterns
             total_deleted = 0
@@ -217,14 +224,10 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
                 total_deleted += deleted_count
 
                 if debug:
-                    logger.info(
-                        f"[Cache Debug] Deleted {deleted_count} keys for pattern: {resolved_pattern}"
-                    )
+                    logger.info(f"[Cache Debug] Deleted {deleted_count} keys")
 
             if debug:
-                logger.info(
-                    f"[Cache Debug] Total deleted: {total_deleted} keys for function: {func.__name__}"
-                )
+                logger.info(f"[Cache Debug] Total deleted: {total_deleted} keys")
 
             return result
 
@@ -233,111 +236,23 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
             # Execute the function first
             result = func(*args, **kwargs)
 
-            # Build context from function arguments
-            context = _build_context(func, args, kwargs)
+            # Build context and invalidate
+            sig = inspect.signature(func)
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+            context = dict(bound_args.arguments)
 
-            # Invalidate all matching patterns
             total_deleted = 0
             for pattern_template in patterns:
-                # Resolve pattern with context
                 resolved_pattern = CacheManager.build_key(pattern_template, context)
-
-                if debug:
-                    logger.info(f"[Cache Debug] Invalidating pattern: {resolved_pattern}")
-
-                # Delete keys matching pattern
                 deleted_count = CacheManager.delete_pattern(resolved_pattern)
                 total_deleted += deleted_count
 
-                if debug:
-                    logger.info(
-                        f"[Cache Debug] Deleted {deleted_count} keys for pattern: {resolved_pattern}"
-                    )
-
-            if debug:
-                logger.info(
-                    f"[Cache Debug] Total deleted: {total_deleted} keys for function: {func.__name__}"
-                )
-
             return result
 
-        # Return appropriate wrapper based on function type
+        # Return appropriate wrapper
         if inspect.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
 
     return decorator
-
-
-def _build_context(func: Callable, args: tuple, kwargs: dict) -> dict:
-    """
-    Build context dictionary from function arguments.
-
-    Handles both positional and keyword arguments, creating a flat dictionary
-    that can be used for cache key template resolution.
-
-    Args:
-        func: The decorated function
-        args: Positional arguments
-        kwargs: Keyword arguments
-
-    Returns:
-        Dictionary with all function arguments
-    """
-    sig = inspect.signature(func)
-    bound_args = sig.bind(*args, **kwargs)
-    bound_args.apply_defaults()
-
-    context = {}
-
-    for param_name, param_value in bound_args.arguments.items():
-        # Handle context objects (Django Ninja, DRF, etc.)
-        if param_name == "context" and hasattr(param_value, "req"):
-            # Extract nested context attributes
-            context["context"] = {
-                "req": _extract_request_attrs(param_value.req)
-            }
-        elif param_name == "request" and hasattr(param_value, "user"):
-            # Handle Django request objects
-            context["request"] = {
-                "user_id": getattr(param_value.user, "id", None),
-                "user": getattr(param_value.user, "email", None),
-            }
-        else:
-            # Regular parameters
-            context[param_name] = param_value
-
-    return context
-
-
-def _extract_request_attrs(req_obj: Any) -> dict:
-    """
-    Extract useful attributes from request object.
-
-    Args:
-        req_obj: Request object (Django HttpRequest, etc.)
-
-    Returns:
-        Dictionary with extracted attributes
-    """
-    attrs = {}
-
-    # Common attributes to extract
-    attr_names = [
-        "user_id",
-        "organization_id",
-        "tenant_id",
-        "workspace_id",
-        "user",
-        "email",
-    ]
-
-    for attr_name in attr_names:
-        if hasattr(req_obj, attr_name):
-            attrs[attr_name] = getattr(req_obj, attr_name)
-
-    # Extract user ID if user object exists
-    if hasattr(req_obj, "user") and hasattr(req_obj.user, "id"):
-        attrs["user_id"] = req_obj.user.id
-
-    return attrs

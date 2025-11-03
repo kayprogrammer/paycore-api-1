@@ -63,7 +63,10 @@ class Notification(BaseModel):
 
     # Related object (polymorphic reference)
     related_object_type = models.CharField(
-        max_length=50, blank=True, help_text="Model name: Payment, Loan, Card, etc.", null=True
+        max_length=50,
+        blank=True,
+        help_text="Model name: Payment, Loan, Card, etc.",
+        null=True,
     )
     related_object_id = models.CharField(
         max_length=100, blank=True, help_text="UUID or ID of related object", null=True
@@ -85,7 +88,10 @@ class Notification(BaseModel):
 
     # Metadata
     metadata = models.JSONField(
-        default=dict, blank=True, null=True, help_text="Additional metadata for the notification"
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Additional metadata for the notification",
     )
 
     expires_at = models.DateTimeField(

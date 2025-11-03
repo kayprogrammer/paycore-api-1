@@ -5,7 +5,13 @@ from datetime import date
 
 from apps.accounts.models import User
 from apps.compliance.models import KYCVerification, KYCStatus, KYCLevel, DocumentType
-from apps.wallets.models import Wallet, Currency, WalletType, WalletStatus, AccountProvider
+from apps.wallets.models import (
+    Wallet,
+    Currency,
+    WalletType,
+    WalletStatus,
+    AccountProvider,
+)
 from apps.profiles.models import Country
 
 
@@ -30,9 +36,7 @@ class Command(BaseCommand):
                 ngn_currency = Currency.objects.filter(code="NGN").first()
                 if not ngn_currency:
                     self.stdout.write(
-                        self.style.WARNING(
-                            "NGN currency not found. Creating..."
-                        )
+                        self.style.WARNING("NGN currency not found. Creating...")
                     )
                     ngn_currency = Currency.objects.create(
                         name="Nigerian Naira",
@@ -83,7 +87,9 @@ class Command(BaseCommand):
                             "is_active": True,
                             "is_email_verified": user_data["is_email_verified"],
                             "dob": user_data["dob"],
-                            "password": make_password("password123"),  # Default password
+                            "password": make_password(
+                                "password123"
+                            ),  # Default password
                         },
                     )
 
@@ -125,11 +131,15 @@ class Command(BaseCommand):
 
                     if kyc_created:
                         self.stdout.write(
-                            self.style.SUCCESS(f"  ✓ Created KYC verification for {user.email}")
+                            self.style.SUCCESS(
+                                f"  ✓ Created KYC verification for {user.email}"
+                            )
                         )
                     else:
                         self.stdout.write(
-                            self.style.WARNING(f"  → Updated KYC verification for {user.email}")
+                            self.style.WARNING(
+                                f"  → Updated KYC verification for {user.email}"
+                            )
                         )
 
                     # Create or update NGN wallet
@@ -185,7 +195,5 @@ class Command(BaseCommand):
                 )
 
         except Exception as e:
-            self.stdout.write(
-                self.style.ERROR(f"✗ Error during seed: {str(e)}")
-            )
+            self.stdout.write(self.style.ERROR(f"✗ Error during seed: {str(e)}"))
             raise

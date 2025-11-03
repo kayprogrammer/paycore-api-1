@@ -4,7 +4,11 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
 from fcm_django.models import DeviceType
-from apps.notifications.models import Notification, NotificationPriority, NotificationType
+from apps.notifications.models import (
+    Notification,
+    NotificationPriority,
+    NotificationType,
+)
 from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 
 

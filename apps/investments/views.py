@@ -20,7 +20,12 @@ from apps.investments.schemas import (
 )
 from apps.investments.services.investment_manager import InvestmentManager
 from apps.investments.services.investment_processor import InvestmentProcessor
-from apps.investments.models import InvestmentProduct, InvestmentStatus, InvestmentType, RiskLevel
+from apps.investments.models import (
+    InvestmentProduct,
+    InvestmentStatus,
+    InvestmentType,
+    RiskLevel,
+)
 from asgiref.sync import sync_to_async
 
 investment_router = Router(tags=["Investments (10)"])

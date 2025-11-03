@@ -1,10 +1,11 @@
-import json
-import hashlib
-import logging
 from typing import Any, Optional, List
 from django.core.cache import cache
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Model
 from django_redis import get_redis_connection
+import json, hashlib, logging, traceback
+from django.forms.models import model_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -16,21 +17,68 @@ class CacheManager:
     """
 
     @staticmethod
-    def _serialize_value(value: Any) -> str:
-        """Serialize Python objects to JSON string."""
-        try:
-            return json.dumps(value, default=str)
-        except (TypeError, ValueError) as e:
-            logger.warning(f"Serialization error: {e}, storing as string")
-            return str(value)
+    def _prepare_for_cache(value: Any) -> Any:
+        """
+        Prepare value for caching by converting Django models to serializable dicts.
+        This runs BEFORE django-redis's JSONSerializer.
+        """
+        # Handle Django model instances
+        if isinstance(value, Model):
+            return CacheManager._model_to_dict(value)
+
+        # Handle lists that might contain Django models
+        if isinstance(value, list):
+            if value and isinstance(value[0], Model):
+                return [CacheManager._model_to_dict(item) for item in value]
+            # Recursively handle nested lists
+            return [CacheManager._prepare_for_cache(item) for item in value]
+
+        # Handle tuples (like CustomResponse.success returns)
+        if isinstance(value, tuple):
+            # Check if it's the (status_code, response_data) pattern
+            if len(value) == 2 and isinstance(value[1], dict):
+                status_code, response_data = value
+                # Make a copy to avoid modifying original
+                response_data = response_data.copy()
+
+                # Check if 'data' field contains models
+                if "data" in response_data:
+                    response_data["data"] = CacheManager._prepare_for_cache(
+                        response_data["data"]
+                    )
+
+                return (status_code, response_data)
+
+            # Generic tuple handling
+            return tuple(CacheManager._prepare_for_cache(item) for item in value)
+
+        # Handle dictionaries recursively
+        if isinstance(value, dict):
+            return {k: CacheManager._prepare_for_cache(v) for k, v in value.items()}
+
+        # Return as-is for primitive types
+        return value
 
     @staticmethod
-    def _deserialize_value(value: str) -> Any:
-        """Deserialize JSON string back to Python object."""
-        try:
-            return json.loads(value)
-        except (TypeError, ValueError, json.JSONDecodeError):
-            return value
+    def _model_to_dict(instance: Model) -> dict:
+        """Convert Django model instance to dictionary."""
+
+        # Get all fields including related fields
+        data = model_to_dict(instance)
+
+        # Add pk/id if not present
+        if "id" not in data:
+            data["id"] = str(instance.pk)
+        else:
+            # Convert UUID to string
+            data["id"] = str(data["id"])
+
+        # Convert any UUID fields to strings
+        for key, value in data.items():
+            if hasattr(value, "hex"):  # UUID has hex attribute
+                data[key] = str(value)
+
+        return data
 
     @staticmethod
     def _hash_params(params: dict) -> str:
@@ -41,7 +89,7 @@ class CacheManager:
     @staticmethod
     def get(key: str) -> Optional[Any]:
         """
-        Retrieve value from cache.
+        Retrieve value from cache using raw Redis to avoid serialization issues.
 
         Args:
             key: Cache key
@@ -50,20 +98,34 @@ class CacheManager:
             Cached value or None if not found
         """
         try:
-            value = cache.get(key)
-            if value is not None:
-                logger.debug(f"Cache HIT: {key}")
-                return CacheManager._deserialize_value(value)
+            # Use raw Redis client to bypass django-redis serialization
+            redis_client = get_redis_connection("default")
+
+            # Add prefix if configured
+            cache_prefix = getattr(settings, "CACHE_KEY_PREFIX", "paycore")
+            full_key = f":{cache_prefix}:{key}:1" if not key.startswith(":") else key
+
+            cached_json = redis_client.get(full_key)
+
+            if cached_json is not None:
+                logger.info(f"Cache HIT: {key}")
+                # Deserialize from JSON
+                value = json.loads(cached_json)
+                logger.info(f"Cache GET - Retrieved value type: {type(value)}")
+                logger.info(f"Cache GET - Retrieved value: {str(value)[:200]}")
+                return value
+
             logger.debug(f"Cache MISS: {key}")
             return None
         except Exception as e:
             logger.error(f"Cache GET error for key '{key}': {e}")
+            logger.error(traceback.format_exc())
             return None
 
     @staticmethod
     def set(key: str, value: Any, ttl: int = 300) -> bool:
         """
-        Store value in cache.
+        Store value in cache using raw Redis to avoid serialization issues.
 
         Args:
             key: Cache key
@@ -74,8 +136,18 @@ class CacheManager:
             True if successful, False otherwise
         """
         try:
-            serialized_value = CacheManager._serialize_value(value)
-            cache.set(key, serialized_value, timeout=ttl)
+            # Prepare value for caching by converting Django models to dicts
+            prepared_value = CacheManager._prepare_for_cache(value)
+
+            # Serialize to JSON
+            json_value = json.dumps(prepared_value, cls=DjangoJSONEncoder)
+
+            # Use raw Redis client to bypass django-redis serialization
+            redis_client = get_redis_connection("default")
+
+            # Key already has prefix from build_key(), just use it directly
+            redis_client.setex(key, ttl, json_value)
+
             logger.debug(f"Cache SET: {key} (TTL: {ttl}s)")
             return True
         except Exception as e:
@@ -126,7 +198,9 @@ class CacheManager:
 
             # Delete all matching keys
             deleted_count = redis_conn.delete(*keys)
-            logger.info(f"Cache INVALIDATE: {deleted_count} keys deleted for pattern '{pattern}'")
+            logger.info(
+                f"Cache INVALIDATE: {deleted_count} keys deleted for pattern '{pattern}'"
+            )
             return deleted_count
 
         except ImportError:

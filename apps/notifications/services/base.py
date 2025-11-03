@@ -135,9 +135,7 @@ class NotificationService:
         user: User, filters, page_params
     ) -> Dict[str, Any]:
         query = Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        notifications = (
-            Notification.objects.filter(user=user).filter(query)
-        )
+        notifications = Notification.objects.filter(user=user).filter(query)
         notifications = filters.filter(notifications)
         unread_count = await Notification.objects.filter(
             user=user, is_read=False

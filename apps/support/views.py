@@ -3,13 +3,13 @@ from typing import Optional
 from uuid import UUID
 
 from apps.accounts.auth import AuthUser
+from apps.common.cache.decorators import cacheable
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
 from apps.support.schemas import (
     CreateTicketSchema,
     CreateMessageSchema,
     TicketDataResponseSchema,
-    TicketListDataResponseSchema,
     MessageDataResponseSchema,
     MessageListResponseSchema,
     FAQListDataResponseSchema,
@@ -53,9 +53,7 @@ async def list_tickets(
     page_params: PaginationQuerySchema = Query(...),
 ):
     user = request.auth
-    paginated_tickets_data = await TicketManager.list_tickets(
-        user, status, page_params
-    )
+    paginated_tickets_data = await TicketManager.list_tickets(user, status, page_params)
     return CustomResponse.success(
         "Tickets retrieved successfully", paginated_tickets_data
     )
@@ -152,6 +150,11 @@ async def get_ticket_stats(request):
     summary="List FAQs",
     response={200: FAQListDataResponseSchema},
     auth=AuthUser(),
+)
+@cacheable(
+    key="faq:list:{{filters}}",
+    hash_params=["filters"],
+    ttl=60 * 5,
 )
 async def list_faqs(request, filters: FAQFilterSchema = Query(...)):
     queryset = filters.filter(FAQ.objects.filter(is_published=True))
