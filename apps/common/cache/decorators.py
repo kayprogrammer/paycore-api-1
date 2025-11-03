@@ -207,25 +207,36 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
     """
     Decorator to invalidate cache entries based on wildcard patterns.
 
+    The 'paycore:' prefix is automatically added, so just specify the pattern without it.
+    Use {{user_id}} placeholder to target specific user's cache based on request.auth.
+
     Args:
-        patterns: List of Redis key patterns with wildcards (e.g., ['paycore:faq:list:*'])
+        patterns: List of Redis key patterns (e.g., ['faq:list:*'] or ['notifications:list:{{user_id}}:*'])
         debug: Enable debug logging
 
     Examples:
         ```python
+        # Invalidate all FAQ caches
         @support_router.post("/faq/create")
-        @invalidate_cache(patterns=['paycore:faq:list:*'])
+        @invalidate_cache(patterns=['faq:list:*'])
         async def create_faq(request, data: FAQSchema):
             faq = await FAQ.objects.acreate(**data)
             return CustomResponse.success("FAQ created", faq)
 
+        # Invalidate only the authenticated user's notifications
+        @notification_router.post("/mark-read")
+        @invalidate_cache(patterns=['notifications:list:{{user_id}}:*', 'notifications:stats:{{user_id}}'])
+        async def mark_notifications_read(request, data: dict):
+            await NotificationService.mark_as_read(request.auth, data)
+            return CustomResponse.success("Marked as read")
+
+        # Multiple patterns
         @invalidate_cache(patterns=[
-            'paycore:wallets:summary:*',
-            'paycore:transactions:list:*',
+            'wallets:detail:{{wallet_id}}:*',
+            'wallets:list:{{user_id}}:*',
         ])
-        async def create_transaction(request, data: dict):
-            transaction = await Transaction.objects.acreate(**data)
-            return transaction
+        async def update_wallet(request, wallet_id: UUID, data: dict):
+            ...
         ```
     """
 
@@ -234,12 +245,33 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
         async def async_wrapper(*args, **kwargs) -> Any:
             result = await func(*args, **kwargs)
 
+            request = args[0] if args else None
+
             total_deleted = 0
             for pattern in patterns:
-                if debug:
-                    logger.info(f"[Cache Invalidate] Pattern: {pattern}")
+                resolved_pattern = pattern
 
-                deleted_count = CacheManager.delete_pattern(pattern)
+                # Replace {{user_id}} if present
+                if '{{user_id}}' in resolved_pattern and request:
+                    user_id = "anon"
+                    if hasattr(request, 'auth') and request.auth:
+                        user_id = str(request.auth.id)
+                    resolved_pattern = resolved_pattern.replace('{{user_id}}', user_id)
+
+                # Replace other path params from kwargs
+                for key, value in kwargs.items():
+                    placeholder = f'{{{{{key}}}}}'
+                    if placeholder in resolved_pattern:
+                        resolved_pattern = resolved_pattern.replace(placeholder, str(value))
+
+                # Add paycore prefix if not present
+                if not resolved_pattern.startswith('paycore:'):
+                    resolved_pattern = f'paycore:{resolved_pattern}'
+
+                if debug:
+                    logger.info(f"[Cache Invalidate] Pattern: {resolved_pattern}")
+
+                deleted_count = CacheManager.delete_pattern(resolved_pattern)
                 total_deleted += deleted_count
 
                 if debug:
@@ -254,12 +286,33 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
         def sync_wrapper(*args, **kwargs) -> Any:
             result = func(*args, **kwargs)
 
+            request = args[0] if args else None
+
             total_deleted = 0
             for pattern in patterns:
-                if debug:
-                    logger.info(f"[Cache Invalidate] Pattern: {pattern}")
+                resolved_pattern = pattern
 
-                deleted_count = CacheManager.delete_pattern(pattern)
+                # Replace {{user_id}} if present
+                if '{{user_id}}' in resolved_pattern and request:
+                    user_id = "anon"
+                    if hasattr(request, 'auth') and request.auth:
+                        user_id = str(request.auth.id)
+                    resolved_pattern = resolved_pattern.replace('{{user_id}}', user_id)
+
+                # Replace other path params from kwargs
+                for key, value in kwargs.items():
+                    placeholder = f'{{{{{key}}}}}'
+                    if placeholder in resolved_pattern:
+                        resolved_pattern = resolved_pattern.replace(placeholder, str(value))
+
+                # Add paycore prefix if not present
+                if not resolved_pattern.startswith('paycore:'):
+                    resolved_pattern = f'paycore:{resolved_pattern}'
+
+                if debug:
+                    logger.info(f"[Cache Invalidate] Pattern: {resolved_pattern}")
+
+                deleted_count = CacheManager.delete_pattern(resolved_pattern)
                 total_deleted += deleted_count
 
                 if debug:

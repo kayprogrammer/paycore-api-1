@@ -3,6 +3,7 @@ from apps.accounts.models import User
 from apps.common.exceptions import BodyValidationError
 from apps.common.responses import CustomResponse
 from apps.common.utils import set_dict_attr
+from apps.common.cache import cacheable, invalidate_cache
 from apps.profiles.schemas import (
     CountryFilterSchema,
     CountryListResponseSchema,
@@ -23,6 +24,7 @@ profiles_router = Router(tags=["Profiles (3)"])
     """,
     response=UserResponseSchema,
 )
+@cacheable(key="profile:{{user_id}}", ttl=60)
 async def get_user(request):
     user = request.auth
     return CustomResponse.success(message="Profile retrieved successfully", data=user)
@@ -36,6 +38,7 @@ async def get_user(request):
     """,
     response=UserResponseSchema,
 )
+@invalidate_cache(patterns=["profile:{{user_id}}"])
 async def update_user(
     request, data: Form[UserUpdateSchema], avatar: File[UploadedFile] = None
 ):
@@ -59,6 +62,7 @@ async def update_user(
     """,
     response=CountryListResponseSchema,
 )
+@cacheable(key="countries:list", ttl=300)
 async def list_countries(request, filters: CountryFilterSchema = Query(...)):
     filtered_countries = filters.filter(Country.objects.filter(is_active=True))
     countries = await sync_to_async(list)(filtered_countries)

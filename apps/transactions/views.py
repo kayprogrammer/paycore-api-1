@@ -29,6 +29,7 @@ from apps.transactions.services.withdrawal_manager import WithdrawalManager
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 from apps.wallets.models import Wallet
+from apps.common.cache import cacheable, invalidate_cache
 
 transaction_router = Router(tags=["Transactions (14)"])
 
@@ -62,6 +63,7 @@ transaction_router = Router(tags=["Transactions (14)"])
     response={200: TransactionReceiptResponseSchema},
     throttle=AuthRateThrottle("100/m"),
 )
+@invalidate_cache(patterns=["transactions:list:{{user_id}}:*", "wallets:detail:*", "wallets:list:{{user_id}}:*"])
 async def initiate_transfer(request, data: InitiateTransferSchema):
     user = request.auth
     result = await TransactionOperations.initiate_transfer(
@@ -78,6 +80,7 @@ async def initiate_transfer(request, data: InitiateTransferSchema):
     description="Get paginated list of user transactions with filtering options",
     response={200: TransactionListResponseSchema},
 )
+@cacheable(key="transactions:list:{{user_id}}", ttl=30)
 async def list_transactions(
     request,
     filters: TransactionFilterSchema = Query(...),
@@ -98,6 +101,7 @@ async def list_transactions(
     description="Get detailed information about a specific transaction",
     response={200: TransactionDetailResponseSchema},
 )
+@cacheable(key="transactions:detail:{{transaction_id}}:{{user_id}}", ttl=300)
 async def get_transaction(request, transaction_id: UUID):
     user = request.auth
     result = await TransactionOperations.get_transaction_detail(user, transaction_id)

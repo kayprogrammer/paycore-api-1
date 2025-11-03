@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from apps.accounts.auth import AuthUser
-from apps.common.cache.decorators import cacheable
+from apps.common.cache import cacheable, invalidate_cache
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
 from apps.support.schemas import (
@@ -34,6 +34,7 @@ support_router = Router(tags=["Support (9)"])
     response={201: TicketDataResponseSchema},
     auth=AuthUser(),
 )
+@invalidate_cache(patterns=["tickets:list:{{user_id}}:*"])
 async def create_ticket(request, data: CreateTicketSchema):
     """Create a new support ticket"""
     user = request.auth
@@ -47,6 +48,7 @@ async def create_ticket(request, data: CreateTicketSchema):
     response={200: TicketListResponseSchema},
     auth=AuthUser(),
 )
+@cacheable(key="tickets:list:{{user_id}}", ttl=60)
 async def list_tickets(
     request,
     status: Optional[TicketStatus] = None,
@@ -65,6 +67,7 @@ async def list_tickets(
     response={200: TicketDataResponseSchema},
     auth=AuthUser(),
 )
+@cacheable(key="tickets:detail:{{ticket_id}}:{{user_id}}", ttl=60)
 async def get_ticket(request, ticket_id: UUID):
     user = request.auth
     ticket = await TicketManager.get_ticket(user, ticket_id)
@@ -77,6 +80,7 @@ async def get_ticket(request, ticket_id: UUID):
     response={200: TicketDataResponseSchema},
     auth=AuthUser(),
 )
+@invalidate_cache(patterns=["tickets:detail:{{ticket_id}}:*", "tickets:list:{{user_id}}:*"])
 async def close_ticket(request, ticket_id: UUID):
     user = request.auth
     ticket = await TicketManager.close_ticket(user, ticket_id)

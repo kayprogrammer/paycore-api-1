@@ -150,6 +150,8 @@ class FAQListSchema(BaseSchema):
     category: str
     view_count: int
     helpfulness_score: float
+    created_at: datetime
+    updated_at: datetime
 
 
 class FAQDataResponseSchema(ResponseSchema):

@@ -16,6 +16,7 @@ from apps.bills.services.bill_manager import BillManager
 
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
+from apps.common.cache import cacheable, invalidate_cache
 
 bill_router = Router(tags=["Bill Payments (7)"])
 
@@ -35,6 +36,7 @@ bill_router = Router(tags=["Bill Payments (7)"])
     """,
     response=BillProviderListResponseSchema,
 )
+@cacheable(key="bills:providers:list", ttl=300)
 async def list_providers(request, category: str = None):
     providers = await BillManager.list_providers(category=category)
     print(providers)
@@ -51,6 +53,7 @@ async def list_providers(request, category: str = None):
     """,
     response=BillProviderDetailResponseSchema,
 )
+@cacheable(key="bills:providers:{{provider_id}}", ttl=300)
 async def get_provider_detail(request, provider_id: UUID):
     provider = await BillManager.get_provider(provider_id)
     return CustomResponse.success("Bill Provider returned successfully", data=provider)
@@ -65,6 +68,7 @@ async def get_provider_detail(request, provider_id: UUID):
     """,
     response=BillPackageListResponseSchema,
 )
+@cacheable(key="bills:providers:{{provider_id}}:packages", ttl=300)
 async def list_provider_packages(request, provider_id: UUID):
     provider = await BillManager.get_provider(provider_id)
     packages = provider.packages.all()
@@ -119,6 +123,7 @@ async def validate_customer(request, data: ValidateCustomerSchema):
     """,
     response={201: BillPaymentResponseSchema},
 )
+@invalidate_cache(patterns=["bills:payments:{{user_id}}:*", "wallets:detail:*", "wallets:list:{{user_id}}:*"])
 async def create_bill_payment(request, data: CreateBillPaymentSchema):
     user = request.auth
     payment = await BillManager.create_bill_payment(user=user, **data.model_dump())
@@ -135,6 +140,7 @@ async def create_bill_payment(request, data: CreateBillPaymentSchema):
     """,
     response=BillPaymentListResponseSchema,
 )
+@cacheable(key="bills:payments:{{user_id}}", ttl=30)
 async def list_bill_payments(
     request,
     category: BillCategory = None,
@@ -163,6 +169,7 @@ async def list_bill_payments(
     """,
     response=BillPaymentResponseSchema,
 )
+@cacheable(key="bills:payments:{{payment_id}}:{{user_id}}", ttl=60)
 async def get_bill_payment(request, payment_id: UUID):
     user = request.auth
     payment = await BillManager.get_payment_by_id(user, payment_id)

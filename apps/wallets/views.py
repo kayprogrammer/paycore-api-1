@@ -30,6 +30,7 @@ from apps.wallets.schemas import (
 from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
 from apps.common.exceptions import RequestError, ErrorCode
+from apps.common.cache import cacheable, invalidate_cache
 
 wallet_router = Router(tags=["Wallets (19)"])
 
@@ -43,6 +44,7 @@ wallet_router = Router(tags=["Wallets (19)"])
     """,
     response={201: CreateWalletResponseSchema},
 )
+@invalidate_cache(patterns=["wallets:list:{{user_id}}:*"])
 async def create_wallet(request, data: CreateWalletSchema):
     user = request.auth
     wallet = await WalletManager.create_wallet(user, data)
@@ -57,6 +59,7 @@ async def create_wallet(request, data: CreateWalletSchema):
     description="Retrieve all wallets for the authenticated user",
     response={200: WalletListResponseSchema},
 )
+@cacheable(key="wallets:list:{{user_id}}", ttl=60)
 async def list_wallets(
     request,
     currency_code: str = None,
@@ -79,6 +82,7 @@ async def list_wallets(
     description="Get detailed information about a specific wallet",
     response={200: CreateWalletResponseSchema},
 )
+@cacheable(key="wallets:detail:{{wallet_id}}:{{user_id}}", ttl=60)
 async def get_wallet(request, wallet_id: UUID):
     user = request.auth
 
@@ -95,6 +99,7 @@ async def get_wallet(request, wallet_id: UUID):
     description="Update wallet configuration and settings",
     response={200: CreateWalletResponseSchema},
 )
+@invalidate_cache(patterns=["wallets:detail:{{wallet_id}}:*", "wallets:list:{{user_id}}:*"])
 async def update_wallet(request, wallet_id: UUID, data: UpdateWalletSchema):
     user = request.auth
 

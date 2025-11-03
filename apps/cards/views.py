@@ -15,6 +15,7 @@ from apps.cards.schemas import (
 )
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
+from apps.common.cache import cacheable, invalidate_cache
 
 card_router = Router(tags=["Cards (12)"])
 
@@ -39,6 +40,7 @@ card_router = Router(tags=["Cards (12)"])
     """,
     response={201: CreateCardDataResponseSchema},
 )
+@invalidate_cache(patterns=["cards:list:{{user_id}}:*"])
 async def create_card(request, data: CreateCardSchema):
     card = await CardManager.create_card(request.auth, data)
     return CustomResponse.success(
@@ -58,6 +60,7 @@ async def create_card(request, data: CreateCardSchema):
     """,
     response={200: CardListDataResponseSchema},
 )
+@cacheable(key="cards:list:{{user_id}}", ttl=60)
 async def list_cards(request, status: str = None, card_type: str = None):
     cards = await CardManager.get_user_cards(
         request.auth, status=status, card_type=card_type
@@ -76,6 +79,7 @@ async def list_cards(request, status: str = None, card_type: str = None):
     """,
     response={200: CardDataResponseSchema},
 )
+@cacheable(key="cards:detail:{{card_id}}:{{user_id}}", ttl=60)
 async def get_card(request, card_id: UUID):
     card = await CardManager.get_card(request.auth, card_id)
     return CustomResponse.success(
@@ -95,6 +99,7 @@ async def get_card(request, card_id: UUID):
     """,
     response={200: CardDataResponseSchema},
 )
+@invalidate_cache(patterns=["cards:detail:{{card_id}}:*", "cards:list:{{user_id}}:*"])
 async def update_card(request, card_id: UUID, data: UpdateCardSchema):
     card = await CardManager.update_card(request.auth, card_id, data)
     return CustomResponse.success(message="Card updated successfully", data=card)
@@ -144,6 +149,7 @@ async def fund_card(request, card_id: UUID, data: FundCardSchema):
     """,
     response={200: CardDataResponseSchema},
 )
+@invalidate_cache(patterns=["cards:detail:{{card_id}}:*", "cards:list:{{user_id}}:*"])
 async def freeze_card(request, card_id: UUID):
     card = await CardManager.freeze_card(request.auth, card_id)
     return CustomResponse.success(message="Card frozen successfully", data=card)
@@ -157,6 +163,7 @@ async def freeze_card(request, card_id: UUID):
     """,
     response={200: CardDataResponseSchema},
 )
+@invalidate_cache(patterns=["cards:detail:{{card_id}}:*", "cards:list:{{user_id}}:*"])
 async def unfreeze_card(request, card_id: UUID):
     card = await CardManager.unfreeze_card(request.auth, card_id)
     return CustomResponse.success(message="Card unfrozen successfully", data=card)
@@ -179,6 +186,7 @@ async def unfreeze_card(request, card_id: UUID):
     """,
     response={200: CardDataResponseSchema},
 )
+@invalidate_cache(patterns=["cards:detail:{{card_id}}:*", "cards:list:{{user_id}}:*"])
 async def block_card(request, card_id: UUID):
     card = await CardManager.block_card(request.auth, card_id)
     return CustomResponse.success(message="Card blocked permanently", data=card)
@@ -194,6 +202,7 @@ async def block_card(request, card_id: UUID):
     """,
     response={200: CardDataResponseSchema},
 )
+@invalidate_cache(patterns=["cards:detail:{{card_id}}:*", "cards:list:{{user_id}}:*"])
 async def activate_card(request, card_id: UUID):
     card = await CardManager.activate_card(request.auth, card_id)
     return CustomResponse.success(message="Card activated successfully", data=card)
@@ -232,6 +241,7 @@ async def update_card_controls(request, card_id: UUID, data: CardControlsSchema)
     """,
     response={200: CardTransactionListResponseSchema},
 )
+@cacheable(key="cards:transactions:{{card_id}}:{{user_id}}", ttl=30)
 async def get_card_transactions(
     request, card_id: UUID, page_params: PaginationQuerySchema = Query(...)
 ):
@@ -257,6 +267,7 @@ async def get_card_transactions(
     """,
     response={200: ResponseSchema},
 )
+@invalidate_cache(patterns=["cards:detail:{{card_id}}:*", "cards:list:{{user_id}}:*"])
 async def delete_card(request, card_id: UUID):
     await CardManager.delete_card(request.auth, card_id)
     return CustomResponse.success(message="Card deleted successfully")
