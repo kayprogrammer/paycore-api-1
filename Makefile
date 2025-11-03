@@ -5,6 +5,48 @@ ENV_FILE_PARAM = --env-file .env
 
 endif
 
+# ============ DOCKER COMMANDS ============
+docker-build:
+	docker-compose build --no-cache
+
+docker-up:
+	docker-compose up -d
+
+docker-down:
+	docker-compose down
+
+docker-down-v:
+	docker-compose down -v
+
+docker-restart:
+	docker-compose restart
+
+docker-logs:
+	docker-compose logs -f
+
+docker-logs-web:
+	docker-compose logs -f web
+
+docker-logs-celery:
+	docker-compose logs -f celery-general celery-emails celery-payments
+
+docker-ps:
+	docker-compose ps
+
+docker-exec-web:
+	docker-compose exec web /bin/sh
+
+docker-exec-db:
+	docker-compose exec db psql -U ${DB_USER:-postgres} -d ${DB_NAME:-paycore}
+
+# Full rebuild (clean start)
+docker-rebuild:
+	docker-compose down -v
+	docker-compose build --no-cache
+	docker-compose up -d
+	docker-compose logs -f
+
+# Quick start (build and run)
 build:
 	docker-compose up --build -d --remove-orphans
 
@@ -15,7 +57,7 @@ down:
 	docker-compose down
 
 show-logs:
-	docker-compose logs
+	docker-compose logs -f
 
 run:
 	uvicorn paycore.asgi:application --reload
