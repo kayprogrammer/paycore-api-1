@@ -4,7 +4,11 @@ import hashlib
 from django.db.models.base import settings
 from ninja.utils import contribute_operation_callback
 from django.http import HttpResponse
+from ninja.responses import Response
+
+from apps.common.responses import CustomResponse
 from .manager import CacheManager
+from apps.common.exceptions import RequestError
 import functools, logging, inspect
 
 logger = logging.getLogger(__name__)
@@ -63,19 +67,27 @@ def cacheable(
             if is_async:
                 @functools.wraps(original_run)
                 async def cached_run(request, **kw):
-                    path_params = {}
-
+                    # Manually run auth callbacks to get user_id for cache key
+                    # Catch RequestError and convert to proper error response
                     user_id = "anon"
-                    if operation.auth_callbacks:
-                        for auth_callback in operation.auth_callbacks:
-                            auth_result = await auth_callback(request)
-                            if auth_result:
-                                user_id = str(auth_result.id)
-                                request.auth = auth_result
-                                break
-                    elif hasattr(request, 'auth') and request.auth:
-                        user_id = str(request.auth.id)
+                    try:
+                        if operation.auth_callbacks:
+                            for auth_callback in operation.auth_callbacks:
+                                auth_result = await auth_callback(request)
+                                if auth_result:
+                                    user_id = str(auth_result.id)
+                                    request.auth = auth_result
+                                    break
+                        elif hasattr(request, 'auth') and request.auth:
+                            user_id = str(request.auth.id)
+                    except RequestError as e:
+                        # Convert RequestError to proper JSON response
+                        status_code, response_data = CustomResponse.error(
+                            e.err_msg, e.err_code, e.data, int(e.status_code)
+                        )
+                        return Response(response_data, status=status_code)
 
+                    path_params = {}
                     path_params['user_id'] = user_id
 
                     for param_name, param_value in kw.items():
@@ -128,19 +140,27 @@ def cacheable(
             else:
                 @functools.wraps(original_run)
                 def cached_run(request, **kw):
-                    path_params = {}
-
+                    # Manually run auth callbacks to get user_id for cache key
+                    # Catch RequestError and convert to proper error response
                     user_id = "anon"
-                    if operation.auth_callbacks:
-                        for auth_callback in operation.auth_callbacks:
-                            auth_result = auth_callback(request)
-                            if auth_result:
-                                user_id = str(auth_result.id)
-                                request.auth = auth_result
-                                break
-                    elif hasattr(request, 'auth') and request.auth:
-                        user_id = str(request.auth.id)
+                    try:
+                        if operation.auth_callbacks:
+                            for auth_callback in operation.auth_callbacks:
+                                auth_result = auth_callback(request)
+                                if auth_result:
+                                    user_id = str(auth_result.id)
+                                    request.auth = auth_result
+                                    break
+                        elif hasattr(request, 'auth') and request.auth:
+                            user_id = str(request.auth.id)
+                    except RequestError as e:
+                        # Convert RequestError to proper JSON response
+                        status_code, response_data = CustomResponse.error(
+                            e.err_msg, e.err_code, e.data, int(e.status_code)
+                        )
+                        return Response(response_data, status=status_code)
 
+                    path_params = {}
                     path_params['user_id'] = user_id
 
                     for param_name, param_value in kw.items():
