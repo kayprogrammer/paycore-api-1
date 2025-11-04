@@ -1,13 +1,11 @@
 from datetime import date
-from uuid import UUID
-import uuid
 from ninja import Field, FilterSchema, ModelSchema
 from pydantic import field_validator
 from typing import List, Optional
 from apps.accounts.models import User
 from apps.common.schemas import BaseSchema, ResponseSchema
 from .models import Country
-
+from apps.compliance.models import KYCLevel
 
 # USER SCHEMAS
 class UserUpdateSchema(BaseSchema):
@@ -31,6 +29,7 @@ class UserUpdateSchema(BaseSchema):
 
 class UserSchema(ModelSchema):
     avatar_url: str | None
+    kyc_level: Optional[KYCLevel] = Field(None, example=KYCLevel.TIER_1)
 
     class Meta:
         model = User

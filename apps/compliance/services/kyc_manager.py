@@ -29,7 +29,9 @@ class KYCManager:
 
     @staticmethod
     @aatomic
-    async def submit_kyc(user: User, data: CreateKYCSchema) -> KYCVerification:
+    async def submit_kyc(
+        user: User, data: CreateKYCSchema, id_document, selfie, proof_of_address=None
+    ) -> KYCVerification:
         # Validate country
         country = await Country.objects.aget_or_none(id=data.country_id)
         if not country:
@@ -68,8 +70,44 @@ class KYCManager:
             user=user,
             country=country,
             document_issuing_country=document_issuing_country,
+            selfie_image=selfie,
             **data_to_create,
         )
+
+        # Create KYC documents in bulk
+        documents_to_create = [
+            # 1. ID Document
+            KYCDocument(
+                kyc_verification=kyc,
+                document_type=data.document_type,
+                file=id_document,
+                file_name=id_document.name,
+                file_size=id_document.size,
+            ),
+            # 2. Selfie
+            KYCDocument(
+                kyc_verification=kyc,
+                document_type="selfie",
+                file=selfie,
+                file_name=selfie.name,
+                file_size=selfie.size,
+            ),
+        ]
+
+        # 3. Proof of Address (optional)
+        if proof_of_address:
+            documents_to_create.append(
+                KYCDocument(
+                    kyc_verification=kyc,
+                    document_type="utility_bill",  # Default to utility bill for proof of address
+                    file=proof_of_address,
+                    file_name=proof_of_address.name,
+                    file_size=proof_of_address.size,
+                )
+            )
+
+        await KYCDocument.objects.abulk_create(documents_to_create)
+
         user.first_name = kyc.first_name
         user.last_name = kyc.last_name
         user.dob = kyc.date_of_birth

@@ -64,7 +64,7 @@ class KYCVerification(BaseModel):
         max_length=2, help_text="ISO 3166-1 alpha-2 country code"
     )
     phone_number = models.CharField(max_length=20, blank=True)
-
+    selfie_image = models.ImageField(null=True, upload_to="kyc_selfies/")
     # Address
     address_line_1 = models.CharField(max_length=255)
     address_line_2 = models.CharField(max_length=255, blank=True)

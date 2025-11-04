@@ -1,4 +1,5 @@
-from ninja import Router, Query
+from ninja import Router, Query, File, Form
+from ninja.files import UploadedFile
 from typing import Optional
 from uuid import UUID
 import logging
@@ -52,9 +53,17 @@ compliance_router = Router(tags=["Compliance (4)"])
     response={201: KYCVerificationDataResponseSchema},
     auth=AuthUser(),
 )
-async def submit_kyc(request, data: CreateKYCSchema):
+async def submit_kyc(
+    request,
+    data: Form[CreateKYCSchema],
+    id_document: File[UploadedFile],
+    selfie: File[UploadedFile],
+    proof_of_address: File[UploadedFile] = None,
+):
     user = request.auth
-    kyc = await KYCManager.submit_kyc(user, data)
+    kyc = await KYCManager.submit_kyc(
+        user, data, id_document, selfie, proof_of_address
+    )
     return CustomResponse.success("KYC verification submitted successfully", kyc, 201)
 
 

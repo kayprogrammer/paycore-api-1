@@ -12,6 +12,7 @@ from apps.profiles.schemas import (
 )
 from apps.profiles.models import Country
 from asgiref.sync import sync_to_async
+from apps.compliance.models import KYCVerification, KYCStatus
 
 profiles_router = Router(tags=["Profiles (3)"])
 
@@ -27,6 +28,8 @@ profiles_router = Router(tags=["Profiles (3)"])
 @cacheable(key="profile:{{user_id}}", ttl=60)
 async def get_user(request):
     user = request.auth
+    kyc = await KYCVerification.objects.filter(user=user).order_by("-created_at").afirst()
+    user.kyc_level = kyc.level if kyc and kyc.status == KYCStatus.APPROVED else None
     return CustomResponse.success(message="Profile retrieved successfully", data=user)
 
 
