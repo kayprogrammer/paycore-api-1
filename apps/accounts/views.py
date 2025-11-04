@@ -102,7 +102,7 @@ async def verify_email(request, data: VerifyOtpSchema):
         This endpoint resends new otp to the user's email
     """,
     response=ResponseSchema,
-    throttle=AnonRateThrottle("3/10m"),
+    throttle=AnonRateThrottle("30/1m"),
 )
 async def resend_verification_email(request, data: EmailSchema):
     email = data.email
@@ -130,7 +130,7 @@ async def resend_verification_email(request, data: EmailSchema):
         This endpoint sends new password reset otp to the user's email
     """,
     response=ResponseSchema,
-    throttle=AnonRateThrottle("3/10m"),
+    throttle=AnonRateThrottle("30/1m"),
 )
 async def send_password_reset_otp(request, data: EmailSchema):
     email = data.email
@@ -154,7 +154,7 @@ async def send_password_reset_otp(request, data: EmailSchema):
     summary="Set New Password",
     description="This endpoint verifies the password reset otp",
     response=ResponseSchema,
-    throttle=AnonRateThrottle("3/15m"),
+    throttle=AnonRateThrottle("30/5m"),
 )
 async def set_new_password(request, data: SetNewPasswordSchema):
     email = data.email
@@ -197,7 +197,7 @@ async def set_new_password(request, data: SetNewPasswordSchema):
         This endpoint validates email/password and sends OTP code.
     """,
     response=ResponseSchema,
-    throttle=AnonRateThrottle("5/15m"),
+    throttle=AnonRateThrottle("50/3m"),
 )
 async def login_initiate(request, data: LoginUserSchema):
     email = data.email
@@ -350,7 +350,7 @@ async def refresh_tokens(
         Web clients receive refresh token as HTTP-only cookie.
     """,
     response={200: TokensResponseSchema},
-    throttle=AnonRateThrottle("10/5m"),
+    throttle=AnonRateThrottle("100/5m"),
 )
 async def google_login(request, data: TokenSchema, response: HttpResponse):
     token = data.token
@@ -446,7 +446,7 @@ async def enable_biometrics(request, data: BiometricsEnableSchema):
         Returns access and refresh tokens upon successful validation.
     """,
     response={200: TokensResponseSchema},
-    throttle=AnonRateThrottle("5/15m"),
+    throttle=AnonRateThrottle("100/15m"),
 )
 async def biometrics_login(
     request, data: BiometricsLoginSchema, response: HttpResponse
