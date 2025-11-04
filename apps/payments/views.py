@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import Optional
 from ninja import Query, Router
 
-from apps.accounts.auth import AuthUser
+from apps.accounts.auth import AuthKycUser
 from apps.common.exceptions import NotFoundError
 from apps.common.paginators import Paginator
 from apps.common.responses import CustomResponse
@@ -14,14 +14,11 @@ from apps.payments.schemas import (
     PaymentListResponseSchema,
     UpdatePaymentLinkSchema,
     PaymentLinkDataResponseSchema,
-    PaymentLinkListDataResponseSchema,
     CreateInvoiceSchema,
     UpdateInvoiceSchema,
     InvoiceDataResponseSchema,
-    InvoiceListDataResponseSchema,
     MakePaymentSchema,
     PaymentDataResponseSchema,
-    PaymentListDataResponseSchema,
 )
 from apps.payments.services.payment_link_manager import PaymentLinkManager
 from apps.payments.services.invoice_manager import InvoiceManager
@@ -39,7 +36,7 @@ payment_router = Router(tags=["Payments (16)"])
     "/links/create",
     summary="Create payment link",
     response={201: PaymentLinkDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def create_payment_link(request, data: CreatePaymentLinkSchema):
     user = request.auth
@@ -51,7 +48,7 @@ async def create_payment_link(request, data: CreatePaymentLinkSchema):
     "/links/list",
     summary="List payment links",
     response={200: PaymentLinksResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def list_payment_links(
     request,
@@ -67,7 +64,7 @@ async def list_payment_links(
     "/links/{link_id}",
     summary="Get payment link details",
     response={200: PaymentLinkDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def get_payment_link(request, link_id: UUID):
     user = request.auth
@@ -79,7 +76,7 @@ async def get_payment_link(request, link_id: UUID):
     "/links/{link_id}",
     summary="Update payment link",
     response={200: PaymentLinkDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def update_payment_link(request, link_id: UUID, data: UpdatePaymentLinkSchema):
     user = request.auth
@@ -91,7 +88,7 @@ async def update_payment_link(request, link_id: UUID, data: UpdatePaymentLinkSch
     "/links/{link_id}",
     summary="Delete payment link",
     response={200: dict},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def delete_payment_link(request, link_id: UUID):
     user = request.auth
@@ -106,7 +103,6 @@ async def delete_payment_link(request, link_id: UUID):
     "/pay/{slug}",
     summary="Get payment link by slug (public)",
     response={200: PaymentLinkDataResponseSchema},
-    auth=None,
 )
 async def get_payment_link_public(request, slug: str):
     link = await PaymentLinkManager.get_payment_link_by_slug(slug)
@@ -117,7 +113,6 @@ async def get_payment_link_public(request, slug: str):
     "/pay/{slug}",
     summary="Make payment via payment link",
     response={201: PaymentDataResponseSchema},
-    auth=None,
 )
 async def pay_via_link(request, slug: str, data: MakePaymentSchema):
     payment = await PaymentProcessor.process_payment_link_payment(slug, data)
@@ -141,7 +136,7 @@ async def pay_via_link(request, slug: str, data: MakePaymentSchema):
     "/invoices/create",
     summary="Create invoice",
     response={201: InvoiceDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def create_invoice(request, data: CreateInvoiceSchema):
     user = request.auth
@@ -154,7 +149,7 @@ async def create_invoice(request, data: CreateInvoiceSchema):
     "/invoices/list",
     summary="List invoices",
     response={200: InvoiceListResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def list_invoices(
     request,
@@ -170,7 +165,7 @@ async def list_invoices(
     "/invoices/{invoice_id}",
     summary="Get invoice details",
     response={200: InvoiceDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def get_invoice(request, invoice_id: UUID):
     user = request.auth
@@ -182,7 +177,7 @@ async def get_invoice(request, invoice_id: UUID):
     "/invoices/{invoice_id}",
     summary="Update invoice",
     response={200: InvoiceDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def update_invoice(request, invoice_id: UUID, data: UpdateInvoiceSchema):
     user = request.auth
@@ -194,7 +189,7 @@ async def update_invoice(request, invoice_id: UUID, data: UpdateInvoiceSchema):
     "/invoices/{invoice_id}",
     summary="Delete invoice",
     response={200: dict},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def delete_invoice(request, invoice_id: UUID):
     user = request.auth
@@ -219,7 +214,6 @@ async def get_invoice_public(request, invoice_number: str):
     "/invoice/{invoice_number}/pay",
     summary="Pay invoice",
     response={201: PaymentDataResponseSchema},
-    auth=None,
 )
 async def pay_invoice(request, invoice_number: str, data: MakePaymentSchema):
     payment = await PaymentProcessor.process_invoice_payment(invoice_number, data)
@@ -241,7 +235,7 @@ async def pay_invoice(request, invoice_number: str, data: MakePaymentSchema):
     "/payments/list",
     summary="List merchant payments",
     response={200: PaymentListResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def list_merchant_payments(
     request,
@@ -272,7 +266,7 @@ async def list_merchant_payments(
     "/payments/{payment_id}",
     summary="Get payment details",
     response={200: PaymentDataResponseSchema},
-    auth=AuthUser(),
+    auth=AuthKycUser(),
 )
 async def get_payment(request, payment_id: UUID):
     user = request.auth

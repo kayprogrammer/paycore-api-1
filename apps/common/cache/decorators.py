@@ -65,6 +65,7 @@ def cacheable(
             is_async = inspect.iscoroutinefunction(original_run)
 
             if is_async:
+
                 @functools.wraps(original_run)
                 async def cached_run(request, **kw):
                     # Manually run auth callbacks to get user_id for cache key
@@ -78,7 +79,7 @@ def cacheable(
                                     user_id = str(auth_result.id)
                                     request.auth = auth_result
                                     break
-                        elif hasattr(request, 'auth') and request.auth:
+                        elif hasattr(request, "auth") and request.auth:
                             user_id = str(request.auth.id)
                     except RequestError as e:
                         # Convert RequestError to proper JSON response
@@ -88,19 +89,23 @@ def cacheable(
                         return Response(response_data, status=status_code)
 
                     path_params = {}
-                    path_params['user_id'] = user_id
+                    path_params["user_id"] = user_id
 
                     for param_name, param_value in kw.items():
-                        if not hasattr(param_value, 'model_dump') and not hasattr(param_value, 'dict'):
+                        if not hasattr(param_value, "model_dump") and not hasattr(
+                            param_value, "dict"
+                        ):
                             path_params[param_name] = str(param_value)
 
                     resolved_key = key
                     for param_name, param_value in path_params.items():
                         placeholder = f"{{{{{param_name}}}}}"
                         if placeholder in resolved_key:
-                            resolved_key = resolved_key.replace(placeholder, str(param_value))
+                            resolved_key = resolved_key.replace(
+                                placeholder, str(param_value)
+                            )
 
-                    query_string = request.META.get('QUERY_STRING', '')
+                    query_string = request.META.get("QUERY_STRING", "")
                     if query_string:
                         query_hash = hashlib.md5(query_string.encode()).hexdigest()[:12]
                         cache_key = f"paycore:{resolved_key}:{query_hash}"
@@ -108,16 +113,18 @@ def cacheable(
                         cache_key = f"paycore:{resolved_key}"
 
                     if debug:
-                        logger.info(f"[Cache] {operation.view_func.__name__} | Path: {path_params} | Query: {query_string[:50]} | Key: {cache_key}")
+                        logger.info(
+                            f"[Cache] {operation.view_func.__name__} | Path: {path_params} | Query: {query_string[:50]} | Key: {cache_key}"
+                        )
 
                     cached_response = CacheManager.get(cache_key)
                     if cached_response is not None:
                         if debug:
                             logger.info(f"[Cache] HIT: {cache_key}")
                         response = HttpResponse(
-                            content=cached_response['content'],
-                            status=cached_response['status'],
-                            content_type=cached_response['content_type']
+                            content=cached_response["content"],
+                            status=cached_response["status"],
+                            content_type=cached_response["content_type"],
                         )
                         return response
 
@@ -126,18 +133,26 @@ def cacheable(
 
                     result = await original_run(request, **kw)
 
-                    if hasattr(result, 'content') and hasattr(result, 'status_code'):
+                    if hasattr(result, "content") and hasattr(result, "status_code"):
                         cache_data = {
-                            'content': result.content.decode('utf-8') if isinstance(result.content, bytes) else result.content,
-                            'status': result.status_code,
-                            'content_type': result.get('Content-Type', 'application/json')
+                            "content": (
+                                result.content.decode("utf-8")
+                                if isinstance(result.content, bytes)
+                                else result.content
+                            ),
+                            "status": result.status_code,
+                            "content_type": result.get(
+                                "Content-Type", "application/json"
+                            ),
                         }
                         if debug:
                             logger.info(f"[Cache] SET: {cache_key} (TTL: {ttl}s)")
                         CacheManager.set(cache_key, cache_data, ttl)
 
                     return result
+
             else:
+
                 @functools.wraps(original_run)
                 def cached_run(request, **kw):
                     # Manually run auth callbacks to get user_id for cache key
@@ -151,7 +166,7 @@ def cacheable(
                                     user_id = str(auth_result.id)
                                     request.auth = auth_result
                                     break
-                        elif hasattr(request, 'auth') and request.auth:
+                        elif hasattr(request, "auth") and request.auth:
                             user_id = str(request.auth.id)
                     except RequestError as e:
                         # Convert RequestError to proper JSON response
@@ -161,19 +176,23 @@ def cacheable(
                         return Response(response_data, status=status_code)
 
                     path_params = {}
-                    path_params['user_id'] = user_id
+                    path_params["user_id"] = user_id
 
                     for param_name, param_value in kw.items():
-                        if not hasattr(param_value, 'model_dump') and not hasattr(param_value, 'dict'):
+                        if not hasattr(param_value, "model_dump") and not hasattr(
+                            param_value, "dict"
+                        ):
                             path_params[param_name] = str(param_value)
 
                     resolved_key = key
                     for param_name, param_value in path_params.items():
                         placeholder = f"{{{{{param_name}}}}}"
                         if placeholder in resolved_key:
-                            resolved_key = resolved_key.replace(placeholder, str(param_value))
+                            resolved_key = resolved_key.replace(
+                                placeholder, str(param_value)
+                            )
 
-                    query_string = request.META.get('QUERY_STRING', '')
+                    query_string = request.META.get("QUERY_STRING", "")
                     if query_string:
                         query_hash = hashlib.md5(query_string.encode()).hexdigest()[:12]
                         cache_key = f"paycore:{resolved_key}:{query_hash}"
@@ -181,16 +200,18 @@ def cacheable(
                         cache_key = f"paycore:{resolved_key}"
 
                     if debug:
-                        logger.info(f"[Cache] {operation.view_func.__name__} | Path: {path_params} | Query: {query_string[:50]} | Key: {cache_key}")
+                        logger.info(
+                            f"[Cache] {operation.view_func.__name__} | Path: {path_params} | Query: {query_string[:50]} | Key: {cache_key}"
+                        )
 
                     cached_response = CacheManager.get(cache_key)
                     if cached_response is not None:
                         if debug:
                             logger.info(f"[Cache] HIT: {cache_key}")
                         response = HttpResponse(
-                            content=cached_response['content'],
-                            status=cached_response['status'],
-                            content_type=cached_response['content_type']
+                            content=cached_response["content"],
+                            status=cached_response["status"],
+                            content_type=cached_response["content_type"],
                         )
                         return response
 
@@ -199,11 +220,17 @@ def cacheable(
 
                     result = original_run(request, **kw)
 
-                    if hasattr(result, 'content') and hasattr(result, 'status_code'):
+                    if hasattr(result, "content") and hasattr(result, "status_code"):
                         cache_data = {
-                            'content': result.content.decode('utf-8') if isinstance(result.content, bytes) else result.content,
-                            'status': result.status_code,
-                            'content_type': result.get('Content-Type', 'application/json')
+                            "content": (
+                                result.content.decode("utf-8")
+                                if isinstance(result.content, bytes)
+                                else result.content
+                            ),
+                            "status": result.status_code,
+                            "content_type": result.get(
+                                "Content-Type", "application/json"
+                            ),
                         }
                         if debug:
                             logger.info(f"[Cache] SET: {cache_key} (TTL: {ttl}s)")
@@ -272,21 +299,23 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
                 resolved_pattern = pattern
 
                 # Replace {{user_id}} if present
-                if '{{user_id}}' in resolved_pattern and request:
+                if "{{user_id}}" in resolved_pattern and request:
                     user_id = "anon"
-                    if hasattr(request, 'auth') and request.auth:
+                    if hasattr(request, "auth") and request.auth:
                         user_id = str(request.auth.id)
-                    resolved_pattern = resolved_pattern.replace('{{user_id}}', user_id)
+                    resolved_pattern = resolved_pattern.replace("{{user_id}}", user_id)
 
                 # Replace other path params from kwargs
                 for key, value in kwargs.items():
-                    placeholder = f'{{{{{key}}}}}'
+                    placeholder = f"{{{{{key}}}}}"
                     if placeholder in resolved_pattern:
-                        resolved_pattern = resolved_pattern.replace(placeholder, str(value))
+                        resolved_pattern = resolved_pattern.replace(
+                            placeholder, str(value)
+                        )
 
                 # Add paycore prefix if not present
-                if not resolved_pattern.startswith('paycore:'):
-                    resolved_pattern = f'paycore:{resolved_pattern}'
+                if not resolved_pattern.startswith("paycore:"):
+                    resolved_pattern = f"paycore:{resolved_pattern}"
 
                 if debug:
                     logger.info(f"[Cache Invalidate] Pattern: {resolved_pattern}")
@@ -313,21 +342,23 @@ def invalidate_cache(patterns: List[str], debug: bool = False):
                 resolved_pattern = pattern
 
                 # Replace {{user_id}} if present
-                if '{{user_id}}' in resolved_pattern and request:
+                if "{{user_id}}" in resolved_pattern and request:
                     user_id = "anon"
-                    if hasattr(request, 'auth') and request.auth:
+                    if hasattr(request, "auth") and request.auth:
                         user_id = str(request.auth.id)
-                    resolved_pattern = resolved_pattern.replace('{{user_id}}', user_id)
+                    resolved_pattern = resolved_pattern.replace("{{user_id}}", user_id)
 
                 # Replace other path params from kwargs
                 for key, value in kwargs.items():
-                    placeholder = f'{{{{{key}}}}}'
+                    placeholder = f"{{{{{key}}}}}"
                     if placeholder in resolved_pattern:
-                        resolved_pattern = resolved_pattern.replace(placeholder, str(value))
+                        resolved_pattern = resolved_pattern.replace(
+                            placeholder, str(value)
+                        )
 
                 # Add paycore prefix if not present
-                if not resolved_pattern.startswith('paycore:'):
-                    resolved_pattern = f'paycore:{resolved_pattern}'
+                if not resolved_pattern.startswith("paycore:"):
+                    resolved_pattern = f"paycore:{resolved_pattern}"
 
                 if debug:
                     logger.info(f"[Cache Invalidate] Pattern: {resolved_pattern}")

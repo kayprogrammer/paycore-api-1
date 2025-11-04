@@ -63,7 +63,13 @@ transaction_router = Router(tags=["Transactions (14)"])
     response={200: TransactionReceiptResponseSchema},
     throttle=AuthRateThrottle("100/m"),
 )
-@invalidate_cache(patterns=["transactions:list:{{user_id}}:*", "wallets:detail:*", "wallets:list:{{user_id}}:*"])
+@invalidate_cache(
+    patterns=[
+        "transactions:list:{{user_id}}:*",
+        "wallets:detail:*",
+        "wallets:list:{{user_id}}:*",
+    ]
+)
 async def initiate_transfer(request, data: InitiateTransferSchema):
     user = request.auth
     result = await TransactionOperations.initiate_transfer(

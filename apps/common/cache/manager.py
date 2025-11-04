@@ -29,7 +29,9 @@ class CacheManager:
                 status_code, response_data = value
                 response_data = response_data.copy()
                 if "data" in response_data:
-                    response_data["data"] = CacheManager._prepare_for_cache(response_data["data"])
+                    response_data["data"] = CacheManager._prepare_for_cache(
+                        response_data["data"]
+                    )
                 return (status_code, response_data)
             return tuple(CacheManager._prepare_for_cache(item) for item in value)
 
@@ -118,11 +120,15 @@ class CacheManager:
                 return 0
 
             deleted_count = redis_conn.delete(*keys)
-            logger.info(f"Cache INVALIDATE: {deleted_count} keys deleted for pattern '{pattern}'")
+            logger.info(
+                f"Cache INVALIDATE: {deleted_count} keys deleted for pattern '{pattern}'"
+            )
             return deleted_count
 
         except ImportError:
-            logger.warning("django-redis not installed, using fallback pattern deletion")
+            logger.warning(
+                "django-redis not installed, using fallback pattern deletion"
+            )
             cache.delete(pattern.replace("*", ""))
             return 1
         except Exception as e:

@@ -99,7 +99,9 @@ async def get_wallet(request, wallet_id: UUID):
     description="Update wallet configuration and settings",
     response={200: CreateWalletResponseSchema},
 )
-@invalidate_cache(patterns=["wallets:detail:{{wallet_id}}:*", "wallets:list:{{user_id}}:*"])
+@invalidate_cache(
+    patterns=["wallets:detail:{{wallet_id}}:*", "wallets:list:{{user_id}}:*"]
+)
 async def update_wallet(request, wallet_id: UUID, data: UpdateWalletSchema):
     user = request.auth
 

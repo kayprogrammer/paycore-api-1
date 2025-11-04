@@ -54,7 +54,9 @@ async def get_notification_stats(request):
     response={200: ResponseSchema},
     auth=AuthUser(),
 )
-@invalidate_cache(patterns=["notifications:list:{{user_id}}:*", "notifications:stats:{{user_id}}"])
+@invalidate_cache(
+    patterns=["notifications:list:{{user_id}}:*", "notifications:stats:{{user_id}}"]
+)
 async def mark_notifications_read(request, data: MarkNotificationsReadSchema):
     await NotificationService.mark_as_read(request.auth, data)
     return CustomResponse.success("Notifications marked as read")
@@ -63,7 +65,9 @@ async def mark_notifications_read(request, data: MarkNotificationsReadSchema):
 @notification_router.delete(
     "", summary="Delete Notification", response={200: dict}, auth=AuthUser()
 )
-@invalidate_cache(patterns=["notifications:list:{{user_id}}:*", "notifications:stats:{{user_id}}"])
+@invalidate_cache(
+    patterns=["notifications:list:{{user_id}}:*", "notifications:stats:{{user_id}}"]
+)
 async def delete_notifications(request, data: MarkNotificationsReadSchema):
     await NotificationService.delete_notifications(user=request.auth, payload=data)
     return CustomResponse.success("Notifications deleted successfully")

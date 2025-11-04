@@ -1,8 +1,8 @@
+from decimal import Decimal
 from ninja import Router, Query
 from typing import Optional
 from uuid import UUID
 
-from apps.accounts.auth import AuthUser
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
 from apps.investments.schemas import (
@@ -38,7 +38,6 @@ investment_router = Router(tags=["Investments (10)"])
     "/products/list",
     summary="List investment products",
     response={200: InvestmentProductListDataResponseSchema},
-    auth=AuthUser(),
 )
 async def list_investment_products(
     request,
@@ -65,7 +64,6 @@ async def list_investment_products(
     "/products/{product_id}",
     summary="Get investment product details",
     response={200: InvestmentProductDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_investment_product(request, product_id: UUID):
     """Get detailed information about an investment product"""
@@ -80,7 +78,6 @@ async def get_investment_product(request, product_id: UUID):
     "/calculate",
     summary="Calculate investment returns",
     response={200: InvestmentCalculationDataResponseSchema},
-    auth=AuthUser(),
 )
 async def calculate_investment(
     request,
@@ -88,8 +85,6 @@ async def calculate_investment(
     amount: float,
     duration_days: int,
 ):
-    from decimal import Decimal
-
     calculation = await InvestmentManager.calculate_investment(
         product_id, Decimal(str(amount)), duration_days
     )
@@ -104,7 +99,6 @@ async def calculate_investment(
     "/create",
     summary="Create new investment",
     response={201: InvestmentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def create_investment(request, data: CreateInvestmentSchema):
     user = request.auth
@@ -116,7 +110,6 @@ async def create_investment(request, data: CreateInvestmentSchema):
     "/list",
     summary="List my investments",
     response={200: InvestmentListResponseSchema},
-    auth=AuthUser(),
 )
 async def list_investments(
     request,
@@ -136,7 +129,6 @@ async def list_investments(
     "/investment/{investment_id}",
     summary="Get investment details",
     response={200: InvestmentDetailsDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_investment_details(request, investment_id: UUID):
     user = request.auth
@@ -151,7 +143,6 @@ async def get_investment_details(request, investment_id: UUID):
     "/investment/{investment_id}/liquidate",
     summary="Liquidate investment (early exit)",
     response={200: InvestmentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def liquidate_investment(
     request, investment_id: UUID, data: LiquidateInvestmentSchema
@@ -165,7 +156,6 @@ async def liquidate_investment(
     "/investment/{investment_id}/renew",
     summary="Renew matured investment",
     response={201: InvestmentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def renew_investment(request, investment_id: UUID, data: RenewInvestmentSchema):
     user = request.auth
@@ -180,7 +170,6 @@ async def renew_investment(request, investment_id: UUID, data: RenewInvestmentSc
     "/portfolio/summary",
     summary="Get investment portfolio summary",
     response={200: InvestmentSummaryDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_portfolio_summary(request):
     user = request.auth
@@ -192,7 +181,6 @@ async def get_portfolio_summary(request):
     "/portfolio/details",
     summary="Get detailed portfolio",
     response={200: InvestmentPortfolioDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_portfolio_details(request):
     user = request.auth

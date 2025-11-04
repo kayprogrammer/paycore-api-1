@@ -123,7 +123,13 @@ async def validate_customer(request, data: ValidateCustomerSchema):
     """,
     response={201: BillPaymentResponseSchema},
 )
-@invalidate_cache(patterns=["bills:payments:{{user_id}}:*", "wallets:detail:*", "wallets:list:{{user_id}}:*"])
+@invalidate_cache(
+    patterns=[
+        "bills:payments:{{user_id}}:*",
+        "wallets:detail:*",
+        "wallets:list:{{user_id}}:*",
+    ]
+)
 async def create_bill_payment(request, data: CreateBillPaymentSchema):
     user = request.auth
     payment = await BillManager.create_bill_payment(user=user, **data.model_dump())

@@ -2,7 +2,6 @@ from ninja import Router, Query
 from typing import Optional
 from uuid import UUID
 
-from apps.accounts.auth import AuthUser
 from apps.common.cache import cacheable, invalidate_cache
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
@@ -32,7 +31,6 @@ support_router = Router(tags=["Support (9)"])
     "/tickets/create",
     summary="Create support ticket",
     response={201: TicketDataResponseSchema},
-    auth=AuthUser(),
 )
 @invalidate_cache(patterns=["tickets:list:{{user_id}}:*"])
 async def create_ticket(request, data: CreateTicketSchema):
@@ -46,7 +44,6 @@ async def create_ticket(request, data: CreateTicketSchema):
     "/tickets/list",
     summary="List my tickets",
     response={200: TicketListResponseSchema},
-    auth=AuthUser(),
 )
 @cacheable(key="tickets:list:{{user_id}}", ttl=60)
 async def list_tickets(
@@ -65,7 +62,6 @@ async def list_tickets(
     "/tickets/{ticket_id}",
     summary="Get ticket details",
     response={200: TicketDataResponseSchema},
-    auth=AuthUser(),
 )
 @cacheable(key="tickets:detail:{{ticket_id}}:{{user_id}}", ttl=60)
 async def get_ticket(request, ticket_id: UUID):
@@ -78,9 +74,10 @@ async def get_ticket(request, ticket_id: UUID):
     "/tickets/{ticket_id}/close",
     summary="Close ticket",
     response={200: TicketDataResponseSchema},
-    auth=AuthUser(),
 )
-@invalidate_cache(patterns=["tickets:detail:{{ticket_id}}:*", "tickets:list:{{user_id}}:*"])
+@invalidate_cache(
+    patterns=["tickets:detail:{{ticket_id}}:*", "tickets:list:{{user_id}}:*"]
+)
 async def close_ticket(request, ticket_id: UUID):
     user = request.auth
     ticket = await TicketManager.close_ticket(user, ticket_id)
@@ -91,7 +88,6 @@ async def close_ticket(request, ticket_id: UUID):
     "/tickets/{ticket_id}/rate",
     summary="Rate ticket",
     response={200: TicketDataResponseSchema},
-    auth=AuthUser(),
 )
 async def rate_ticket(request, ticket_id: UUID, data: RateTicketSchema):
     user = request.auth
@@ -106,7 +102,6 @@ async def rate_ticket(request, ticket_id: UUID, data: RateTicketSchema):
     "/tickets/{ticket_id}/messages",
     summary="Add message to ticket",
     response={201: MessageDataResponseSchema},
-    auth=AuthUser(),
 )
 async def add_message(request, ticket_id: UUID, data: CreateMessageSchema):
     user = request.auth
@@ -118,7 +113,6 @@ async def add_message(request, ticket_id: UUID, data: CreateMessageSchema):
     "/tickets/{ticket_id}/messages",
     summary="Get ticket messages",
     response={200: MessageListResponseSchema},
-    auth=AuthUser(),
 )
 async def get_messages(
     request, ticket_id: UUID, page_params: PaginationQuerySchema = Query(...)
@@ -140,7 +134,6 @@ async def get_messages(
     "/tickets/stats/data",
     summary="Get my ticket statistics",
     response={200: TicketStatsDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_ticket_stats(request):
     user = request.auth
@@ -153,7 +146,6 @@ async def get_ticket_stats(request):
     "/faq/list",
     summary="List FAQs",
     response={200: FAQListDataResponseSchema},
-    auth=AuthUser(),
 )
 @cacheable(
     key="faq:list:{{user_id}}",

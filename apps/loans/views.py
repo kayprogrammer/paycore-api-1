@@ -3,7 +3,6 @@ from uuid import UUID
 from typing import Optional
 from ninja import Query, Router
 
-from apps.accounts.auth import AuthUser
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
 from apps.loans.models import LoanProductType, LoanRepayment
@@ -17,7 +16,6 @@ from apps.loans.schemas import (
     LoanRepaymentListResponseSchema,
     MakeLoanRepaymentSchema,
     LoanRepaymentDataResponseSchema,
-    LoanRepaymentListDataResponseSchema,
     CreditScoreDataResponseSchema,
     LoanSummaryDataResponseSchema,
     LoanDetailsDataResponseSchema,
@@ -42,7 +40,6 @@ loan_router = Router(tags=["Loans (20)"])
     "/products/list",
     summary="List loan products",
     response={200: LoanProductListDataResponseSchema},
-    auth=AuthUser(),
 )
 async def list_loan_products(
     request,
@@ -58,7 +55,6 @@ async def list_loan_products(
     "/products/{product_id}",
     summary="Get loan product details",
     response={200: LoanProductDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_loan_product(request, product_id: UUID):
     product = await LoanManager.get_loan_product(product_id)
@@ -69,7 +65,6 @@ async def get_loan_product(request, product_id: UUID):
     "/calculate",
     summary="Calculate loan details",
     response={200: LoanCalculationDataResponseSchema},
-    auth=AuthUser(),
 )
 async def calculate_loan(
     request,
@@ -93,7 +88,6 @@ async def calculate_loan(
     "/applications/create",
     summary="Create loan application",
     response={201: LoanApplicationDataResponseSchema},
-    auth=AuthUser(),
 )
 async def create_loan_application(request, data: CreateLoanApplicationSchema):
     user = request.auth
@@ -108,7 +102,6 @@ async def create_loan_application(request, data: CreateLoanApplicationSchema):
     "/applications/list",
     summary="List loan applications",
     response={200: LoanApplicationListDataResponseSchema},
-    auth=AuthUser(),
 )
 async def list_loan_applications(
     request,
@@ -128,7 +121,6 @@ async def list_loan_applications(
     "/applications/{application_id}",
     summary="Get loan application details",
     response={200: LoanApplicationDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_loan_application(request, application_id: UUID):
     user = request.auth
@@ -140,7 +132,6 @@ async def get_loan_application(request, application_id: UUID):
     "/applications/{application_id}",
     summary="Cancel loan application",
     response={200: dict},
-    auth=AuthUser(),
 )
 async def cancel_loan_application(request, application_id: UUID):
     user = request.auth
@@ -155,7 +146,6 @@ async def cancel_loan_application(request, application_id: UUID):
     "/applications/{application_id}/schedule",
     summary="Get repayment schedule",
     response={200: RepaymentScheduleListResponseSchema},
-    auth=AuthUser(),
 )
 async def get_repayment_schedule(request, application_id: UUID):
     user = request.auth
@@ -172,7 +162,6 @@ async def get_repayment_schedule(request, application_id: UUID):
     "/applications/{application_id}/repay",
     summary="Make loan repayment",
     response={201: LoanRepaymentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def make_loan_repayment(
     request, application_id: UUID, data: MakeLoanRepaymentSchema
@@ -189,7 +178,6 @@ async def make_loan_repayment(
     "/applications/{application_id}/repayments",
     summary="Get loan repayments",
     response={200: LoanRepaymentListResponseSchema},
-    auth=AuthUser(),
 )
 async def get_loan_repayments(
     request, application_id: UUID, page_params: PaginationQuerySchema = Query(...)
@@ -210,7 +198,6 @@ async def get_loan_repayments(
     "/credit-score",
     summary="Get credit score",
     response={200: CreditScoreDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_credit_score(request):
     user = request.auth
@@ -222,7 +209,6 @@ async def get_credit_score(request):
     "/credit-score/refresh",
     summary="Refresh credit score",
     response={200: CreditScoreDataResponseSchema},
-    auth=AuthUser(),
 )
 async def refresh_credit_score(request):
     user = request.auth
@@ -237,7 +223,6 @@ async def refresh_credit_score(request):
     "/summary",
     summary="Get loan summary",
     response={200: LoanSummaryDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_loan_summary(request):
     user = request.auth
@@ -249,7 +234,6 @@ async def get_loan_summary(request):
     "/applications/{application_id}/details",
     summary="Get comprehensive loan details",
     response={200: LoanDetailsDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_loan_details(request, application_id: UUID):
     user = request.auth
@@ -264,7 +248,6 @@ async def get_loan_details(request, application_id: UUID):
     "/applications/{application_id}/auto-repayment/enable",
     summary="Enable automatic repayment",
     response={201: AutoRepaymentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def enable_auto_repayment(
     request, application_id: UUID, data: EnableAutoRepaymentSchema
@@ -282,11 +265,8 @@ async def enable_auto_repayment(
     "/applications/{application_id}/auto-repayment",
     summary="Get automatic repayment settings",
     response={200: AutoRepaymentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def get_auto_repayment(request, application_id: UUID):
-    from apps.loans.services.auto_repayment_service import AutoRepaymentService
-
     user = request.auth
     auto_repayment = await AutoRepaymentService.get_auto_repayment(user, application_id)
     return CustomResponse.success(
@@ -298,7 +278,6 @@ async def get_auto_repayment(request, application_id: UUID):
     "/applications/{application_id}/auto-repayment",
     summary="Update automatic repayment settings",
     response={200: AutoRepaymentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def update_auto_repayment(
     request, application_id: UUID, data: UpdateAutoRepaymentSchema
@@ -316,7 +295,6 @@ async def update_auto_repayment(
     "/applications/{application_id}/auto-repayment/disable",
     summary="Disable automatic repayment",
     response={200: dict},
-    auth=AuthUser(),
 )
 async def disable_auto_repayment(request, application_id: UUID):
     user = request.auth
@@ -328,7 +306,6 @@ async def disable_auto_repayment(request, application_id: UUID):
     "/applications/{application_id}/auto-repayment/suspend",
     summary="Suspend automatic repayment temporarily",
     response={200: AutoRepaymentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def suspend_auto_repayment(
     request, application_id: UUID, reason: Optional[str] = None
@@ -346,7 +323,6 @@ async def suspend_auto_repayment(
     "/applications/{application_id}/auto-repayment/reactivate",
     summary="Reactivate suspended automatic repayment",
     response={200: AutoRepaymentDataResponseSchema},
-    auth=AuthUser(),
 )
 async def reactivate_auto_repayment(request, application_id: UUID):
     user = request.auth
