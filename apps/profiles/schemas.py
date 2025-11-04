@@ -33,7 +33,7 @@ class UserSchema(ModelSchema):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "bio", "dob"]
+        fields = ["first_name", "last_name", "bio", "dob", "phone"]
 
 
 class UserResponseSchema(ResponseSchema):

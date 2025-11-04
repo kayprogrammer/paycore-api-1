@@ -6,18 +6,19 @@ from asgiref.sync import async_to_sync
 from apps.compliance.models import (
     KYCVerification,
     KYCDocument,
-    AMLCheck,
-    SanctionsScreening,
-    TransactionMonitoring,
+    KYCStatus
 )
 from apps.compliance.services.kyc_provider import KYCProviderService
 from apps.compliance.services.compliance_checker import ComplianceChecker
-from apps.compliance.schemas import CreateAMLCheckSchema, CreateSanctionsScreeningSchema
+from apps.compliance.schemas import CreateAMLCheckSchema, CreateSanctionsScreeningSchema, UpdateKYCStatusSchema
+from apps.compliance.services.kyc_manager import KYCManager
+
 from apps.accounts.models import User
 from datetime import date, timedelta
 from decimal import Decimal
 from apps.transactions.models import Transaction
 from django.utils import timezone
+from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,52 @@ logger = logging.getLogger(__name__)
 
 class KYCTasks:
     """Background tasks for KYC verification processing"""
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        name="compliance.auto_approve_kyc",
+        queue="compliance",
+    )
+    def auto_approve_kyc(self, kyc_id: str):
+        """
+        Auto-approve KYC after 15 seconds for internal provider
+        This simulates processing time for demo/testing purposes
+        """
+        try:
+            # Get KYC to check status
+            kyc = KYCVerification.objects.select_related("user").get_or_none(
+                kyc_id=kyc_id
+            )
+
+            if not kyc:
+                logger.error(f"KYC {kyc_id} not found for auto-approval")
+                return {"status": "failed", "error": "KYC record not found"}
+
+            if kyc.status != KYCStatus.PENDING:
+                logger.warning(f"KYC {kyc_id} is not in pending status, skipping auto-approval")
+                return {"status": "skipped", "current_status": kyc.status}
+
+            update_data = UpdateKYCStatusSchema(
+                status=KYCStatus.APPROVED,
+                rejection_reason=None,
+                expires_at=None,
+            )
+            admin_user = None  # System auto-approval, no specific admin
+            updated_kyc = async_to_sync(KYCManager.update_kyc_status)(
+                admin_user, kyc_id, update_data
+            )
+
+            logger.info(f"KYC {kyc_id} auto-approved successfully via KYCManager")
+            return {
+                "status": "success",
+                "kyc_id": kyc_id,
+                "approved_at": updated_kyc.reviewed_at.isoformat() if updated_kyc.reviewed_at else None,
+            }
+
+        except Exception as exc:
+            logger.error(f"Auto-approve KYC task failed for {kyc_id}: {str(exc)}")
+            return {"status": "failed", "error": str(exc)}
 
     @staticmethod
     @shared_task(

@@ -13,16 +13,13 @@ from apps.common.schemas import (
 )
 from apps.loans.models import (
     AutoRepayment,
-    AutoRepaymentStatus,
     CollateralType,
     CreditScore,
     LoanApplication,
     LoanProduct,
-    LoanProductType,
     LoanRepayment,
     LoanRepaymentSchedule,
     RepaymentFrequency,
-    RepaymentStatus,
 )
 from apps.wallets.schemas import CurrencySchema
 
@@ -321,7 +318,7 @@ class LoanSummarySchema(BaseSchema):
     credit_score: Optional[int]
     credit_score_band: Optional[str]
 
-    currency: CurrencySchema
+    currency: Optional[CurrencySchema] = None
 
 
 class LoanSummaryDataResponseSchema(ResponseSchema):

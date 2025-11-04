@@ -47,6 +47,7 @@ class UserAdmin(BaseUserAdmin):
                     "bio",
                     "dob",
                     "avatar",
+                    "phone",
                 )
             },
         ),

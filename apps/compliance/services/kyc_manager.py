@@ -48,7 +48,7 @@ class KYCManager:
         existing_kyc = await KYCVerification.objects.filter(
             user=user,
             level=data.level,
-            status__in=[KYCStatus.PENDING, KYCStatus.UNDER_REVIEW, KYCStatus.APPROVED],
+            status=[KYCStatus.PENDING, KYCStatus.UNDER_REVIEW, KYCStatus.APPROVED],
         ).afirst()
         if existing_kyc:
             if existing_kyc.status == KYCStatus.APPROVED:
@@ -84,17 +84,9 @@ class KYCManager:
                 file_name=id_document.name,
                 file_size=id_document.size,
             ),
-            # 2. Selfie
-            KYCDocument(
-                kyc_verification=kyc,
-                document_type="selfie",
-                file=selfie,
-                file_name=selfie.name,
-                file_size=selfie.size,
-            ),
         ]
 
-        # 3. Proof of Address (optional)
+        # 2. Proof of Address (optional)
         if proof_of_address:
             documents_to_create.append(
                 KYCDocument(
