@@ -1,7 +1,8 @@
 import json
 from uuid import UUID
+from asgiref.sync import sync_to_async
 from ninja import Router
-from apps.wallets.models import AccountProvider, WalletStatus, WalletType
+from apps.wallets.models import AccountProvider, Currency, WalletStatus, WalletType
 from apps.wallets.services.providers.factory import AccountProviderFactory
 from apps.wallets.services.wallet_manager import WalletManager
 from apps.wallets.services.wallet_operations import WalletOperations
@@ -26,13 +27,31 @@ from apps.wallets.schemas import (
     WalletSummaryDataResponseSchema,
     DepositWebhookSchema,
     DepositWebhookDataResponseSchema,
+    CurrencyListResponseSchema,
 )
 from apps.common.responses import CustomResponse
 from apps.common.schemas import ResponseSchema
 from apps.common.exceptions import RequestError, ErrorCode
 from apps.common.cache import cacheable, invalidate_cache
 
-wallet_router = Router(tags=["Wallets (19)"])
+wallet_router = Router(tags=["Wallets (20)"])
+
+
+# =============== CURRENCY ENDPOINTS ===============
+@wallet_router.get(
+    "/currencies",
+    summary="Get all active currencies",
+    description="Retrieve a list of all active currencies available for wallet creation",
+    response={200: CurrencyListResponseSchema},
+    auth=None, 
+)
+@cacheable(key="currencies:list", ttl=3600)  # Cache for 1 hour
+async def list_currencies(request):
+    currencies = await sync_to_async(list)(Currency.objects.filter(is_active=True).order_by('code'))
+    return CustomResponse.success(
+        message="Currencies retrieved successfully",
+        data=currencies
+    )
 
 
 # =============== WALLET MANAGEMENT ENDPOINTS ===============

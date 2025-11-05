@@ -165,7 +165,7 @@ class WalletManager:
         )
         if not wallet:
             raise NotFoundError("Wallet not found")
-        wallet = set_dict_attr(wallet, data.model_dump())
+        wallet = set_dict_attr(wallet, data.model_dump(exclude_none=True, exclude_unset=True))
         await wallet.asave()
         return wallet
 

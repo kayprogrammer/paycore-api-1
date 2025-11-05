@@ -19,6 +19,7 @@ class UserUpdateSchema(BaseSchema):
     push_enabled: bool = Field(..., example=True)
     in_app_enabled: bool = Field(..., example=True)
     email_enabled: bool = Field(..., example=True)
+    biometrics_enabled: bool = Field(..., example=True)
 
     @field_validator("first_name", "last_name")
     def no_spaces(cls, v: str):
@@ -33,7 +34,7 @@ class UserSchema(ModelSchema):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "bio", "dob", "phone"]
+        fields = ["first_name", "last_name", "bio", "dob", "phone", "push_enabled", "in_app_enabled", "email_enabled", "biometrics_enabled"]
 
 
 class UserResponseSchema(ResponseSchema):

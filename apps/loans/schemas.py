@@ -138,8 +138,11 @@ class LoanApplicationListSchema(BaseSchema):
     requested_amount: Decimal
     approved_amount: Optional[Decimal]
     tenure_months: int
+    monthly_repayment: Decimal
+    total_repayable: Decimal
     status: str
     credit_score: Optional[int]
+    disbursed_at: Optional[datetime]
     created_at: datetime
     currency: CurrencySchema = Field(
         ..., description="Currency of the loan", alias="loan_product.currency"

@@ -21,6 +21,10 @@ class CurrencySchema(BaseSchema):
     is_crypto: bool = Field(..., example=False)
 
 
+class CurrencyListResponseSchema(ResponseSchema):
+    data: List[CurrencySchema]
+
+
 # =============== WALLET MANAGEMENT SCHEMAS ===============
 class CreateWalletSchema(BaseSchema):
     currency_code: str = Field(..., example="USD", max_length=10)
@@ -35,7 +39,7 @@ class UpdateWalletSchema(BaseSchema):
     description: Optional[str] = Field(None, example="Updated description")
     daily_limit: Optional[Decimal] = Field(None, example=1000.00, ge=0)
     monthly_limit: Optional[Decimal] = Field(None, example=5000.00, ge=0)
-    requires_pin: Optional[bool] = Field(None, example=True)
+    requires_pin: Optional[bool] = Field(False, example=True)
     requires_biometric: Optional[bool] = Field(None, example=False)
 
 
