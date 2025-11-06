@@ -5,7 +5,7 @@ from datetime import datetime
 from ninja import ModelSchema
 from pydantic import Field
 
-from apps.cards.models import Card, CardBrand, CardType
+from apps.cards.models import Card, CardBrand, CardStatus, CardType
 from apps.common.schemas import BaseSchema, PaginatedResponseDataSchema, ResponseSchema
 from apps.common.doc_examples import UUID_EXAMPLE, DATE_EXAMPLE
 
@@ -90,16 +90,44 @@ class CardDetailsResponseSchema(CardResponseSchema):
     cvv: str = Field(..., description="CVV (only shown on creation)")
 
 
-class CardListItemSchema(BaseSchema):
-    card_id: UUID
-    masked_number: str
-    card_brand: str
-    card_type: str
-    status: str
-    is_frozen: bool
-    nickname: Optional[str]
-    total_spent: Decimal
-    created_at: datetime
+class CardListItemSchema(ModelSchema):
+    class Meta:
+        model = Card
+        fields = [
+            "card_id",
+            "card_brand",
+            "card_type",
+            "card_number",
+            "card_holder_name",
+            "expiry_month",
+            "expiry_year",
+            "cvv",
+            "status",
+            "is_frozen",
+            "nickname",
+            "total_spent",
+            "created_at",
+        ]
+
+    # Additional computed fields from properties and relations
+    masked_number: str = Field(default="****", description="Masked card number")
+    balance: float = Field(default=0.0, description="Card balance")
+    currency: str = Field(default="USD", description="Card currency code")
+
+    @staticmethod
+    def resolve_masked_number(obj):
+        """Get masked number from card property"""
+        return obj.masked_number
+
+    @staticmethod
+    def resolve_balance(obj):
+        """Get balance from associated wallet"""
+        return float(obj.wallet.available_balance) if obj.wallet else 0.0
+
+    @staticmethod
+    def resolve_currency(obj):
+        """Get currency from associated wallet"""
+        return obj.wallet.currency.code if obj.wallet and obj.wallet.currency else "USD"
 
 
 class CardTransactionSchema(BaseSchema):

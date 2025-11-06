@@ -6,6 +6,11 @@ import uuid
 from apps.common.models import BaseModel
 
 
+def get_current_date():
+    """Helper function to get current date (not datetime) for DateField defaults"""
+    return timezone.now().date()
+
+
 class CardType(models.TextChoices):
     VIRTUAL = "virtual", "Virtual Card"
     PHYSICAL = "physical", "Physical Card"
@@ -108,8 +113,8 @@ class Card(BaseModel):
     daily_spent = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     monthly_spent = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     last_used_at = models.DateTimeField(null=True, blank=True)
-    last_daily_reset = models.DateField(default=timezone.now)
-    last_monthly_reset = models.DateField(default=timezone.now)
+    last_daily_reset = models.DateField(default=get_current_date)
+    last_monthly_reset = models.DateField(default=get_current_date)
 
     allow_online_transactions = models.BooleanField(default=True)
     allow_atm_withdrawals = models.BooleanField(default=True)
