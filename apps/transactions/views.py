@@ -5,6 +5,7 @@ from ninja.throttling import AuthRateThrottle
 from apps.common.exceptions import NotFoundError
 from apps.transactions.schemas import (
     BanksResponseSchema,
+    BankAccountResponseSchema,
     InitiateTransferSchema,
     InitiateDepositSchema,
     InitiateWithdrawalSchema,
@@ -30,6 +31,8 @@ from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema, ResponseSchema
 from apps.wallets.models import Wallet
 from apps.common.cache import cacheable, invalidate_cache
+from apps.transactions.tasks import DepositTasks
+from django.conf import settings
 
 transaction_router = Router(tags=["Transactions (14)"])
 
@@ -169,7 +172,7 @@ async def get_transaction_stats(request):
         Returns payment URL for external providers or instant completion for internal.
     """,
     response={200: TransactionResponseSchema},
-    throttle=AuthRateThrottle("10/m"),
+    throttle=AuthRateThrottle("200/m"),
 )
 async def initiate_deposit(request, data: InitiateDepositSchema):
     """Initiate a deposit using configured payment provider"""
@@ -187,6 +190,12 @@ async def initiate_deposit(request, data: InitiateDepositSchema):
         callback_url=callback_url,
         description=data.description,
     )
+    if settings.USE_INTERNAL_PROVIDER:
+        # Schedule auto-confirmation after 15 seconds
+        DepositTasks.auto_confirm_deposit.apply_async(
+            args=[str(transaction.transaction_id)],
+            countdown=10  # 10 seconds delay
+        )
 
     return CustomResponse.success(
         message=(
@@ -346,11 +355,11 @@ async def get_withdrawal_banks(request, currency_code: str = "NGN"):
 
         Required for withdrawal verification.
     """,
-    response={200: ResponseSchema},
+    response={200: BankAccountResponseSchema},
     throttle=AuthRateThrottle("10/m"),
 )
 async def verify_bank_account(
-    request, account_number: str, bank_code: str, currency_code: str = "NGN"
+    request, account_number: str = Query(...), bank_code: str = Query(...), currency_code: str = "NGN"
 ):
     test_mode = WithdrawalProviderFactory.get_test_mode_setting()
     provider = WithdrawalProviderFactory.get_provider_for_currency(
@@ -362,7 +371,7 @@ async def verify_bank_account(
     )
 
     return CustomResponse.success(
-        message="Account verified successfully", data=account_info
+        message="Account verified successfully", data=account_info, status_code=200
     )
 
 
@@ -375,7 +384,7 @@ async def verify_bank_account(
         Disputes must be filed within 30 days of transaction completion.
     """,
     response={200: DisputeResponseSchema},
-    throttle=AuthRateThrottle("5/m"),
+    throttle=AuthRateThrottle("100/m"),
 )
 async def create_dispute(request, transaction_id: UUID, data: CreateDisputeSchema):
     user = request.auth

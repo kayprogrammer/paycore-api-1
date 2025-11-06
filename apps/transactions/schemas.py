@@ -202,6 +202,13 @@ class BankSchema(BaseSchema):
     currency: str = Field(..., example="USD")
 
 
+class BankAccountSchema(BaseSchema):
+    account_number: str = Field(..., example="1234567890")
+    account_name: str = Field(..., example="JANE JOHNSON")
+    bank_code: str = Field(..., example="033")
+    bank_name: str = Field(..., example="United Bank for Africa")
+
+
 # =============== API RESPONSE WRAPPERS ===============
 class TransactionResponseSchema(ResponseSchema):
     data: TransactionSchema
@@ -243,3 +250,7 @@ class BankListResponseDataSchema(BaseSchema):
 
 class BanksResponseSchema(ResponseSchema):
     data: BankListResponseDataSchema
+
+
+class BankAccountResponseSchema(ResponseSchema):
+    data: BankAccountSchema

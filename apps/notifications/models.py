@@ -28,7 +28,7 @@ class NotificationPriority(models.TextChoices):
 
 class Notification(BaseModel):
     """
-    In-app notification model
+    Notification model
     Supports real-time delivery via WebSockets and push notifications via FCM
     """
 

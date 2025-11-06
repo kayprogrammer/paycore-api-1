@@ -3,16 +3,16 @@ from . models import Wallet, Currency
 
 class CurrencyAdmin(admin.ModelAdmin):
     list_display = (
-        "currency",
+        "code",
         "name",
         "symbol",
     )
     list_filter = (
-        "currency",
-        "name",
+        "is_active",
+        "is_crypto",
     )
     search_fields = (
-        "currency",
+        "code",
         "name",
     )
 

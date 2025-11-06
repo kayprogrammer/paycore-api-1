@@ -402,22 +402,68 @@ JAZZMIN_SETTINGS = {
     "hide_models": [],
     # List of apps (and/or models) to base side menu ordering off of (does not need to contain all apps/models)
     "order_with_respect_to": [
-        "auth",
-        "accounts",
-        "accounts.user",
-        "wallets",
-        "cards",
-        "cards.card",
+        "auth", "accounts", "compliance",
+        "wallets", "cards", "transactions",
+        "payments", "bills", "loans",
+        "investments", "support", "notifications"
     ],
     # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.13.0,5.12.0,5.11.2,5.11.1,5.10.0,5.9.0,5.8.2,5.8.1,5.7.2,5.7.1,5.7.0,5.6.3,5.5.0,5.4.2
     # for the full list of 5.13.0 free icon classes
     "icons": {
         "accounts.Group": "fas fa-users",
         "accounts.user": "fas fa-user-cog",
+
+        "compliance.kycverification": "fas fa-users",
+        "compliance.kycdocument": "fas fa-document",
+        "compliance.compliancereport": "fas fa-document",
+        "compliance.amlcheck": "fas fa-users",
+        "compliance.sanctionsscreening": "fas fa-users",
+        "compliance.transactionmonitoring": "fas fa-users",
+
         "wallets.currency": "fas fa-money-bill",
         "wallets.wallet": "fas fa-wallet",
         "cards.card": "fas fa-credit-card",
 
+        "transactions.transaction": "fas fa-exchange-alt",
+        "transactions.transactiondispute": "fas fa-flag",
+        "transactions.transactionhold": "fas fa-hold-o",
+        "transactions.transactionfee": "fas fa-hand-holding-usd",
+        "transactions.transactionlog": "fas fa-file-alt",
+
+        "payments.paymentlink": "fas fa-credit-card",
+        "payments.invoice": "fas fa-file-invoice",
+        "payments.invoiceitem": "fas fa-file-invoice-dollar",
+        "payments.payment": "fas fa-credit-card",
+        "payments.merchantapikey": "fas fa-key",
+
+        "bills.billprovider": "fas fa-bill",
+        "bills.billpackage": "fas fa-bill",
+        "bills.billpayment": "fas fa-bill",
+        "bills.billbeneficiary": "fas fa-bill",
+        "bills.billpaymentschedule": "fas fa-bill",
+
+        "loans.loanproduct": "fas fa-loan",
+        "loans.loanapplication": "fas fa-bill",
+        "loans.loanrepaymentschedule": "fas fa-bill",
+        "loans.loanrepayment": "fas fa-bill",
+        "loans.creditscore": "fas fa-bill",
+        "loans.autorepayment": "fas fa-bill",
+
+        "investments.investmentproduct": "fas fa-loan",
+        "investments.investment": "fas fa-bill",
+        "investments.investmentreturn": "fas fa-bill",
+        "investments.investmentportfolio": "fas fa-bill",
+
+        "support.supportticket": "fas fa-loan",
+        "support.ticketmessage": "fas fa-bill",
+        "support.ticketattachment": "fas fa-bill",
+        "support.faq": "fas fa-bill",
+        "support.cannedresponse": "fas fa-bill",
+        "support.ticketescalation": "fas fa-bill",
+
+        "notifications.notification": "fas fa-loan",
+        "notifications.notificationtemplate": "fas fa-bill",
+   
         "sites.site": "fas fa-globe",
     },
     # Icons that are used when one is not manually specified

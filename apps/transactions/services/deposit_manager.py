@@ -98,23 +98,8 @@ class DepositManager:
                 "provider_response": serialized_payment_info
             }
 
-            # If internal provider (instant completion)
-            if payment_info["status"] == "completed":
-                wallet.balance += amount
-                await wallet.asave(update_fields=["balance", "updated_at"])
-
-                transaction.status = TransactionStatus.COMPLETED
-                transaction.from_balance_after = wallet.balance
-                transaction.completed_at = timezone.now()
-
             await transaction.asave(
-                update_fields=[
-                    "metadata",
-                    "status",
-                    "from_balance_after",
-                    "completed_at",
-                    "updated_at",
-                ]
+                update_fields=["metadata"]
             )
 
             return transaction, payment_info
@@ -165,19 +150,20 @@ class DepositManager:
         # Get provider and verify
         test_mode = DepositProviderFactory.get_test_mode_setting()
         provider = DepositProviderFactory.get_provider(
-            transaction.provider or "internal", test_mode=test_mode
+            transaction.metadata.get("provider") or "internal", test_mode=test_mode
         )
 
         try:
             verification_result = await provider.verify_deposit(
                 transaction.external_reference
             )
-
+            print(verification_result)
             if verification_result["status"] == "success":
                 # Credit wallet
-                wallet = transaction.wallet
+                wallet = transaction.to_wallet
                 wallet.balance += transaction.amount
-                await wallet.asave(update_fields=["balance", "updated_at"])
+                wallet.available_balance += transaction.amount
+                await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
                 # Update transaction
                 transaction.status = TransactionStatus.COMPLETED

@@ -2,6 +2,7 @@ import asyncio
 import time
 from typing import Dict, Any
 from decimal import Decimal
+from django.conf import settings
 
 from .base import BaseDepositProvider
 
@@ -56,32 +57,57 @@ class InternalDepositProvider(BaseDepositProvider):
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        Initiate internal deposit (instant completion for testing).
+        Initiate internal deposit.
 
-        Returns immediate success without requiring external payment.
+        If USE_INTERNAL_PROVIDER is True, returns pending status and
+        schedules auto-confirmation after 15 seconds via Celery.
+        Otherwise, completes instantly.
         """
         # Add small delay to simulate processing
         await asyncio.sleep(0.1)
 
         provider_reference = self._generate_provider_reference()
 
-        return {
-            "reference": reference,
-            "provider_reference": provider_reference,
-            "payment_url": None,  # No external payment required
-            "access_code": None,
-            "status": "completed",  # Instantly completed
-            "amount": amount,
-            "currency": currency_code,
-            "channel": "internal",
-            "paid_at": time.time(),
-            "metadata": {
-                "provider": "internal",
-                "test_mode": self.test_mode,
-                "auto_completed": True,
-                "message": "Internal deposit - automatically completed for testing",
-            },
-        }
+        # Check if we should use delayed auto-confirmation
+        use_internal_provider = getattr(settings, 'USE_INTERNAL_PROVIDER', False)
+
+        if use_internal_provider:
+            # Return pending status - will be auto-confirmed after 15 seconds
+            return {
+                "reference": reference,
+                "provider_reference": provider_reference,
+                "payment_url": None,  # No external payment required
+                "access_code": None,
+                "status": "pending",  # Pending - will be confirmed by Celery task
+                "amount": amount,
+                "currency": currency_code,
+                "channel": "internal",
+                "metadata": {
+                    "provider": "internal",
+                    "test_mode": self.test_mode,
+                    "auto_confirm": True,
+                    "message": "Internal deposit - will be auto-confirmed in 15 seconds",
+                },
+            }
+        else:
+            # Instant completion for non-USE_INTERNAL_PROVIDER environments
+            return {
+                "reference": reference,
+                "provider_reference": provider_reference,
+                "payment_url": None,  # No external payment required
+                "access_code": None,
+                "status": "completed",  # Instantly completed
+                "amount": amount,
+                "currency": currency_code,
+                "channel": "internal",
+                "paid_at": time.time(),
+                "metadata": {
+                    "provider": "internal",
+                    "test_mode": self.test_mode,
+                    "auto_completed": True,
+                    "message": "Internal deposit - automatically completed for testing",
+                },
+            }
 
     async def verify_deposit(self, reference: str, **kwargs) -> Dict[str, Any]:
         """

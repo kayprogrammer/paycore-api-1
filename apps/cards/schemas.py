@@ -69,9 +69,9 @@ class FundCardSchema(BaseSchema):
 
 
 class CardControlsSchema(BaseSchema):
-    allow_online_transactions: bool = Field(..., example=True)
-    allow_atm_withdrawals: bool = Field(..., example=True)
-    allow_international_transactions: bool = Field(..., example=False)
+    allow_online_transactions: Optional[bool] = Field(None, example=True)
+    allow_atm_withdrawals: Optional[bool] = Field(None, example=True)
+    allow_international_transactions: Optional[bool] = Field(None, example=False)
 
 
 # =============== RESPONSE SCHEMAS ===============
@@ -106,6 +106,9 @@ class CardListItemSchema(ModelSchema):
             "is_frozen",
             "nickname",
             "total_spent",
+            "allow_online_transactions",
+            "allow_atm_withdrawals",
+            "allow_international_transactions",
             "created_at",
         ]
 
