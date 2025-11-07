@@ -13,6 +13,9 @@ python manage.py seed_users
 echo "Upserting countries..."
 python manage.py upsert_countries
 
+echo "Seeding currencies..."
+python manage.py seed_currencies
+
 echo "Seeding bill providers..."
 python manage.py seed_bill_providers
 
