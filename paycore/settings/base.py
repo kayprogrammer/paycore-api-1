@@ -170,15 +170,29 @@ DATABASES = {
 }
 
 # Redis details
+# Support both URL-based (Upstash) and host/port-based (local) Redis configurations
+REDIS_URL = config("REDIS_URL", default=None)
 REDIS_HOST = config("REDIS_HOST", default="localhost")
 REDIS_PORT = config("REDIS_PORT", default="6379", cast=int)
 REDIS_DB = config("REDIS_DB", default="0", cast=int)
+REDIS_PASSWORD = config("REDIS_PASSWORD", default=None)
+
+# Build Redis location based on available configuration
+if REDIS_URL:
+    # Use full Redis URL (Upstash or other managed Redis)
+    REDIS_LOCATION = REDIS_URL
+else:
+    # Build Redis URL from host, port, password, and db
+    if REDIS_PASSWORD:
+        REDIS_LOCATION = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    else:
+        REDIS_LOCATION = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # Cache configuration for rate limiting
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+        "LOCATION": REDIS_LOCATION,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
@@ -540,7 +554,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [
+            "hosts": [REDIS_LOCATION] if REDIS_URL else [
                 (
                     REDIS_HOST,
                     REDIS_PORT,

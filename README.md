@@ -10,7 +10,7 @@ A robust, production-grade Fintech API built with Django Ninja, designed for pay
 - **Admin Panel**: [https://paycore-api.fly.dev/admin](https://paycore-api.fly.dev/admin)
 
 ### Frontend Application (Netlify)
-- **Live Application**: [https://paycore-frontend.netlify.app](https://paycore-frontend.netlify.app)
+- **Live Application**: [https://paycore-fe.netlify.app](https://paycore-fe.netlify.app)
 - **GitHub Repository**: [PayCore Frontend](https://github.com/kayprogrammer/paycore-frontend)
 
 ### Screenshots

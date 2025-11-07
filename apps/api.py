@@ -63,7 +63,7 @@ Django 5.2 + Django Ninja | PostgreSQL 16 | Redis | Celery + RabbitMQ | Promethe
 
 - **Production API**: [https://paycore-api.fly.dev](https://paycore-api.fly.dev)
 - **Admin Panel**: [https://paycore-api.fly.dev/admin](https://paycore-api.fly.dev/admin)
-- **Frontend App**: [https://paycore-frontend.netlify.app](https://paycore-frontend.netlify.app)
+- **Frontend App**: [https://paycore-fe.netlify.app](https://paycore-fe.netlify.app)
 - **GitHub Repository**: [https://github.com/kayprogrammer/paycore-api-1](https://github.com/kayprogrammer/paycore-api-1)
 
 **Built by**: [Kenechi Ifeanyi](https://github.com/kayprogrammer)
