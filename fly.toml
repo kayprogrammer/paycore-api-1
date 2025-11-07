@@ -31,11 +31,11 @@ console_command = '/app/manage.py shell'
 
   # Add health checks to prevent premature restarts
   [[http_service.checks]]
-    grace_period = "30s"
-    interval = "15s"
+    grace_period = "60s"
+    interval = "30s"
     method = "GET"
-    path = "/api/v1/healthcheck"
-    timeout = "10s"
+    path = "/api/v1/healthcheck/"
+    timeout = "15s"
     type = "http"
 
 [[vm]]
