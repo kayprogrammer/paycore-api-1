@@ -6,9 +6,11 @@ A robust, production-grade Fintech API built with Django Ninja, designed for pay
 
 > **⚠️ Important Notice**: The live server will be discontinued on **February 14th, 2026** due to hosting costs. This is a demonstration project and not intended for long-term production use. You can run the project locally following the setup instructions below.
 
+> **📊 Performance Note**: The live URL may experience slower response times. This is **not** due to the application or implementation itself, but rather the hosting service configuration. The basic tier uses limited RAM and server resources. For optimal performance, please run the project locally using the setup instructions below.
+
 ### Backend API (Fly.io)
 - **Production API**: [https://paycore-api.fly.dev](https://paycore-api.fly.dev)
-- **API Documentation (Swagger)**: [https://paycore-api.fly.dev/api/docs](https://paycore-api.fly.dev/api/docs)
+- **API Documentation (Swagger)**: [https://paycore-api.fly.dev](https://paycore-api.fly.dev)
 - **Admin Panel**: [https://paycore-api.fly.dev/admin](https://paycore-api.fly.dev/admin)
 - **GitHub Repository**: [kayprogrammer/paycore-api-1](https://github.com/kayprogrammer/paycore-api-1)
 
@@ -444,7 +446,7 @@ Authorization: Bearer <access-token>
 
 Once the server is running, visit:
 
-- **Swagger UI**: http://localhost:8000/api/docs (Interactive API documentation)
+- **Swagger UI**: http://localhost:8000/ (Interactive API documentation)
 - **OpenAPI Schema**: http://localhost:8000/api/openapi.json (Machine-readable API spec)
 - **Admin Panel**: http://localhost:8000/admin (Django admin interface)
 
