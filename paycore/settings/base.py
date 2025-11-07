@@ -204,6 +204,7 @@ CACHES = {
             },
             "SOCKET_CONNECT_TIMEOUT": 5,
             "SOCKET_TIMEOUT": 5,
+            "IGNORE_EXCEPTIONS": True,  # Gracefully handle Redis connection failures
         },
         "KEY_PREFIX": "paycore",
         "TIMEOUT": 300,  # Default TTL: 5 minutes

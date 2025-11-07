@@ -67,9 +67,9 @@ async def submit_kyc(
 
     # Schedule auto-approval if using internal provider
     if settings.USE_INTERNAL_PROVIDER:
-        # Schedule auto-approval after 15 seconds
+        # Schedule auto-approval after 3 seconds
         KYCTasks.auto_approve_kyc.apply_async(
-            args=[str(kyc.kyc_id)], countdown=15  # 15 seconds delay
+            args=[str(kyc.kyc_id)], countdown=3  # 3 seconds delay
         )
         logger.info(f"Scheduled auto-approval for KYC {kyc.kyc_id} in 15 seconds")
 
