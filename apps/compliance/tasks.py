@@ -34,6 +34,9 @@ class KYCTasks:
         bind=True,
         name="compliance.auto_approve_kyc",
         queue="compliance",
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 10},
+        retry_backoff=True,
     )
     def auto_approve_kyc(self, kyc_id: str):
         """
@@ -79,7 +82,8 @@ class KYCTasks:
 
         except Exception as exc:
             logger.error(f"Auto-approve KYC task failed for {kyc_id}: {str(exc)}")
-            return {"status": "failed", "error": str(exc)}
+            # Retry on database connection errors
+            raise self.retry(exc=exc)
 
     @staticmethod
     @shared_task(
