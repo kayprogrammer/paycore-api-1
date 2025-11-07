@@ -22,6 +22,10 @@ RUN set -ex && \
     rm -rf /root/.cache/
 COPY . /app
 
+# Copy and set entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["gunicorn","--bind",":8000","--workers","2","--worker-class","uvicorn.workers.UvicornWorker","paycore.asgi:application"]
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]

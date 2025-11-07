@@ -10,16 +10,9 @@ console_command = '/app/manage.py shell'
 [build]
 
 [deploy]
-  release_command = 'sh -c "python manage.py collectstatic --noinput && python manage.py migrate --noinput"'
 
 [env]
   PORT = '8000'
-
-[processes]
-  # Reduced to 1 worker to minimize memory usage on basic tier
-  app = 'gunicorn --bind :8000 --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --max-requests 1000 --max-requests-jitter 100 paycore.asgi:application'
-  # Reduced concurrency for Celery to save memory
-  celery = 'celery -A paycore worker --loglevel=warning --concurrency=1 --max-tasks-per-child=100'
 
 [http_service]
   internal_port = 8000
@@ -27,7 +20,6 @@ console_command = '/app/manage.py shell'
   auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
 
   # Add health checks to prevent premature restarts
   [[http_service.checks]]
@@ -42,14 +34,7 @@ console_command = '/app/manage.py shell'
   memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
-  processes = ['app']
-
-[[vm]]
-  memory = '256mb'
-  cpu_kind = 'shared'
-  cpus = 1
-  processes = ['celery']
 
 [[statics]]
-  guest_path = '/app/static'
+  guest_path = '/app/staticfiles'
   url_prefix = '/static/'
