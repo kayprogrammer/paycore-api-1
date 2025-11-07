@@ -3,14 +3,14 @@ from celery import shared_task
 from typing import Dict, Any
 from asgiref.sync import async_to_sync
 
-from apps.compliance.models import (
-    KYCVerification,
-    KYCDocument,
-    KYCStatus
-)
+from apps.compliance.models import KYCVerification, KYCDocument, KYCStatus
 from apps.compliance.services.kyc_provider import KYCProviderService
 from apps.compliance.services.compliance_checker import ComplianceChecker
-from apps.compliance.schemas import CreateAMLCheckSchema, CreateSanctionsScreeningSchema, UpdateKYCStatusSchema
+from apps.compliance.schemas import (
+    CreateAMLCheckSchema,
+    CreateSanctionsScreeningSchema,
+    UpdateKYCStatusSchema,
+)
 from apps.compliance.services.kyc_manager import KYCManager
 
 from apps.accounts.models import User
@@ -51,7 +51,9 @@ class KYCTasks:
                 return {"status": "failed", "error": "KYC record not found"}
 
             if kyc.status != KYCStatus.PENDING:
-                logger.warning(f"KYC {kyc_id} is not in pending status, skipping auto-approval")
+                logger.warning(
+                    f"KYC {kyc_id} is not in pending status, skipping auto-approval"
+                )
                 return {"status": "skipped", "current_status": kyc.status}
 
             update_data = UpdateKYCStatusSchema(
@@ -68,7 +70,11 @@ class KYCTasks:
             return {
                 "status": "success",
                 "kyc_id": kyc_id,
-                "approved_at": updated_kyc.reviewed_at.isoformat() if updated_kyc.reviewed_at else None,
+                "approved_at": (
+                    updated_kyc.reviewed_at.isoformat()
+                    if updated_kyc.reviewed_at
+                    else None
+                ),
             }
 
         except Exception as exc:

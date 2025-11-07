@@ -49,7 +49,9 @@ class LoanApprovalTasks:
             ).get_or_none(application_id=application_id)
 
             if not loan:
-                logger.error(f"Loan application {application_id} not found for auto-approval")
+                logger.error(
+                    f"Loan application {application_id} not found for auto-approval"
+                )
                 return {"status": "failed", "error": "Loan application not found"}
 
             if loan.status != LoanStatus.PENDING:
@@ -87,8 +89,7 @@ class LoanApprovalTasks:
             # Schedule auto-disbursement after 10 seconds
             if settings.USE_INTERNAL_PROVIDER:
                 LoanApprovalTasks.auto_disburse_loan.apply_async(
-                    args=[str(application_id)],
-                    countdown=10  # 10 seconds delay
+                    args=[str(application_id)], countdown=10  # 10 seconds delay
                 )
 
             return {
@@ -126,7 +127,9 @@ class LoanApprovalTasks:
             ).get_or_none(application_id=application_id)
 
             if not loan:
-                logger.error(f"Loan application {application_id} not found for auto-disbursement")
+                logger.error(
+                    f"Loan application {application_id} not found for auto-disbursement"
+                )
                 return {"status": "failed", "error": "Loan application not found"}
 
             if loan.status != LoanStatus.APPROVED:

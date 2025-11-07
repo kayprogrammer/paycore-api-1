@@ -7,6 +7,7 @@ from apps.common.schemas import BaseSchema, ResponseSchema
 from .models import Country
 from apps.compliance.models import KYCLevel
 
+
 # USER SCHEMAS
 class UserUpdateSchema(BaseSchema):
     first_name: str = Field(..., example="John", max_length=50)
@@ -34,7 +35,17 @@ class UserSchema(ModelSchema):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "bio", "dob", "phone", "push_enabled", "in_app_enabled", "email_enabled", "biometrics_enabled"]
+        fields = [
+            "first_name",
+            "last_name",
+            "bio",
+            "dob",
+            "phone",
+            "push_enabled",
+            "in_app_enabled",
+            "email_enabled",
+            "biometrics_enabled",
+        ]
 
 
 class UserResponseSchema(ResponseSchema):

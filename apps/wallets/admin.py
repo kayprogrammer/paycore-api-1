@@ -1,5 +1,6 @@
 from django.contrib import admin
-from . models import Wallet, Currency
+from .models import Wallet, Currency
+
 
 class CurrencyAdmin(admin.ModelAdmin):
     list_display = (
@@ -15,6 +16,7 @@ class CurrencyAdmin(admin.ModelAdmin):
         "code",
         "name",
     )
+
 
 class WalletAdmin(admin.ModelAdmin):
     list_display = (

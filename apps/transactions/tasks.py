@@ -32,7 +32,9 @@ class DepositTasks:
             ).get_or_none(transaction_id=transaction_id)
 
             if not transaction:
-                logger.error(f"Transaction {transaction_id} not found for auto-confirmation")
+                logger.error(
+                    f"Transaction {transaction_id} not found for auto-confirmation"
+                )
                 return {"status": "failed", "error": "Transaction not found"}
 
             if transaction.status != TransactionStatus.PENDING:

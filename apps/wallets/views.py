@@ -43,14 +43,15 @@ wallet_router = Router(tags=["Wallets (20)"])
     summary="Get all active currencies",
     description="Retrieve a list of all active currencies available for wallet creation",
     response={200: CurrencyListResponseSchema},
-    auth=None, 
+    auth=None,
 )
 @cacheable(key="currencies:list", ttl=3600)  # Cache for 1 hour
 async def list_currencies(request):
-    currencies = await sync_to_async(list)(Currency.objects.filter(is_active=True).order_by('code'))
+    currencies = await sync_to_async(list)(
+        Currency.objects.filter(is_active=True).order_by("code")
+    )
     return CustomResponse.success(
-        message="Currencies retrieved successfully",
-        data=currencies
+        message="Currencies retrieved successfully", data=currencies
     )
 
 

@@ -63,16 +63,13 @@ async def submit_kyc(
     proof_of_address: UploadedFile = File(None),
 ):
     user = request.auth
-    kyc = await KYCManager.submit_kyc(
-        user, data, id_document, selfie, proof_of_address
-    )
+    kyc = await KYCManager.submit_kyc(user, data, id_document, selfie, proof_of_address)
 
     # Schedule auto-approval if using internal provider
     if settings.USE_INTERNAL_PROVIDER:
         # Schedule auto-approval after 15 seconds
         KYCTasks.auto_approve_kyc.apply_async(
-            args=[str(kyc.kyc_id)],
-            countdown=15  # 15 seconds delay
+            args=[str(kyc.kyc_id)], countdown=15  # 15 seconds delay
         )
         logger.info(f"Scheduled auto-approval for KYC {kyc.kyc_id} in 15 seconds")
 

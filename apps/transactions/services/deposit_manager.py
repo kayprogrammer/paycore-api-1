@@ -98,9 +98,7 @@ class DepositManager:
                 "provider_response": serialized_payment_info
             }
 
-            await transaction.asave(
-                update_fields=["metadata"]
-            )
+            await transaction.asave(update_fields=["metadata"])
 
             return transaction, payment_info
 
@@ -163,7 +161,9 @@ class DepositManager:
                 wallet = transaction.to_wallet
                 wallet.balance += transaction.amount
                 wallet.available_balance += transaction.amount
-                await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
+                await wallet.asave(
+                    update_fields=["balance", "available_balance", "updated_at"]
+                )
 
                 # Update transaction
                 transaction.status = TransactionStatus.COMPLETED

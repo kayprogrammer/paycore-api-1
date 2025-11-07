@@ -28,7 +28,9 @@ profiles_router = Router(tags=["Profiles (3)"])
 @cacheable(key="profile:{{user_id}}", ttl=60)
 async def get_user(request):
     user = request.auth
-    kyc = await KYCVerification.objects.filter(user=user).order_by("-created_at").afirst()
+    kyc = (
+        await KYCVerification.objects.filter(user=user).order_by("-created_at").afirst()
+    )
     user.kyc_level = kyc.level if kyc and kyc.status == KYCStatus.APPROVED else None
     return CustomResponse.success(message="Profile retrieved successfully", data=user)
 

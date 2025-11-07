@@ -69,7 +69,7 @@ class InternalDepositProvider(BaseDepositProvider):
         provider_reference = self._generate_provider_reference()
 
         # Check if we should use delayed auto-confirmation
-        use_internal_provider = getattr(settings, 'USE_INTERNAL_PROVIDER', False)
+        use_internal_provider = getattr(settings, "USE_INTERNAL_PROVIDER", False)
 
         if use_internal_provider:
             # Return pending status - will be auto-confirmed after 15 seconds

@@ -99,8 +99,7 @@ async def create_loan_application(request, data: CreateLoanApplicationSchema):
     # Schedule auto-approval after 10 seconds if using internal provider
     if settings.USE_INTERNAL_PROVIDER:
         LoanApprovalTasks.auto_approve_loan.apply_async(
-            args=[str(loan.application_id)],
-            countdown=10  # 10 seconds delay
+            args=[str(loan.application_id)], countdown=10  # 10 seconds delay
         )
 
     return CustomResponse.success(

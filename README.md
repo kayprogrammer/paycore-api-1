@@ -78,17 +78,17 @@ exit
 
 The Docker setup includes 10 services:
 
-| Service | Port | Description |
-|---------|------|-------------|
-| **web** | 8000 | Django API (uvicorn with 4 workers) |
-| **db** | 5432 | PostgreSQL 16 database |
-| **redis** | 6379 | Redis cache and session store |
-| **rabbitmq** | 5672, 15672 | RabbitMQ message broker + management UI |
-| **celery-general** | - | General background tasks worker |
-| **celery-emails** | - | Email queue worker (4 concurrency) |
-| **celery-payments** | - | Payment processing worker (2 concurrency) |
-| **celery-beat** | - | Periodic task scheduler |
-| **flower** | 5555 | Celery monitoring dashboard |
+| Service                   | Port        | Description                               |
+| ------------------------- | ----------- | ----------------------------------------- |
+| **web**             | 8000        | Django API (uvicorn with 4 workers)       |
+| **db**              | 5432        | PostgreSQL 16 database                    |
+| **redis**           | 6379        | Redis cache and session store             |
+| **rabbitmq**        | 5672, 15672 | RabbitMQ message broker + management UI   |
+| **celery-general**  | -           | General background tasks worker           |
+| **celery-emails**   | -           | Email queue worker (4 concurrency)        |
+| **celery-payments** | -           | Payment processing worker (2 concurrency) |
+| **celery-beat**     | -           | Periodic task scheduler                   |
+| **flower**          | 5555        | Celery monitoring dashboard               |
 
 ### Access Dashboards
 
@@ -100,12 +100,13 @@ The Docker setup includes 10 services:
 
 After running `make init` or `make su`, you can use these test accounts:
 
-| Email | Password | PIN | Type | KYC Status | Wallet |
-|-------|----------|-----|------|------------|--------|
-| test@example.com | password123 | 1234 | Regular User | Tier 2 Verified | ₦100,000 NGN |
-| test2@example.com | password123 | 1234 | Staff User | Tier 2 Verified | ₦100,000 NGN |
+| Email             | Password    | PIN  | Type         | KYC Status      | Wallet        |
+| ----------------- | ----------- | ---- | ------------ | --------------- | ------------- |
+| test@example.com  | password123 | 1234 | Regular User | Tier 2 Verified | ₦100,000 NGN |
+| test2@example.com | password123 | 1234 | Staff User   | Tier 2 Verified | ₦100,000 NGN |
 
 Both accounts have:
+
 - Verified email
 - Approved KYC (Tier 2)
 - Active NGN wallet with ₦100,000 balance
@@ -252,6 +253,7 @@ make show-dashboards
 ```
 
 Production services include:
+
 - **Grafana**: http://localhost:3000 (admin/paycore123)
 - **Prometheus**: http://localhost:9090
 - **AlertManager**: http://localhost:9093
@@ -351,6 +353,7 @@ make inspect-active
 ```
 
 Health endpoints:
+
 - System: http://localhost:8000/health/system/
 - Celery: http://localhost:8000/health/celery/
 - Metrics: http://localhost:8000/metrics/

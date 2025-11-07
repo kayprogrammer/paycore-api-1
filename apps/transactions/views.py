@@ -193,8 +193,7 @@ async def initiate_deposit(request, data: InitiateDepositSchema):
     if settings.USE_INTERNAL_PROVIDER:
         # Schedule auto-confirmation after 15 seconds
         DepositTasks.auto_confirm_deposit.apply_async(
-            args=[str(transaction.transaction_id)],
-            countdown=10  # 10 seconds delay
+            args=[str(transaction.transaction_id)], countdown=10  # 10 seconds delay
         )
 
     return CustomResponse.success(
@@ -359,7 +358,10 @@ async def get_withdrawal_banks(request, currency_code: str = "NGN"):
     throttle=AuthRateThrottle("10/m"),
 )
 async def verify_bank_account(
-    request, account_number: str = Query(...), bank_code: str = Query(...), currency_code: str = "NGN"
+    request,
+    account_number: str = Query(...),
+    bank_code: str = Query(...),
+    currency_code: str = "NGN",
 ):
     test_mode = WithdrawalProviderFactory.get_test_mode_setting()
     provider = WithdrawalProviderFactory.get_provider_for_currency(
