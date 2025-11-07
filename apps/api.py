@@ -28,9 +28,47 @@ from apps.common.health_checks import celery_health_check, system_health_check
 from django.urls import path
 
 api = NinjaAPI(
-    title="Paycore API",
+    title="PayCore API",
     description="""
-        A robust, production-grade Fintech API built with Django Ninja, designed for payments, wallets, transactions, and compliance.
+# PayCore API - Production-Grade Fintech Platform
+
+A comprehensive Fintech API built with Django Ninja for payments, wallets, cards, loans, investments, and compliance.
+
+## 🚀 Key Features
+
+- **Multi-Currency Wallets** - NGN, KES, GHS, USD with real-time exchange rates
+- **Card Issuing** - Virtual/physical cards via Flutterwave and Sudo Africa
+- **Loans & Investments** - Personal loans, fixed deposits, mutual funds
+- **Payment Processing** - Payment links, invoices, merchant API
+- **KYC & Compliance** - Multi-tier verification, AML checks, transaction monitoring
+- **Notifications** - Email, SMS, push notifications via Firebase FCM
+
+## 🔐 Authentication
+
+1. **Google OAuth** (Primary) - Secure social login
+2. **Email/OTP** - 6-digit OTP verification
+3. **JWT Tokens** - Access and refresh token rotation
+
+**Rate Limiting:** 5,000 req/min (anonymous) | 10,000 req/min (authenticated)
+
+## 🛠️ Tech Stack
+
+Django 5.2 + Django Ninja | PostgreSQL 16 | Redis | Celery + RabbitMQ | Prometheus + Grafana | Cloudinary | Django Channels
+
+## 📚 Endpoints
+
+`/api/v1/auth` • `/api/v1/profiles` • `/api/v1/wallets` • `/api/v1/cards` • `/api/v1/transactions` • `/api/v1/bills` • `/api/v1/payments` • `/api/v1/loans` • `/api/v1/investments` • `/api/v1/support` • `/api/v1/compliance` • `/api/v1/notifications` • `/api/v1/audit-logs`
+
+## 🔗 Resources
+
+- **Production API**: [https://paycore-api.fly.dev](https://paycore-api.fly.dev)
+- **Admin Panel**: [https://paycore-api.fly.dev/admin](https://paycore-api.fly.dev/admin)
+- **Frontend App**: [https://paycore-frontend.netlify.app](https://paycore-frontend.netlify.app)
+- **GitHub Repository**: [https://github.com/kayprogrammer/paycore-api-1](https://github.com/kayprogrammer/paycore-api-1)
+
+**Built by**: [Kenechi Ifeanyi](https://github.com/kayprogrammer)
+
+**Note**: Most financial operations require KYC verification.
     """,
     version="1.0.0",
     docs_url="/",

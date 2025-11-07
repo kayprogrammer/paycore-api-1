@@ -2,16 +2,102 @@
 
 A robust, production-grade Fintech API built with Django Ninja, designed for payments, wallets, transactions, and compliance.
 
-## Features
+## 🚀 Live Demo
 
-- **Multi-currency Wallet System** - NGN, KES, GHS, USD support
-- **Transaction Management** - Deposits, withdrawals, transfers, bill payments
-- **Card Issuing & Management** - Virtual and physical cards
-- **Loan & Investment Products** - Personal loans, fixed deposits, mutual funds
-- **Compliance & KYC** - Document verification, risk assessment, audit trails
-- **Notifications** - Email, SMS, push notifications via Celery
-- **Support System** - Ticketing, FAQs, real-time chat
-- **Monitoring** - Prometheus metrics, Grafana dashboards, AlertManager
+### Backend API (Fly.io)
+- **Production API**: [https://paycore-api.fly.dev](https://paycore-api.fly.dev)
+- **API Documentation (Swagger)**: [https://paycore-api.fly.dev/api/docs](https://paycore-api.fly.dev/api/docs)
+- **Admin Panel**: [https://paycore-api.fly.dev/admin](https://paycore-api.fly.dev/admin)
+
+### Frontend Application (Netlify)
+- **Live Application**: [https://paycore-frontend.netlify.app](https://paycore-frontend.netlify.app)
+- **GitHub Repository**: [PayCore Frontend](https://github.com/kayprogrammer/paycore-frontend)
+
+### Screenshots
+
+**Admin Panel**
+![PayCore Admin Panel](static/media/admin.png)
+
+**API Documentation (Swagger)**
+![PayCore API Documentation](static/media/api.png)
+
+## ✨ Features
+
+### Core Functionality
+- **Multi-currency Wallet System** - NGN, KES, GHS, USD support with real-time exchange rates
+- **Transaction Management** - Deposits, withdrawals, transfers, bill payments with fee calculation
+- **Card Issuing & Management** - Virtual and physical cards via Flutterwave and Sudo Africa
+- **Loan & Investment Products** - Personal loans, fixed deposits, mutual funds with automated calculations
+- **Payment Processing** - Payment links, invoices, merchant API integration
+
+### Security & Compliance
+- **Google OAuth Authentication** - Secure third-party authentication as primary login method
+- **Email/OTP Authentication** - Alternative authentication with 6-digit OTP verification
+- **JWT Token Management** - Access & refresh tokens with automatic rotation
+- **KYC Verification** - Multi-tier verification (Tier 1-3) with Onfido integration
+- **Compliance & Risk Assessment** - AML checks, sanctions screening, transaction monitoring
+- **Audit Logs** - Complete activity tracking with IP logging and user agents
+- **PIN Authorization** - Transaction-level security with wallet PINs
+
+### Communications & Support
+- **Notifications** - Email, SMS, push notifications via Firebase Cloud Messaging
+- **Support System** - Ticketing with SLA tracking, FAQs, canned responses, escalation management
+- **Real-time Updates** - WebSocket support via Django Channels
+
+### Monitoring & Operations
+- **Prometheus Metrics** - System and application-level metrics
+- **Grafana Dashboards** - Pre-configured dashboards for monitoring
+- **AlertManager** - Automated alerting for critical issues
+- **Health Checks** - System and Celery health endpoints
+- **Celery Task Queue** - Background job processing with specialized queues
+
+## 🛠️ Technology Stack
+
+### Backend Framework
+- **Django 5.2** - High-level Python web framework
+- **Django Ninja** - Fast, type-safe API framework with automatic OpenAPI documentation
+- **PostgreSQL 16** - Primary database with JSONB support
+- **Redis** - Caching, rate limiting, and session storage
+
+### Task Queue & Messaging
+- **Celery** - Distributed task queue for background jobs
+- **RabbitMQ** - Message broker with priority queues
+- **Django Celery Beat** - Periodic task scheduler
+- **Flower** - Real-time Celery monitoring
+
+### Real-time & Notifications
+- **Django Channels** - WebSocket support for real-time features
+- **Firebase Cloud Messaging** - Push notifications for mobile/web
+- **SMTP** - Email notifications with templating
+
+### Security & Authentication
+- **Google OAuth 2.0** - Primary authentication provider
+- **JWT (JSON Web Tokens)** - Stateless authentication with refresh tokens
+- **Onfido** - KYC verification and identity checks
+- **bcrypt** - Password hashing
+
+### Payment & Card Providers
+- **Paystack** - Payment processing for NGN
+- **Flutterwave** - Virtual card issuing (USD, NGN, GBP)
+- **Sudo Africa** - Virtual card issuing (USD, NGN)
+- **Internal Provider** - Mock provider for development/testing
+
+### Storage & Media
+- **Cloudinary** - Cloud-based image and file storage
+- **WhiteNoise** - Static file serving for production
+
+### Monitoring & Observability
+- **Prometheus** - Metrics collection and time-series database
+- **Grafana** - Visualization and dashboards
+- **AlertManager** - Alert routing and management
+- **Django Prometheus** - Django metrics exporter
+
+### Development & Deployment
+- **Docker & Docker Compose** - Containerization and orchestration
+- **Fly.io** - Production hosting platform
+- **pytest** - Testing framework with coverage
+- **Black & isort** - Code formatting
+- **Python 3.11+** - Runtime environment
 
 ## Quick Start with Docker
 
@@ -224,17 +310,53 @@ CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
 SECRET_KEY=your-secret-key
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
+SITE_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3000
+
+# CORS (for frontend)
+CORS_ALLOWED_ORIGINS=http://localhost:3000 http://127.0.0.1:3000
+
+# Authentication
+GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+
+# JWT Token Settings
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_MINUTES=10080
+TRUST_TOKEN_EXPIRE_DAYS=30
 
 # Payment Providers
-PAYSTACK_SECRET_KEY=sk_test_xxx
-PAYSTACK_PUBLIC_KEY=pk_test_xxx
-FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-xxx
+USE_INTERNAL_PROVIDER=False  # Set to True for development without external APIs
+PAYMENT_PROVIDERS_TEST_MODE=True
+PAYSTACK_TEST_SECRET_KEY=sk_test_xxx
+PAYSTACK_TEST_PUBLIC_KEY=pk_test_xxx
+FLUTTERWAVE_TEST_SECRET_KEY=FLWSECK_TEST-xxx
+SUDO_TEST_SECRET_KEY=your-sudo-test-key
 
-# Email (if using real SMTP)
+# Card Providers
+CARD_PROVIDERS_TEST_MODE=True
+
+# KYC Provider
+KYC_PROVIDER=onfido
+ONFIDO_API_KEY=your-onfido-api-key
+ONFIDO_WEBHOOK_TOKEN=your-onfido-webhook-token
+
+# Email
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
+EMAIL_USE_SSL=True
 EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=noreply@paycore.com
+
+# Firebase Cloud Messaging (for push notifications)
+FIREBASE_CREDENTIALS_JSON={"type":"service_account",...}  # Production
+# OR
+FIREBASE_CREDENTIALS_PATH=firebase-credentials.json  # Development
+
+# Notifications
+NOTIFICATION_RETENTION_DAYS=90
 ```
 
 ## Production Deployment
@@ -260,12 +382,85 @@ Production services include:
 - **Node Exporter**: Metrics for host system
 - **Redis Exporter**: Metrics for Redis
 
-## API Documentation
+## 🔐 Authentication
+
+PayCore API supports multiple authentication methods:
+
+### 1. Google OAuth (Primary Method)
+```bash
+POST /api/v1/auth/google-oauth
+Content-Type: application/json
+
+{
+  "token": "google-id-token-from-frontend"
+}
+
+Response:
+{
+  "status": "success",
+  "message": "Login successful",
+  "data": {
+    "user": { ... },
+    "access": "jwt-access-token",
+    "refresh": "jwt-refresh-token"
+  }
+}
+```
+
+### 2. Email/OTP Authentication
+```bash
+# Step 1: Request OTP
+POST /api/v1/auth/request-otp
+{
+  "email": "user@example.com"
+}
+
+# Step 2: Verify OTP
+POST /api/v1/auth/verify-otp
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+
+### 3. Token Refresh
+```bash
+POST /api/v1/auth/refresh
+{
+  "refresh": "jwt-refresh-token"
+}
+```
+
+### Authentication Headers
+All authenticated requests require the JWT token in the Authorization header:
+```bash
+Authorization: Bearer <access-token>
+```
+
+## 📚 API Documentation
 
 Once the server is running, visit:
 
-- **Swagger UI**: http://localhost:8000/api/docs
-- **OpenAPI Schema**: http://localhost:8000/api/openapi.json
+- **Swagger UI**: http://localhost:8000/api/docs (Interactive API documentation)
+- **OpenAPI Schema**: http://localhost:8000/api/openapi.json (Machine-readable API spec)
+- **Admin Panel**: http://localhost:8000/admin (Django admin interface)
+
+### API Endpoints Overview
+
+| Category | Endpoints | Description |
+|----------|-----------|-------------|
+| **Authentication** | `/api/v1/auth/*` | Login, register, OTP, OAuth, token refresh |
+| **Profiles** | `/api/v1/profiles/*` | User profiles, avatar upload, device management |
+| **Wallets** | `/api/v1/wallets/*` | Multi-currency wallets, balance, currency exchange |
+| **Cards** | `/api/v1/cards/*` | Virtual/physical cards, transactions, controls |
+| **Transactions** | `/api/v1/transactions/*` | Deposits, withdrawals, transfers, history |
+| **Bills** | `/api/v1/bills/*` | Bill providers, packages, payments, beneficiaries |
+| **Payments** | `/api/v1/payments/*` | Payment links, invoices, merchant API |
+| **Loans** | `/api/v1/loans/*` | Loan products, applications, repayments |
+| **Investments** | `/api/v1/investments/*` | Investment products, portfolios, returns |
+| **Support** | `/api/v1/support/*` | Tickets, messages, FAQs |
+| **Notifications** | `/api/v1/notifications/*` | Push, email, SMS notifications |
+| **Compliance** | `/api/v1/compliance/*` | KYC verification, document upload |
 
 ## Testing
 

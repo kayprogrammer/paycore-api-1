@@ -337,6 +337,7 @@ LOGGING = {
     },
 }
 
+FRONTEND_URL = config("FRONTEND_URL")
 
 JAZZMIN_SETTINGS = {
     # title of the window (Will default to current_admin_site.site_title if absent or None)
@@ -344,13 +345,13 @@ JAZZMIN_SETTINGS = {
     # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
     "site_header": "PAYCORE",
     # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "media/logo.png",
+    "site_logo": "media/logo.jpg",
     # CSS classes that are applied to the logo above
     "site_logo_classes": "img-circle",
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
-    "login_logo": "media/logo.png",
+    "login_logo": "media/logo.jpg",
     # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
-    "site_icon": "media/logo.png",
+    "site_icon": "media/logo.jpg",
     # Welcome text on the login screen
     "welcome_sign": "Welcome to the Paycore Admin Section",
     # Copyright on the footer
@@ -385,6 +386,11 @@ JAZZMIN_SETTINGS = {
         {
             "name": "GITHUB REPO",
             "url": "https://github.com/kayprogrammer/paycore-api-1",
+            "new_window": True,
+        },
+        {
+            "name": "FRONTEND LINK",
+            "url": FRONTEND_URL,
             "new_window": True,
         },
         {"model": "accounts.user"},
@@ -462,6 +468,7 @@ JAZZMIN_SETTINGS = {
         "support.ticketescalation": "fas fa-level-up-alt",
         "notifications.notification": "fas fa-bell",
         "notifications.notificationtemplate": "fas fa-envelope",
+        "audit_logs.auditlog": "fas fa-file-alt",
         "sites.site": "fas fa-globe",
     },
     # Icons that are used when one is not manually specified

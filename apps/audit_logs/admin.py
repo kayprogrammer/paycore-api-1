@@ -131,15 +131,12 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_per_page = 50
 
     def has_add_permission(self, request):
-        """Audit logs should not be manually added"""
         return False
 
     def has_delete_permission(self, request, obj=None):
-        """Audit logs should not be deleted manually"""
         return False
 
     def has_change_permission(self, request, obj=None):
-        """Audit logs should not be modified"""
         return False
 
     def event_badge(self, obj):
