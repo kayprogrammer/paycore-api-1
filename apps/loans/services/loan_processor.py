@@ -54,19 +54,20 @@ class LoanProcessor:
 
         wallet = loan.wallet
         wallet.balance += loan.approved_amount
-        await wallet.asave(update_fields=["balance", "updated_at"])
+        wallet.available_balance += loan.approved_amount
+        await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
         transaction_ref = (
             f"LOAN-{int(timezone.now().timestamp())}-{secrets.token_urlsafe(8)}"
         )
         transaction = await Transaction.objects.acreate(
-            user=loan.user,
-            wallet=wallet,
+            to_user=loan.user,
+            to_wallet=wallet,
             transaction_type=TransactionType.LOAN_DISBURSEMENT,
             amount=loan.approved_amount,
-            currency=wallet.currency,
-            balance_before=wallet.balance - loan.approved_amount,
-            balance_after=wallet.balance,
+            net_amount=loan.approved_amount,
+            to_balance_before=wallet.balance - loan.approved_amount,
+            to_balance_after=wallet.balance,
             reference=transaction_ref,
             status=TransactionStatus.COMPLETED,
             description=f"Loan disbursement for {loan.loan_product.name}",

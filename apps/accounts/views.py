@@ -350,7 +350,7 @@ async def refresh_tokens(
         Web clients receive refresh token as HTTP-only cookie.
     """,
     response={200: TokensResponseSchema},
-    throttle=AnonRateThrottle("100/5m"),
+    throttle=AnonRateThrottle("1000/5m"),
 )
 async def google_login(request, data: TokenSchema, response: HttpResponse):
     token = data.token

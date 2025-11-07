@@ -40,6 +40,9 @@ app.conf.update(
         "apps.payments.tasks.*": {"queue": "payments"},
         "apps.audit_logs.tasks.*": {"queue": "audit"},
         "apps.compliance.tasks.*": {"queue": "compliance"},
+        "loans.auto_approve_loan": {"queue": "loans"},
+        "loans.auto_disburse_loan": {"queue": "loans"},
+        "loans.process_auto_repayments": {"queue": "loans"},
     },
     # Queue definitions with priorities
     task_default_queue="default",
@@ -61,6 +64,12 @@ app.conf.update(
             "compliance",
             Exchange("compliance"),
             routing_key="compliance",
+            queue_arguments={"x-max-priority": 10},
+        ),
+        Queue(
+            "loans",
+            Exchange("loans"),
+            routing_key="loans",
             queue_arguments={"x-max-priority": 10},
         ),
         # Medium priority queues
@@ -169,5 +178,18 @@ app.conf.beat_schedule = {
     "weekly-sanctions-rescan": {
         "task": "compliance.weekly_sanctions_rescan",
         "schedule": crontab(day_of_week=1, hour=2, minute=0),  # Monday 2 AM
+    },
+    # Loan tasks
+    "process-auto-repayments": {
+        "task": "loans.process_auto_repayments",
+        "schedule": crontab(hour=3, minute=0),  # 3 AM daily
+    },
+    "update-overdue-schedules": {
+        "task": "loans.update_overdue_schedules",
+        "schedule": crontab(hour=1, minute=0),  # 1 AM daily
+    },
+    "cleanup-old-credit-scores": {
+        "task": "loans.cleanup_old_credit_scores",
+        "schedule": crontab(day_of_week=0, hour=4, minute=0),  # Sunday 4 AM
     },
 }

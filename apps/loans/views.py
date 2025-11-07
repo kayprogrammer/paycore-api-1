@@ -2,6 +2,7 @@ from decimal import Decimal
 from uuid import UUID
 from typing import Optional
 from ninja import Query, Router
+from django.conf import settings
 
 from apps.common.responses import CustomResponse
 from apps.common.schemas import PaginationQuerySchema
@@ -28,6 +29,7 @@ from apps.loans.services.loan_manager import LoanManager
 from apps.loans.services.loan_processor import LoanProcessor
 from apps.loans.services.credit_score_service import CreditScoreService
 from apps.loans.services.auto_repayment_service import AutoRepaymentService
+from apps.loans.tasks import LoanApprovalTasks
 
 
 loan_router = Router(tags=["Loans (20)"])
@@ -93,6 +95,14 @@ async def create_loan_application(request, data: CreateLoanApplicationSchema):
     user = request.auth
     loan = await LoanManager.create_loan_application(user, data)
     loan = await LoanManager.get_loan_application(user, loan.application_id)
+
+    # Schedule auto-approval after 10 seconds if using internal provider
+    if settings.USE_INTERNAL_PROVIDER:
+        LoanApprovalTasks.auto_approve_loan.apply_async(
+            args=[str(loan.application_id)],
+            countdown=10  # 10 seconds delay
+        )
+
     return CustomResponse.success(
         "Loan application created successfully", loan, status_code=201
     )

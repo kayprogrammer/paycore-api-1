@@ -5,6 +5,7 @@ from django.db import transaction as db_transaction
 from datetime import timedelta
 from decimal import Decimal
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from apps.loans.models import (
     AutoRepayment,
     LoanRepaymentSchedule,
@@ -12,14 +13,169 @@ from apps.loans.models import (
     AutoRepaymentStatus,
     CreditScore,
     LoanStatus,
+    LoanApplication,
 )
 from apps.loans.services.loan_processor import LoanProcessor
-from apps.loans.schemas import MakeLoanRepaymentSchema
+from apps.loans.services.loan_manager import LoanManager
+from apps.loans.schemas import MakeLoanRepaymentSchema, ApproveLoanSchema
 from apps.accounts.models import User
 from django.db.models import Count, F, Window
 from django.db.models.functions import RowNumber
 
 logger = logging.getLogger(__name__)
+
+
+# ==================== LOAN APPROVAL TASKS ====================
+
+
+class LoanApprovalTasks:
+    """Background tasks for loan approval and disbursement"""
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        name="loans.auto_approve_loan",
+        queue="loans",
+    )
+    def auto_approve_loan(self, application_id: str):
+        """
+        Auto-approve loan after 15 seconds for internal provider
+        This simulates loan review processing time for demo/testing purposes
+        """
+        try:
+            # Get loan application to check status
+            loan = LoanApplication.objects.select_related(
+                "loan_product", "wallet", "wallet__currency", "user"
+            ).get_or_none(application_id=application_id)
+
+            if not loan:
+                logger.error(f"Loan application {application_id} not found for auto-approval")
+                return {"status": "failed", "error": "Loan application not found"}
+
+            if loan.status != LoanStatus.PENDING:
+                logger.warning(
+                    f"Loan application {application_id} is not in pending status, "
+                    f"skipping auto-approval. Current status: {loan.status}"
+                )
+                return {"status": "skipped", "current_status": loan.status}
+
+            # Create a system user for approval if needed
+            system_user = User.objects.filter(email="system@paycore.com").first()
+            if not system_user:
+                # Use the loan applicant as reviewer for demo purposes
+                system_user = loan.user
+
+            # Use LoanManager to approve the loan
+            # Approve with requested amount and existing interest rate
+            approval_data = ApproveLoanSchema(
+                approved_amount=loan.requested_amount,
+                interest_rate=loan.interest_rate,
+            )
+
+            approved_loan = async_to_sync(LoanManager.approve_loan)(
+                reviewer=system_user,
+                application_id=application_id,
+                data=approval_data,
+            )
+
+            logger.info(
+                f"Loan {application_id} auto-approved successfully. "
+                f"Amount: {approved_loan.approved_amount}, "
+                f"Status: {approved_loan.status}"
+            )
+
+            # Schedule auto-disbursement after 10 seconds
+            if settings.USE_INTERNAL_PROVIDER:
+                LoanApprovalTasks.auto_disburse_loan.apply_async(
+                    args=[str(application_id)],
+                    countdown=10  # 10 seconds delay
+                )
+
+            return {
+                "status": "success",
+                "application_id": application_id,
+                "approved_amount": float(approved_loan.approved_amount),
+                "approved_at": (
+                    approved_loan.reviewed_at.isoformat()
+                    if approved_loan.reviewed_at
+                    else None
+                ),
+            }
+
+        except Exception as exc:
+            logger.error(
+                f"Auto-approve loan task failed for {application_id}: {str(exc)}"
+            )
+            return {"status": "failed", "error": str(exc)}
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        name="loans.auto_disburse_loan",
+        queue="loans",
+    )
+    def auto_disburse_loan(self, application_id: str):
+        """
+        Auto-disburse loan after approval for internal provider
+        This simulates loan disbursement processing time for demo/testing purposes
+        """
+        try:
+            # Get loan application to check status
+            loan = LoanApplication.objects.select_related(
+                "loan_product", "wallet", "wallet__currency", "user"
+            ).get_or_none(application_id=application_id)
+
+            if not loan:
+                logger.error(f"Loan application {application_id} not found for auto-disbursement")
+                return {"status": "failed", "error": "Loan application not found"}
+
+            if loan.status != LoanStatus.APPROVED:
+                logger.warning(
+                    f"Loan application {application_id} is not in approved status, "
+                    f"skipping auto-disbursement. Current status: {loan.status}"
+                )
+                return {"status": "skipped", "current_status": loan.status}
+
+            if loan.disbursed_at:
+                logger.warning(
+                    f"Loan application {application_id} has already been disbursed"
+                )
+                return {"status": "skipped", "reason": "already_disbursed"}
+
+            # Create a system user for disbursement if needed
+            system_user = User.objects.filter(email="system@paycore.com").first()
+
+            # Use LoanProcessor to disburse the loan
+            disbursed_loan = async_to_sync(LoanProcessor.disburse_loan)(
+                application_id=application_id,
+                admin_user=system_user,
+            )
+
+            logger.info(
+                f"Loan {application_id} auto-disbursed successfully. "
+                f"Amount: {disbursed_loan.approved_amount}, "
+                f"Status: {disbursed_loan.status}"
+            )
+
+            return {
+                "status": "success",
+                "application_id": application_id,
+                "disbursed_amount": float(disbursed_loan.approved_amount),
+                "disbursed_at": (
+                    disbursed_loan.disbursed_at.isoformat()
+                    if disbursed_loan.disbursed_at
+                    else None
+                ),
+            }
+
+        except Exception as exc:
+            logger.error(
+                f"Auto-disburse loan task failed for {application_id}: {str(exc)}"
+            )
+            return {"status": "failed", "error": str(exc)}
+
+
+# ==================== AUTO REPAYMENT TASKS ====================
 
 
 class AutoRepaymentTasks:
@@ -409,6 +565,8 @@ class LoanMaintenanceTasks:
 
 
 # Expose task functions for imports
+auto_approve_loan = LoanApprovalTasks.auto_approve_loan
+auto_disburse_loan = LoanApprovalTasks.auto_disburse_loan
 process_auto_repayments = AutoRepaymentTasks.process_auto_repayments
 retry_failed_auto_repayment = AutoRepaymentTasks.retry_failed_auto_repayment
 send_auto_repayment_notification = AutoRepaymentTasks.send_auto_repayment_notification

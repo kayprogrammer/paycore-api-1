@@ -39,6 +39,7 @@ class TransactionType(models.TextChoices):
     LOAN_FEE = "loan_fee", "Loan Fee"
     LOAN_INTEREST = "loan_interest", "Loan Interest"
     LOAN_PENALTY = "loan_penalty", "Loan Penalty"
+    LOAN_DISBURSEMENT = "loan_disbursement", "Loan Disbursement"
 
     # Investment transaction types
     INVESTMENT = "investment", "Investment"
