@@ -184,7 +184,9 @@ if REDIS_URL:
 else:
     # Build Redis URL from host, port, password, and db
     if REDIS_PASSWORD:
-        REDIS_LOCATION = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+        REDIS_LOCATION = (
+            f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+        )
     else:
         REDIS_LOCATION = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
@@ -554,12 +556,16 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_LOCATION] if REDIS_URL else [
-                (
-                    REDIS_HOST,
-                    REDIS_PORT,
-                )
-            ],
+            "hosts": (
+                [REDIS_LOCATION]
+                if REDIS_URL
+                else [
+                    (
+                        REDIS_HOST,
+                        REDIS_PORT,
+                    )
+                ]
+            ),
             "capacity": 1500,
             "expiry": 10,
         },

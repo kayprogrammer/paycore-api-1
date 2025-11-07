@@ -4,14 +4,17 @@ A robust, production-grade Fintech API built with Django Ninja, designed for pay
 
 ## 🚀 Live Demo
 
+> **⚠️ Important Notice**: The live server will be discontinued on **February 14th, 2026** due to hosting costs. This is a demonstration project and not intended for long-term production use. You can run the project locally following the setup instructions below.
+
 ### Backend API (Fly.io)
 - **Production API**: [https://paycore-api.fly.dev](https://paycore-api.fly.dev)
 - **API Documentation (Swagger)**: [https://paycore-api.fly.dev/api/docs](https://paycore-api.fly.dev/api/docs)
 - **Admin Panel**: [https://paycore-api.fly.dev/admin](https://paycore-api.fly.dev/admin)
+- **GitHub Repository**: [kayprogrammer/paycore-api-1](https://github.com/kayprogrammer/paycore-api-1)
 
 ### Frontend Application (Netlify)
 - **Live Application**: [https://paycore-fe.netlify.app](https://paycore-fe.netlify.app)
-- **GitHub Repository**: [PayCore Frontend](https://github.com/kayprogrammer/paycore-frontend)
+- **GitHub Repository**: [kayprogrammer/paycore-frontend](https://github.com/kayprogrammer/paycore-frontend)
 
 ### Screenshots
 
@@ -464,16 +467,81 @@ Once the server is running, visit:
 
 ## Testing
 
+PayCore has comprehensive **unit tests** focused on business logic (not API integration tests, which Swagger handles).
+
+### Test Categories
+
+- **Unit Tests**: Business logic, calculations, validations (✅ What we test)
+- **Integration Tests**: API endpoints, request/response (Swagger handles this)
+
+### Run Tests
+
 ```bash
-# Run all tests
-make test
+# Run all unit tests
+pytest -m unit -v
+
+# Run tests by category
+pytest -m auth          # Authentication tests
+pytest -m loan          # Loan calculation & credit score tests
+pytest -m wallet        # Wallet validation tests
+pytest -m payment       # Payment processing tests
+pytest -m compliance    # KYC/compliance tests
+pytest -m transaction   # Transaction tests
+
+# Run specific test file
+pytest apps/accounts/test_authentication.py -v
+pytest apps/loans/test_credit_score_service.py -v
+pytest apps/loans/test_loan_calculations.py -v
 
 # Run with coverage
-pytest --cov=apps --cov-report=html
-
-# Test specific module
-pytest apps/accounts/tests/
+pytest -m unit --cov=apps --cov-report=html
+open htmlcov/index.html
 ```
+
+### Test Coverage
+
+**Completed** (2,100+ lines of unit tests):
+- ✅ **Accounts**: JWT tokens, OAuth, expiration, security (289 lines, 26 tests)
+- ✅ **Wallets - Validation**: Amount/PIN/email validation, split payments (440 lines, 60+ tests)
+- ✅ **Wallets - Operations**: Balance operations, spending limits, status checks (525 lines, 35+ tests)
+- ✅ **Loans - Credit Score**: FICO-like scoring 300-850 (397 lines, 30+ tests)
+- ✅ **Loans - Calculations**: Interest, fees, installments (464 lines, 40+ tests)
+
+**Test Focus Areas**:
+- **Authentication**: Token generation & validation, OAuth flow, security
+- **Wallet Validation**: Amount boundaries ($0.01-$1M), PIN strength (4-6 digits), weak PIN rejection, currency codes (ISO 4217), email lists (2-20), split payment types (EQUAL/CUSTOM/PERCENTAGE)
+- **Balance Operations**: Credit/debit/hold/release, spending limits (daily/monthly), balance consistency (`balance = available + pending`)
+- **Credit Scoring**: 35% payment history + 30% utilization + 15% age + 20% history
+- **Loan Calculations**: Interest formula `(Principal × Rate × Time) / 12`, Processing fee `max(amount × 2%, fixed_fee)`, Installments by frequency
+- **Edge Cases**: Decimal precision (8 places), boundaries (min/max), state transitions
+
+### Example Unit Test
+
+```python
+@pytest.mark.unit
+@pytest.mark.loan
+class TestInterestCalculation:
+    """Test simple interest formula."""
+
+    async def test_simple_interest_formula(self, loan_product):
+        """Formula: Total Interest = Principal × Rate × Time / 12"""
+        result = await LoanManager.calculate_loan(
+            product=loan_product,
+            amount=Decimal("100000"),
+            tenure_months=12,
+            repayment_frequency=RepaymentFrequency.MONTHLY,
+        )
+
+        # For 100k at 15% for 12 months: (100000 * 0.15 * 12) / 12 = 15000
+        expected_interest = Decimal("15000")
+        assert result["total_interest"] == expected_interest
+```
+
+### Test Configuration
+
+- **conftest.py**: Shared fixtures (users, wallets, loans, mocks)
+- **pytest.ini**: Test discovery, markers, coverage settings
+- **Fixtures**: `verified_user`, `funded_wallet`, `loan_product`, `mock_email_send`
 
 ## Common Tasks
 
