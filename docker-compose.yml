@@ -60,7 +60,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: paycore-web
     command: >
       sh -c "python manage.py migrate &&
@@ -95,7 +95,7 @@ services:
   celery-general:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: paycore-celery-general
     command: celery -A paycore worker --loglevel=info --concurrency=4 -Q celery
     env_file:
@@ -123,7 +123,7 @@ services:
   celery-emails:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: paycore-celery-emails
     command: celery -A paycore worker --loglevel=info --concurrency=4 -Q emails
     env_file:
@@ -151,7 +151,7 @@ services:
   celery-payments:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: paycore-celery-payments
     command: celery -A paycore worker --loglevel=info --concurrency=2 -Q payments
     env_file:
@@ -179,7 +179,7 @@ services:
   celery-beat:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: paycore-celery-beat
     command: celery -A paycore beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
@@ -207,7 +207,7 @@ services:
   flower:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: paycore-flower
     command: celery -A paycore flower --port=5555 --basic-auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-paycore123}
     env_file:
