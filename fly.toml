@@ -10,7 +10,7 @@ console_command = '/app/manage.py shell'
 [build]
 
 [deploy]
-  release_command = 'python manage.py migrate --noinput'
+  release_command = 'python manage.py collectstatic --noinput && python manage.py migrate --noinput'
 
 [env]
   PORT = '8000'
