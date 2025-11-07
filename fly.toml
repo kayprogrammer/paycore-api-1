@@ -30,14 +30,13 @@ console_command = '/app/manage.py shell'
   processes = ['app']
 
   # Add health checks to prevent premature restarts
-  [http_service.checks]
-    [http_service.checks.health]
-      grace_period = "30s"
-      interval = "15s"
-      method = "GET"
-      path = "/api/v1/healthcheck"
-      timeout = "10s"
-      type = "http"
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    method = "GET"
+    path = "/api/v1/healthcheck"
+    timeout = "10s"
+    type = "http"
 
 [[vm]]
   memory = '512mb'
