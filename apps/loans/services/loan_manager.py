@@ -28,6 +28,12 @@ from apps.loans.schemas import (
     ApproveLoanSchema,
     RejectLoanSchema,
 )
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationChannel,
+    NotificationEventType,
+)
+from apps.notifications.models import NotificationPriority
 from apps.loans.services.credit_score_service import CreditScoreService
 from asgiref.sync import sync_to_async
 
@@ -353,6 +359,25 @@ class LoanManager:
         )
 
         await LoanManager._generate_repayment_schedule(loan)
+
+        # Send loan approval notification (in-app, push, email)
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=loan.user,
+            event_type=NotificationEventType.LOAN_APPROVED,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.PUSH,
+                NotificationChannel.EMAIL,
+            ],
+            title="Loan Approved!",
+            message=f"Your loan application for {loan.wallet.currency.symbol}{loan.approved_amount:,.2f} has been approved",
+            context_data={"loan_id": str(loan.application_id)},
+            priority=NotificationPriority.HIGH,
+            related_object_type="Loan",
+            related_object_id=str(loan.application_id),
+            action_url=f"/loans/{loan.application_id}",
+        )
+
         return loan
 
     @staticmethod

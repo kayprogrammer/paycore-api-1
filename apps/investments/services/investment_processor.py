@@ -19,6 +19,12 @@ from apps.investments.models import (
 )
 from apps.wallets.models import Wallet
 from apps.transactions.models import Transaction, TransactionType, TransactionStatus
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationChannel,
+    NotificationEventType,
+)
+from apps.notifications.models import NotificationPriority
 
 
 class InvestmentProcessor:
@@ -84,6 +90,24 @@ class InvestmentProcessor:
         if product.available_slots is not None:
             product.slots_taken -= 1
             await product.asave(update_fields=["slots_taken", "updated_at"])
+
+        # Send investment maturity notification (in-app, push, email)
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=investment.user,
+            event_type=NotificationEventType.INVESTMENT_MATURED,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.PUSH,
+                NotificationChannel.EMAIL,
+            ],
+            title="Investment Matured!",
+            message=f"Your investment in {product.name} has matured. Total payout: {wallet.currency.symbol}{total_payout:,.2f}",
+            context_data={"investment_id": str(investment.investment_id)},
+            priority=NotificationPriority.HIGH,
+            related_object_type="Investment",
+            related_object_id=str(investment.investment_id),
+            action_url=f"/investments/{investment.investment_id}",
+        )
 
         return investment
 

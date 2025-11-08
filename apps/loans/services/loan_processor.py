@@ -25,6 +25,12 @@ from apps.common.exceptions import (
 )
 from apps.loans.schemas import MakeLoanRepaymentSchema
 from apps.loans.services.credit_score_service import CreditScoreService
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationChannel,
+    NotificationEventType,
+)
+from apps.notifications.models import NotificationPriority
 from asgiref.sync import sync_to_async
 
 
@@ -90,6 +96,25 @@ class LoanProcessor:
                 "updated_at",
             ]
         )
+
+        # Send loan disbursement notification (in-app, push, email)
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=loan.user,
+            event_type=NotificationEventType.LOAN_DISBURSED,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.PUSH,
+                NotificationChannel.EMAIL,
+            ],
+            title="Loan Disbursed!",
+            message=f"Your loan of {wallet.currency.symbol}{loan.approved_amount:,.2f} has been disbursed to your wallet",
+            context_data={"loan_id": str(loan.application_id)},
+            priority=NotificationPriority.HIGH,
+            related_object_type="Loan",
+            related_object_id=str(loan.application_id),
+            action_url=f"/loans/{loan.application_id}",
+        )
+
         return loan
 
     @staticmethod
@@ -254,6 +279,25 @@ class LoanProcessor:
             await loan.asave(update_fields=["status", "updated_at"])
             # Update credit score after loan completion
             await CreditScoreService.calculate_credit_score(user)
+
+        # Send loan repayment notification (in-app, push, email)
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=user,
+            event_type=NotificationEventType.LOAN_REPAYMENT,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.PUSH,
+                NotificationChannel.EMAIL,
+            ],
+            title="Loan Repayment Successful!",
+            message=f"Your loan repayment of {payer_wallet.currency.symbol}{amount_to_pay:,.2f} was successful",
+            context_data={"repayment_id": str(repayment.repayment_id)},
+            priority=NotificationPriority.MEDIUM,
+            related_object_type="LoanRepayment",
+            related_object_id=str(repayment.repayment_id),
+            action_url=f"/loans/{loan.application_id}",
+        )
+
         return repayment
 
     @staticmethod

@@ -25,6 +25,12 @@ from apps.investments.models import (
 from apps.investments.schemas import CreateInvestmentSchema, RenewInvestmentSchema
 from apps.wallets.models import Wallet
 from apps.transactions.models import Transaction, TransactionType, TransactionStatus
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationChannel,
+    NotificationEventType,
+)
+from apps.notifications.models import NotificationPriority
 from asgiref.sync import sync_to_async
 from apps.common.paginators import Paginator
 from apps.common.schemas import PaginationQuerySchema
@@ -149,6 +155,25 @@ class InvestmentManager:
         # Generate payout schedule if periodic payouts
         if product.payout_frequency != InterestPayoutFrequency.AT_MATURITY:
             await InvestmentManager._generate_payout_schedule(investment, product)
+
+        # Send investment creation notification (in-app, push, email)
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=user,
+            event_type=NotificationEventType.INVESTMENT_CREATED,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.PUSH,
+                NotificationChannel.EMAIL,
+            ],
+            title="Investment Created Successfully!",
+            message=f"Your investment of {wallet.currency.symbol}{data.amount:,.2f} in {product.name} has been created",
+            context_data={"investment_id": str(investment.investment_id)},
+            priority=NotificationPriority.MEDIUM,
+            related_object_type="Investment",
+            related_object_id=str(investment.investment_id),
+            action_url=f"/investments/{investment.investment_id}",
+        )
+
         return investment
 
     @staticmethod

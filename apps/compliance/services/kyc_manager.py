@@ -22,6 +22,12 @@ from asgiref.sync import sync_to_async
 from apps.profiles.models import Country
 from apps.wallets.services.wallet_manager import WalletManager
 from apps.wallets.schemas import CreateWalletSchema
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationChannel,
+    NotificationEventType,
+)
+from apps.notifications.models import NotificationPriority
 
 
 class KYCManager:
@@ -198,6 +204,47 @@ class KYCManager:
                     description="Auto-created upon KYC approval for fiat transactions",
                 )
                 await WalletManager.create_wallet(user=kyc.user, data=wallet_data)
+
+        # Send KYC status notification (in-app, push, email)
+        notification_map = {
+            KYCStatus.APPROVED: {
+                "event_type": NotificationEventType.KYC_APPROVED,
+                "title": "KYC Verification Approved!",
+                "message": f"Your {kyc.level} KYC verification has been approved",
+                "priority": NotificationPriority.HIGH,
+            },
+            KYCStatus.REJECTED: {
+                "event_type": NotificationEventType.KYC_REJECTED,
+                "title": "KYC Verification Rejected",
+                "message": f"Your {kyc.level} KYC verification was rejected. Reason: {kyc.rejection_reason}",
+                "priority": NotificationPriority.HIGH,
+            },
+            KYCStatus.PENDING: {
+                "event_type": NotificationEventType.KYC_PENDING,
+                "title": "KYC Under Review",
+                "message": f"Your {kyc.level} KYC verification is under review",
+                "priority": NotificationPriority.MEDIUM,
+            },
+        }
+
+        if data.status in notification_map:
+            notif_data = notification_map[data.status]
+            await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+                user=kyc.user,
+                event_type=notif_data["event_type"],
+                channels=[
+                    NotificationChannel.IN_APP,
+                    NotificationChannel.PUSH,
+                    NotificationChannel.EMAIL,
+                ],
+                title=notif_data["title"],
+                message=notif_data["message"],
+                context_data={"kyc_id": str(kyc.kyc_id)},
+                priority=notif_data["priority"],
+                related_object_type="KYCVerification",
+                related_object_id=str(kyc.kyc_id),
+                action_url="/settings/kyc",
+            )
 
         return kyc
 
