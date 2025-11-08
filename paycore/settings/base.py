@@ -5,6 +5,7 @@ import json
 import warnings
 import firebase_admin
 from firebase_admin import credentials
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -158,21 +159,41 @@ ASGI_APPLICATION = "paycore.asgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
-        "CONN_MAX_AGE": 0,  # Don't persist connections (helps with serverless DBs)
-        "OPTIONS": {
-            "connect_timeout": 10,
-            "options": "-c statement_timeout=30000",  # 30 second statement timeout
-        },
+# Check if DATABASE_URL is provided (Fly.io Postgres attachment)
+DATABASE_URL = config("DATABASE_URL", default=None)
+
+if DATABASE_URL:
+    # Use Fly Postgres (or any DATABASE_URL-based setup)
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=0,  # Don't persist connections
+            conn_health_checks=True,  # Enable connection health checks
+            ssl_require=False,  # Fly's internal network doesn't need SSL
+        )
     }
-}
+    # Add additional options for Fly Postgres
+    DATABASES["default"]["OPTIONS"] = {
+        "connect_timeout": 10,
+        "options": "-c statement_timeout=30000",  # 30 second statement timeout
+    }
+else:
+    # Use legacy individual config variables (local development or Neon)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DB_NAME"),
+            "USER": config("DB_USER"),
+            "PASSWORD": config("DB_PASSWORD"),
+            "HOST": config("DB_HOST", default="localhost"),
+            "PORT": config("DB_PORT", default="5432"),
+            "CONN_MAX_AGE": 0,  # Don't persist connections (helps with serverless DBs)
+            "OPTIONS": {
+                "connect_timeout": 10,
+                "options": "-c statement_timeout=30000",  # 30 second statement timeout
+            },
+        }
+    }
 
 # Redis details
 # Support both URL-based (Upstash) and host/port-based (local) Redis configurations

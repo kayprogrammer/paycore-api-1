@@ -93,6 +93,7 @@ python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-decouple==3.8
 pytz==2025.2
+dj-database-url==2.3.0
 qrcode==8.2
 redis==5.2.1
 requests==2.32.5
