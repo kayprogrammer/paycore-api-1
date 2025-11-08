@@ -2,7 +2,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 from asgiref.sync import async_to_sync
-from decimal import Decimal
+from apps.investments.emails import InvestmentEmailUtil
 
 from apps.investments.models import Investment, InvestmentReturn, InvestmentStatus
 from apps.investments.services.investment_processor import InvestmentProcessor
@@ -207,14 +207,23 @@ class InvestmentEmailTasks:
     )
     def send_investment_created_email(self, investment_id: str):
         """Send investment creation confirmation email"""
-        # To be implemented when investment features are defined
-        logger.info(
-            f"Investment created email task placeholder for investment {investment_id}"
-        )
-        return {
-            "status": "pending",
-            "message": "Investment email tasks not yet implemented",
-        }
+        try:
+            investment = Investment.objects.select_related(
+                "user", "product", "wallet", "wallet__currency"
+            ).get_or_none(investment_id=investment_id)
+
+            if not investment:
+                logger.error(f"Investment {investment_id} not found")
+                return {"status": "failed", "error": "Investment not found"}
+
+            InvestmentEmailUtil.send_investment_created_email(investment)
+            logger.info(
+                f"Investment created email sent for investment {investment.investment_id}"
+            )
+            return {"status": "success", "investment_id": str(investment.investment_id)}
+        except Exception as exc:
+            logger.error(f"Investment created email failed: {str(exc)}")
+            raise self.retry(exc=exc)
 
     @staticmethod
     @shared_task(
@@ -226,14 +235,23 @@ class InvestmentEmailTasks:
     )
     def send_investment_matured_email(self, investment_id: str):
         """Send investment maturity notification email"""
-        # To be implemented when investment features are defined
-        logger.info(
-            f"Investment matured email task placeholder for investment {investment_id}"
-        )
-        return {
-            "status": "pending",
-            "message": "Investment email tasks not yet implemented",
-        }
+        try:
+            investment = Investment.objects.select_related(
+                "user", "product", "wallet", "wallet__currency"
+            ).get_or_none(investment_id=investment_id)
+
+            if not investment:
+                logger.error(f"Investment {investment_id} not found")
+                return {"status": "failed", "error": "Investment not found"}
+
+            InvestmentEmailUtil.send_investment_matured_email(investment)
+            logger.info(
+                f"Investment matured email sent for investment {investment.investment_id}"
+            )
+            return {"status": "success", "investment_id": str(investment.investment_id)}
+        except Exception as exc:
+            logger.error(f"Investment matured email failed: {str(exc)}")
+            raise self.retry(exc=exc)
 
 
 # Expose task functions for imports

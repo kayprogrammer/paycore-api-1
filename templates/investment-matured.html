@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Investment Matured</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <tr>
+            <td style="padding: 40px 30px; background-color: #10B981; color: #ffffff; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">🎊</div>
+                <h1 style="margin: 0; font-size: 24px;">Your Investment Has Matured!</h1>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ user_name }},</p>
+                <p>Great news! Your investment in <strong>{{ product_name }}</strong> has reached maturity and your returns have been credited to your wallet.</p>
+                <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #10B981;">Investment Summary</h2>
+                    <table width="100%" style="border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Product:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ product_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Investment Type:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ product_type }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Principal Amount:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ currency_symbol }}{{ principal_amount }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Returns Earned:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #10B981; border-bottom: 1px solid #e5e7eb;">{{ currency_symbol }}{{ actual_returns }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Total Payout:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: bold; font-size: 18px; color: #10B981; border-bottom: 1px solid #e5e7eb;">{{ currency_symbol }}{{ total_payout }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Investment Period:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ duration_days }} days</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Start Date:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ start_date }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666;">Maturity Date:</td>
+                            <td style="padding: 10px 0; text-align: right;">{{ maturity_date }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #1E40AF;">
+                        <strong>Your New Wallet Balance:</strong> {{ currency_symbol }}{{ new_balance }}<br>
+                        <span style="font-size: 12px;">The total payout has been credited to your {{ wallet_name }}.</span>
+                    </p>
+                </div>
+                {% if auto_renewed %}
+                <div style="background-color: #F0FDF4; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #065F46;">
+                        <strong>Auto-Renewal:</strong><br>
+                        This investment has been automatically renewed for another term.
+                    </p>
+                </div>
+                {% endif %}
+                <div style="background-color: #FEF2F2; border-left: 4px solid #EF4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 13px; color: #991B1B;">
+                        <strong>Important:</strong> The return on investment may be subject to applicable taxes. Please consult with a tax advisor regarding your obligations.
+                    </p>
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ portfolio_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; margin-right: 10px;">View Portfolio</a>
+                    <a href="{{ investment_url }}" style="display: inline-block; padding: 14px 32px; background-color: #ffffff; color: #3B82F6; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; border: 2px solid #3B82F6;">Invest Again</a>
+                </div>
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">Best regards,<br><strong>PayCore Investment Team</strong></p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

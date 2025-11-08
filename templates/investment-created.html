@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Investment Created Successfully</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <tr>
+            <td style="padding: 40px 30px; background-color: #10B981; color: #ffffff; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">💰</div>
+                <h1 style="margin: 0; font-size: 24px;">Investment Created Successfully!</h1>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ user_name }},</p>
+                <p>Your investment in <strong>{{ product_name }}</strong> has been created successfully.</p>
+                <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #10B981;">Investment Details</h2>
+                    <table width="100%" style="border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Product:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ product_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Investment Type:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ product_type }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Principal Amount:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: bold; font-size: 18px; color: #10B981; border-bottom: 1px solid #e5e7eb;">{{ currency_symbol }}{{ principal_amount }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Interest Rate:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #10B981; border-bottom: 1px solid #e5e7eb;">{{ interest_rate }}% per annum</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Duration:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ duration_days }} days</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Start Date:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ start_date }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Maturity Date:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ maturity_date }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666;">Expected Returns:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: bold; font-size: 16px; color: #10B981;">{{ currency_symbol }}{{ expected_returns }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #1E40AF;">
+                        <strong>Total Expected Value at Maturity:</strong><br>
+                        {{ currency_symbol }}{{ total_value_at_maturity }} (Principal + Returns)
+                    </p>
+                </div>
+                {% if payout_frequency %}
+                <div style="background-color: #F0FDF4; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #065F46;">
+                        <strong>Interest Payout:</strong> {{ payout_frequency }}<br>
+                        {% if payout_frequency == "At Maturity" %}
+                        All returns will be paid out when the investment matures.
+                        {% else %}
+                        You will receive periodic returns {{ payout_frequency|lower }}.
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ investment_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Investment</a>
+                </div>
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">Best regards,<br><strong>PayCore Investment Team</strong></p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
