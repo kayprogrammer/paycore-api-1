@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>KYC Verification - Action Required</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <!-- Warning Header -->
+        <tr>
+            <td style="padding: 40px 30px; background-color: #EF4444; color: #ffffff; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">⚠</div>
+                <h1 style="margin: 0; font-size: 24px;">KYC Verification - Action Required</h1>
+                <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Additional information needed</p>
+            </td>
+        </tr>
+
+        <!-- Main Content -->
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ user_name }},</p>
+                <p>We've reviewed your KYC (Know Your Customer) verification submission and require additional information or clarification.</p>
+
+                <!-- Review Details -->
+                <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #EF4444;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #EF4444;">Review Details</h2>
+
+                    <table width="100%" style="border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Verification Status:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #EF4444; border-bottom: 1px solid #e5e7eb;">Action Required</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Reviewed Date:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ reviewed_date }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666;">Reference Number:</td>
+                            <td style="padding: 10px 0; text-align: right; font-family: monospace;">{{ reference_number }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Reason for Rejection -->
+                <div style="background-color: #FEF2F2; border-left: 4px solid #EF4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #991B1B; font-weight: bold;">
+                        Reason for Review:
+                    </p>
+                    <p style="margin: 0; font-size: 14px; color: #991B1B;">
+                        {{ rejection_reason }}
+                    </p>
+                </div>
+
+                <!-- What to Do Next -->
+                <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #1E40AF;">
+                        <strong>What You Need to Do:</strong><br>
+                        Please log in to your account and resubmit your verification documents addressing the issues mentioned above. Ensure all documents are:
+                    </p>
+                    <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1E40AF; font-size: 14px;">
+                        <li>Clear and readable</li>
+                        <li>Valid and not expired</li>
+                        <li>Complete with all required information visible</li>
+                        <li>In an accepted format (JPG, PNG, or PDF)</li>
+                    </ul>
+                </div>
+
+                {% if missing_documents %}
+                <div style="margin: 20px 0;">
+                    <h3 style="font-size: 16px; color: #333; margin-bottom: 10px;">Required Documents:</h3>
+                    <ul style="margin: 0; padding-left: 20px; color: #666; font-size: 14px;">
+                        {% for document in missing_documents %}
+                        <li>{{ document }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                    We're here to help! If you have any questions about the verification process, please don't hesitate to contact our support team.
+                </p>
+
+                <!-- Action Button -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ resubmit_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Resubmit Verification</a>
+                </div>
+
+                <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 14px; color: #666;">
+                    Thank you for your patience and cooperation.
+                </p>
+
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">
+                    Best regards,<br>
+                    <strong>PayCore Compliance Team</strong>
+                </p>
+            </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">This is an automated notification from PayCore.</p>
+                <p style="margin: 10px 0 0 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+                <p style="margin: 10px 0 0 0;">
+                    <a href="{{ terms_url }}" style="color: #3B82F6; text-decoration: none;">Terms of Service</a> |
+                    <a href="{{ privacy_url }}" style="color: #3B82F6; text-decoration: none;">Privacy Policy</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

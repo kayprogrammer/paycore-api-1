@@ -25,7 +25,7 @@ class PaymentEmailTasks:
         """Send invoice notification email to customer"""
         try:
             invoice = Invoice.objects.select_related(
-                'user', 'wallet', 'wallet__currency'
+                "user", "wallet", "wallet__currency"
             ).get_or_none(invoice_id=invoice_id)
 
             if not invoice:
@@ -51,11 +51,11 @@ class PaymentEmailTasks:
         """Send payment confirmation email to payer"""
         try:
             payment = Payment.objects.select_related(
-                'payer_wallet',
-                'payer_wallet__currency',
-                'merchant_user',
-                'payment_link',
-                'invoice'
+                "payer_wallet",
+                "payer_wallet__currency",
+                "merchant_user",
+                "payment_link",
+                "invoice",
             ).get_or_none(payment_id=payment_id)
 
             if not payment:
@@ -63,7 +63,9 @@ class PaymentEmailTasks:
                 return {"status": "failed", "error": "Payment not found"}
 
             PaymentEmailUtil.send_payment_confirmation_email(payment)
-            logger.info(f"Payment confirmation email sent for payment {payment.reference}")
+            logger.info(
+                f"Payment confirmation email sent for payment {payment.reference}"
+            )
             return {"status": "success", "reference": payment.reference}
         except Exception as exc:
             logger.error(f"Payment confirmation email failed: {str(exc)}")
@@ -81,11 +83,11 @@ class PaymentEmailTasks:
         """Send payment received notification email to merchant"""
         try:
             payment = Payment.objects.select_related(
-                'merchant_wallet',
-                'merchant_wallet__currency',
-                'merchant_user',
-                'payment_link',
-                'invoice'
+                "merchant_wallet",
+                "merchant_wallet__currency",
+                "merchant_user",
+                "payment_link",
+                "invoice",
             ).get_or_none(payment_id=payment_id)
 
             if not payment:
@@ -93,7 +95,9 @@ class PaymentEmailTasks:
                 return {"status": "failed", "error": "Payment not found"}
 
             PaymentEmailUtil.send_payment_received_email(payment)
-            logger.info(f"Payment received email sent to merchant for payment {payment.reference}")
+            logger.info(
+                f"Payment received email sent to merchant for payment {payment.reference}"
+            )
             return {"status": "success", "reference": payment.reference}
         except Exception as exc:
             logger.error(f"Payment received email failed: {str(exc)}")
@@ -102,5 +106,7 @@ class PaymentEmailTasks:
 
 # Expose task functions for imports
 send_invoice_email_async = PaymentEmailTasks.send_invoice_email
-send_payment_confirmation_email_async = PaymentEmailTasks.send_payment_confirmation_email
+send_payment_confirmation_email_async = (
+    PaymentEmailTasks.send_payment_confirmation_email
+)
 send_payment_received_email_async = PaymentEmailTasks.send_payment_received_email

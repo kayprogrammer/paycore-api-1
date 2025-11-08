@@ -4,6 +4,7 @@ from asgiref.sync import async_to_sync
 
 from apps.transactions.models import Transaction, TransactionStatus
 from apps.transactions.services.deposit_manager import DepositManager
+from apps.transactions.emails import TransferEmailUtil
 
 logger = logging.getLogger(__name__)
 
@@ -114,3 +115,49 @@ class WithdrawalTasks:
                 f"Withdrawal processing task failed for {transaction_id}: {str(exc)}"
             )
             raise self.retry(exc=exc)
+
+
+# ==================== TRANSFER EMAIL TASKS ====================
+
+
+class TransferEmailTasks:
+    """Email tasks for transfer-related notifications"""
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="transactions.send_transfer_success_email",
+        queue="emails",
+    )
+    def send_transfer_success_email(self, transaction_id: str):
+        """Send transfer confirmation email"""
+        try:
+            transaction = Transaction.objects.select_related(
+                "from_user",
+                "to_user",
+                "from_wallet",
+                "from_wallet__currency",
+                "to_wallet",
+            ).get_or_none(transaction_id=transaction_id)
+
+            if not transaction:
+                logger.error(f"Transaction {transaction_id} not found")
+                return {"status": "failed", "error": "Transaction not found"}
+
+            TransferEmailUtil.send_transfer_success_email(transaction)
+            logger.info(
+                f"Transfer email sent for transaction {transaction.transaction_id}"
+            )
+            return {
+                "status": "success",
+                "transaction_id": str(transaction.transaction_id),
+            }
+        except Exception as exc:
+            logger.error(f"Transfer email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+
+# Expose email task functions for imports
+send_transfer_success_email_async = TransferEmailTasks.send_transfer_success_email

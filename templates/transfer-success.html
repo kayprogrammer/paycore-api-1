@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Transfer Successful</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <tr>
+            <td style="padding: 40px 30px; background-color: #10B981; color: #ffffff; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">→</div>
+                <h1 style="margin: 0; font-size: 24px;">Transfer Successful!</h1>
+                <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">{{ reference }}</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ user_name }},</p>
+                <p>Your transfer has been processed successfully.</p>
+                <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #10B981;">Transfer Details</h2>
+                    <table width="100%" style="border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Reference:</td>
+                            <td style="padding: 10px 0; text-align: right; font-family: monospace; border-bottom: 1px solid #e5e7eb;">{{ reference }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Recipient:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ recipient_name }}</td>
+                        </tr>
+                        {% if recipient_account %}
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Account:</td>
+                            <td style="padding: 10px 0; text-align: right; font-family: monospace; border-bottom: 1px solid #e5e7eb;">{{ recipient_account }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Amount:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: bold; font-size: 18px; color: #10B981; border-bottom: 1px solid #e5e7eb;">{{ currency_symbol }}{{ amount }}</td>
+                        </tr>
+                        {% if fee_amount %}
+                        <tr>
+                            <td style="padding: 5px 0; color: #999; font-size: 14px;">Transfer Fee:</td>
+                            <td style="padding: 5px 0; text-align: right; font-size: 14px; color: #999;">{{ currency_symbol }}{{ fee_amount }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td style="padding: 10px 0; color: #666;">Date & Time:</td>
+                            <td style="padding: 10px 0; text-align: right;">{{ transfer_date }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #1E40AF;">
+                        <strong>Your New Balance:</strong> {{ currency_symbol }}{{ new_balance }}
+                    </p>
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ transaction_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Transaction</a>
+                </div>
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">Best regards,<br><strong>PayCore Team</strong></p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

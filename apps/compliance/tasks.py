@@ -19,6 +19,7 @@ from decimal import Decimal
 from apps.transactions.models import Transaction
 from django.utils import timezone
 from asgiref.sync import async_to_sync
+from apps.compliance.emails import KYCEmailUtil
 
 logger = logging.getLogger(__name__)
 
@@ -447,3 +448,102 @@ def rescan_sanctions():
     except Exception as e:
         logger.error(f"Weekly sanctions rescan failed: {str(e)}")
         return {"status": "failed", "error": str(e)}
+
+
+# ==================== KYC EMAIL TASKS ====================
+
+
+class KYCEmailTasks:
+    """Email tasks for KYC-related notifications"""
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="compliance.send_kyc_approved_email",
+        queue="emails",
+    )
+    def send_kyc_approved_email(self, kyc_verification_id: str):
+        """Send KYC approval notification email"""
+        try:
+            kyc_verification = KYCVerification.objects.select_related(
+                "user"
+            ).get_or_none(kyc_id=kyc_verification_id)
+
+            if not kyc_verification:
+                logger.error(f"KYC Verification {kyc_verification_id} not found")
+                return {"status": "failed", "error": "KYC Verification not found"}
+
+            KYCEmailUtil.send_kyc_approved_email(kyc_verification)
+            logger.info(
+                f"KYC approval email sent for user {kyc_verification.user.email}"
+            )
+            return {"status": "success", "reference": kyc_verification.reference_number}
+        except Exception as exc:
+            logger.error(f"KYC approval email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="compliance.send_kyc_pending_email",
+        queue="emails",
+    )
+    def send_kyc_pending_email(self, kyc_verification_id: str):
+        """Send KYC pending review notification email"""
+        try:
+            kyc_verification = (
+                KYCVerification.objects.select_related("user")
+                .prefetch_related("documents")
+                .get_or_none(kyc_id=kyc_verification_id)
+            )
+
+            if not kyc_verification:
+                logger.error(f"KYC Verification {kyc_verification_id} not found")
+                return {"status": "failed", "error": "KYC Verification not found"}
+
+            KYCEmailUtil.send_kyc_pending_email(kyc_verification)
+            logger.info(
+                f"KYC pending email sent for user {kyc_verification.user.email}"
+            )
+            return {"status": "success", "reference": kyc_verification.reference_number}
+        except Exception as exc:
+            logger.error(f"KYC pending email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="compliance.send_kyc_rejected_email",
+        queue="emails",
+    )
+    def send_kyc_rejected_email(self, kyc_verification_id: str):
+        """Send KYC rejection/action required notification email"""
+        try:
+            kyc_verification = KYCVerification.objects.select_related(
+                "user"
+            ).get_or_none(kyc_id=kyc_verification_id)
+
+            if not kyc_verification:
+                logger.error(f"KYC Verification {kyc_verification_id} not found")
+                return {"status": "failed", "error": "KYC Verification not found"}
+
+            KYCEmailUtil.send_kyc_rejected_email(kyc_verification)
+            logger.info(
+                f"KYC rejection email sent for user {kyc_verification.user.email}"
+            )
+            return {"status": "success", "reference": kyc_verification.reference_number}
+        except Exception as exc:
+            logger.error(f"KYC rejection email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+
+# Expose email task functions for imports
+send_kyc_approved_email_async = KYCEmailTasks.send_kyc_approved_email
+send_kyc_pending_email_async = KYCEmailTasks.send_kyc_pending_email
+send_kyc_rejected_email_async = KYCEmailTasks.send_kyc_rejected_email

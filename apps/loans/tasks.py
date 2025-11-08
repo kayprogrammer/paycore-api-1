@@ -3,7 +3,6 @@ from celery import shared_task
 from django.utils import timezone
 from django.db import transaction as db_transaction
 from datetime import timedelta
-from decimal import Decimal
 from asgiref.sync import async_to_sync
 from django.conf import settings
 from apps.loans.models import (
@@ -11,7 +10,6 @@ from apps.loans.models import (
     LoanRepaymentSchedule,
     RepaymentStatus,
     AutoRepaymentStatus,
-    CreditScore,
     LoanStatus,
     LoanApplication,
 )
@@ -19,8 +17,8 @@ from apps.loans.services.loan_processor import LoanProcessor
 from apps.loans.services.loan_manager import LoanManager
 from apps.loans.schemas import MakeLoanRepaymentSchema, ApproveLoanSchema
 from apps.accounts.models import User
-from django.db.models import Count, F, Window
-from django.db.models.functions import RowNumber
+from apps.loans.emails import LoanEmailUtil
+from apps.loans.models import LoanApplication
 
 logger = logging.getLogger(__name__)
 
@@ -567,6 +565,95 @@ class LoanMaintenanceTasks:
             return {"status": "failed", "error": str(e)}
 
 
+# ==================== LOAN EMAIL TASKS ====================
+
+
+class LoanEmailTasks:
+    """Email tasks for loan-related notifications"""
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="loans.send_loan_approved_email",
+        queue="emails",
+    )
+    def send_loan_approved_email(self, loan_id: str):
+        """Send loan approval notification email"""
+        try:
+            loan = LoanApplication.objects.select_related(
+                "user", "wallet", "wallet__currency"
+            ).get_or_none(application_id=loan_id)
+
+            if not loan:
+                logger.error(f"Loan {loan_id} not found")
+                return {"status": "failed", "error": "Loan not found"}
+
+            LoanEmailUtil.send_loan_approved_email(loan)
+            logger.info(f"Loan approval email sent for loan {loan.reference_number}")
+            return {"status": "success", "reference": loan.reference_number}
+        except Exception as exc:
+            logger.error(f"Loan approval email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="loans.send_loan_disbursed_email",
+        queue="emails",
+    )
+    def send_loan_disbursed_email(self, loan_id: str):
+        """Send loan disbursement notification email"""
+        try:
+            loan = LoanApplication.objects.select_related(
+                "user", "wallet", "wallet__currency"
+            ).get_or_none(application_id=loan_id)
+
+            if not loan:
+                logger.error(f"Loan {loan_id} not found")
+                return {"status": "failed", "error": "Loan not found"}
+
+            LoanEmailUtil.send_loan_disbursed_email(loan)
+            logger.info(
+                f"Loan disbursement email sent for loan {loan.reference_number}"
+            )
+            return {"status": "success", "reference": loan.reference_number}
+        except Exception as exc:
+            logger.error(f"Loan disbursement email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="loans.send_loan_repayment_email",
+        queue="emails",
+    )
+    def send_loan_repayment_email(self, repayment_id: str):
+        """Send loan repayment confirmation email"""
+        try:
+            repayment = LoanRepayment.objects.select_related(
+                "loan", "loan__user", "loan__wallet", "loan__wallet__currency"
+            ).get_or_none(repayment_id=repayment_id)
+
+            if not repayment:
+                logger.error(f"Loan Repayment {repayment_id} not found")
+                return {"status": "failed", "error": "Loan Repayment not found"}
+
+            LoanEmailUtil.send_loan_repayment_email(repayment)
+            logger.info(
+                f"Loan repayment email sent for repayment {repayment.reference_number}"
+            )
+            return {"status": "success", "reference": repayment.reference_number}
+        except Exception as exc:
+            logger.error(f"Loan repayment email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
+
 # Expose task functions for imports
 auto_approve_loan = LoanApprovalTasks.auto_approve_loan
 auto_disburse_loan = LoanApprovalTasks.auto_disburse_loan
@@ -575,3 +662,6 @@ retry_failed_auto_repayment = AutoRepaymentTasks.retry_failed_auto_repayment
 send_auto_repayment_notification = AutoRepaymentTasks.send_auto_repayment_notification
 update_overdue_schedules = LoanMaintenanceTasks.update_overdue_schedules
 cleanup_old_credit_scores = LoanMaintenanceTasks.cleanup_old_credit_scores
+send_loan_approved_email_async = LoanEmailTasks.send_loan_approved_email
+send_loan_disbursed_email_async = LoanEmailTasks.send_loan_disbursed_email
+send_loan_repayment_email_async = LoanEmailTasks.send_loan_repayment_email

@@ -191,7 +191,54 @@ class InvestmentTasks:
             return {"status": "failed", "error": str(e)}
 
 
+# ==================== INVESTMENT EMAIL TASKS ====================
+
+
+class InvestmentEmailTasks:
+    """Email tasks for investment-related notifications"""
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="investments.send_investment_created_email",
+        queue="emails",
+    )
+    def send_investment_created_email(self, investment_id: str):
+        """Send investment creation confirmation email"""
+        # To be implemented when investment features are defined
+        logger.info(
+            f"Investment created email task placeholder for investment {investment_id}"
+        )
+        return {
+            "status": "pending",
+            "message": "Investment email tasks not yet implemented",
+        }
+
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="investments.send_investment_matured_email",
+        queue="emails",
+    )
+    def send_investment_matured_email(self, investment_id: str):
+        """Send investment maturity notification email"""
+        # To be implemented when investment features are defined
+        logger.info(
+            f"Investment matured email task placeholder for investment {investment_id}"
+        )
+        return {
+            "status": "pending",
+            "message": "Investment email tasks not yet implemented",
+        }
+
+
 # Expose task functions for imports
 process_matured_investments = InvestmentTasks.process_matured_investments
 process_periodic_returns = InvestmentTasks.process_periodic_returns
 update_portfolios = InvestmentTasks.update_portfolios
+send_investment_created_email_async = InvestmentEmailTasks.send_investment_created_email
+send_investment_matured_email_async = InvestmentEmailTasks.send_investment_matured_email

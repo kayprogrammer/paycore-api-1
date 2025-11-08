@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bill Payment Successful</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <!-- Success Header -->
+        <tr>
+            <td style="padding: 40px 30px; background-color: #10B981; color: #ffffff; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
+                <h1 style="margin: 0; font-size: 24px;">Bill Payment Successful!</h1>
+                <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">{{ reference }}</p>
+            </td>
+        </tr>
+
+        <!-- Main Content -->
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ user_name }},</p>
+                <p>Your bill payment has been processed successfully.</p>
+
+                <!-- Payment Summary -->
+                <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #10B981;">Payment Details</h2>
+
+                    <table width="100%" style="border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Biller:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ biller_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Bill Type:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ bill_type }}</td>
+                        </tr>
+                        {% if account_number %}
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Account Number:</td>
+                            <td style="padding: 10px 0; text-align: right; font-family: monospace; border-bottom: 1px solid #e5e7eb;">{{ account_number }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Payment Reference:</td>
+                            <td style="padding: 10px 0; text-align: right; font-family: monospace; border-bottom: 1px solid #e5e7eb;">{{ reference }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Payment Date:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ payment_date }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px 0 5px 0; color: #666;">Amount Paid:</td>
+                            <td style="padding: 15px 0 5px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10B981;">{{ currency_symbol }}{{ amount }}</td>
+                        </tr>
+                        {% if fee_amount %}
+                        <tr>
+                            <td style="padding: 5px 0; color: #999; font-size: 14px;">Service Fee:</td>
+                            <td style="padding: 5px 0; text-align: right; font-size: 14px; color: #999;">{{ currency_symbol }}{{ fee_amount }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+
+                <!-- Wallet Balance Info -->
+                <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #1E40AF;">
+                        <strong>Your New Wallet Balance:</strong><br>
+                        {{ currency_symbol }}{{ new_balance }}
+                    </p>
+                </div>
+
+                <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                    The payment has been sent to {{ biller_name }}. You should receive confirmation from them shortly.
+                </p>
+
+                <!-- Action Button -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ transaction_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Transaction</a>
+                </div>
+
+                <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 14px; color: #666;">
+                    If you have any questions about this payment, please contact our support team.
+                </p>
+
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">
+                    Best regards,<br>
+                    <strong>PayCore Team</strong>
+                </p>
+            </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">This is an automated payment confirmation from PayCore.</p>
+                <p style="margin: 10px 0 0 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+                <p style="margin: 10px 0 0 0;">
+                    <a href="{{ terms_url }}" style="color: #3B82F6; text-decoration: none;">Terms of Service</a> |
+                    <a href="{{ privacy_url }}" style="color: #3B82F6; text-decoration: none;">Privacy Policy</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>KYC Verification Approved</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <!-- Success Header -->
+        <tr>
+            <td style="padding: 40px 30px; background-color: #10B981; color: #ffffff; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
+                <h1 style="margin: 0; font-size: 24px;">KYC Verification Approved!</h1>
+                <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Your account is now fully verified</p>
+            </td>
+        </tr>
+
+        <!-- Main Content -->
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ user_name }},</p>
+                <p>Congratulations! Your KYC (Know Your Customer) verification has been approved.</p>
+
+                <!-- Verification Details -->
+                <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #10B981;">Verification Details</h2>
+
+                    <table width="100%" style="border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Verification Status:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #10B981; border-bottom: 1px solid #e5e7eb;">Approved</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Verification Level:</td>
+                            <td style="padding: 10px 0; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">{{ verification_level }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; color: #666; border-bottom: 1px solid #e5e7eb;">Approved Date:</td>
+                            <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">{{ approved_date }}</td>
+                        </tr>
+                        {% if verified_by %}
+                        <tr>
+                            <td style="padding: 10px 0; color: #666;">Verified By:</td>
+                            <td style="padding: 10px 0; text-align: right;">{{ verified_by }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+
+                <!-- Benefits Info -->
+                <div style="background-color: #EFF6FF; border-left: 4px solid: #3B82F6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #1E40AF;">
+                        <strong>What's Next?</strong><br>
+                        With your verified account, you can now enjoy:
+                    </p>
+                    <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1E40AF; font-size: 14px;">
+                        <li>Higher transaction limits</li>
+                        <li>Access to all platform features</li>
+                        <li>Enhanced security and trust</li>
+                        <li>Priority customer support</li>
+                    </ul>
+                </div>
+
+                <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                    Thank you for completing your verification. Your account security and compliance are our top priorities.
+                </p>
+
+                <!-- Action Button -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ dashboard_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Go to Dashboard</a>
+                </div>
+
+                <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 14px; color: #666;">
+                    If you have any questions, please contact our support team.
+                </p>
+
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">
+                    Best regards,<br>
+                    <strong>PayCore Team</strong>
+                </p>
+            </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">This is an automated notification from PayCore.</p>
+                <p style="margin: 10px 0 0 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+                <p style="margin: 10px 0 0 0;">
+                    <a href="{{ terms_url }}" style="color: #3B82F6; text-decoration: none;">Terms of Service</a> |
+                    <a href="{{ privacy_url }}" style="color: #3B82F6; text-decoration: none;">Privacy Policy</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

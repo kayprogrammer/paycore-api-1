@@ -22,9 +22,7 @@ class Command(BaseCommand):
         active_count = Currency.objects.filter(is_active=True).count()
         crypto_count = Currency.objects.filter(is_crypto=True).count()
 
-        self.stdout.write(
-            self.style.SUCCESS(f"\n✅ Successfully seeded currencies!")
-        )
+        self.stdout.write(self.style.SUCCESS(f"\n✅ Successfully seeded currencies!"))
         self.stdout.write(self.style.SUCCESS(f"   Total Currencies: {currency_count}"))
         self.stdout.write(self.style.SUCCESS(f"   Active: {active_count}"))
         self.stdout.write(self.style.SUCCESS(f"   Cryptocurrencies: {crypto_count}"))
@@ -137,7 +135,9 @@ class Command(BaseCommand):
                 "decimal_places": 8,
                 "is_crypto": True,
                 "is_active": True,
-                "exchange_rate_usd": Decimal("0.000023"),  # 1 USD ≈ 0.000023 BTC (approx)
+                "exchange_rate_usd": Decimal(
+                    "0.000023"
+                ),  # 1 USD ≈ 0.000023 BTC (approx)
             },
             {
                 "code": "ETH",
