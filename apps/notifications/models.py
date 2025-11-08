@@ -8,10 +8,13 @@ User = get_user_model()
 
 class NotificationType(models.TextChoices):
     PAYMENT = "payment", "Payment"
+    TRANSFER = "transfer", "Transfer"
     LOAN = "loan", "Loan"
+    INVESTMENT = "investment", "Investment"
     CARD = "card", "Card"
     KYC = "kyc", "KYC/Compliance"
     BILL = "bill", "Bill Payment"
+    WALLET = "wallet", "Wallet"
     ACCOUNT = "account", "Account"
     SECURITY = "security", "Security"
     PROMOTION = "promotion", "Promotion"
