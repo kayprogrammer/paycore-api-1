@@ -4,7 +4,7 @@ set -e
 # Check which process group we're running
 if [ "$FLY_PROCESS_GROUP" = "celery" ]; then
   echo "Starting Celery Worker..."
-  exec celery -A paycore worker --loglevel=info --concurrency=1 --max-tasks-per-child=100
+  exec celery -A paycore worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 --prefetch-multiplier=4
 else
   echo "Running migrations..."
   python manage.py migrate --noinput

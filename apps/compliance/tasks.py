@@ -40,8 +40,8 @@ class KYCTasks:
     )
     def auto_approve_kyc(self, kyc_id: str):
         """
-        Auto-approve KYC after 15 seconds for internal provider
-        This simulates processing time for demo/testing purposes
+        Auto-approve KYC instantly for internal provider
+        This simulates instant processing for demo/testing purposes
         """
         try:
             # Get KYC to check status

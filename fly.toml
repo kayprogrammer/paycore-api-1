@@ -16,7 +16,7 @@ console_command = '/app/manage.py shell'
 
 [processes]
   app = ''
-  celery = 'celery -A paycore worker --loglevel=info --concurrency=1 --max-tasks-per-child=100'
+  celery = 'celery -A paycore worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 --prefetch-multiplier=4'
 
 [http_service]
   internal_port = 8000
@@ -42,7 +42,7 @@ console_command = '/app/manage.py shell'
   processes = ['app']
 
 [[vm]]
-  memory = '256mb'
+  memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
   processes = ['celery']
