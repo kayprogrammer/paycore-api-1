@@ -74,11 +74,16 @@ def cacheable(
                     try:
                         if operation.auth_callbacks:
                             for auth_callback in operation.auth_callbacks:
-                                auth_result = await auth_callback(request)
-                                if auth_result:
-                                    user_id = str(auth_result.id)
-                                    request.auth = auth_result
-                                    break
+                                try:
+                                    if callable(auth_callback):
+                                        auth_result = await auth_callback(request)
+                                        if auth_result:
+                                            user_id = str(auth_result.id)
+                                            request.auth = auth_result
+                                            break
+                                except TypeError:
+                                    # auth_callback is None or not awaitable, skip
+                                    pass
                         elif hasattr(request, "auth") and request.auth:
                             user_id = str(request.auth.id)
                     except RequestError as e:
@@ -161,11 +166,16 @@ def cacheable(
                     try:
                         if operation.auth_callbacks:
                             for auth_callback in operation.auth_callbacks:
-                                auth_result = auth_callback(request)
-                                if auth_result:
-                                    user_id = str(auth_result.id)
-                                    request.auth = auth_result
-                                    break
+                                try:
+                                    if callable(auth_callback):
+                                        auth_result = auth_callback(request)
+                                        if auth_result:
+                                            user_id = str(auth_result.id)
+                                            request.auth = auth_result
+                                            break
+                                except TypeError:
+                                    # auth_callback is None or not callable, skip
+                                    pass
                         elif hasattr(request, "auth") and request.auth:
                             user_id = str(request.auth.id)
                     except RequestError as e:

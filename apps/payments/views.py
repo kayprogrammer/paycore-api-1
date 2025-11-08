@@ -1,6 +1,7 @@
 from uuid import UUID
 from typing import Optional
 from ninja import Query, Router
+import logging
 
 from apps.accounts.auth import AuthKycUser
 from apps.common.exceptions import NotFoundError
@@ -24,8 +25,8 @@ from apps.payments.services.payment_link_manager import PaymentLinkManager
 from apps.payments.services.invoice_manager import InvoiceManager
 from apps.payments.services.payment_processor import PaymentProcessor
 from apps.payments.models import Payment, PaymentLinkStatus
-
-
+from .tasks import PaymentEmailTasks
+logger = logging.getLogger(__name__)
 payment_router = Router(tags=["Payments (16)"])
 
 
@@ -113,6 +114,7 @@ async def get_payment_link_public(request, slug: str):
     "/pay/{slug}",
     summary="Make payment via payment link",
     response={201: PaymentDataResponseSchema},
+    auth=AuthKycUser(),
 )
 async def pay_via_link(request, slug: str, data: MakePaymentSchema):
     payment = await PaymentProcessor.process_payment_link_payment(slug, data)
@@ -139,8 +141,16 @@ async def pay_via_link(request, slug: str, data: MakePaymentSchema):
     auth=AuthKycUser(),
 )
 async def create_invoice(request, data: CreateInvoiceSchema):
+
     user = request.auth
     invoice = await InvoiceManager.create_invoice(user, data)
+
+    # Send invoice email to customer asynchronously via Celery
+    try:
+        PaymentEmailTasks.send_invoice_email.delay(str(invoice.invoice_id))
+    except Exception as e:
+        logger.error(f"Failed to queue invoice email: {e}")
+
     invoice = await InvoiceManager.get_invoice(user, invoice.invoice_id)
     return CustomResponse.success("Invoice created successfully", invoice, 201)
 

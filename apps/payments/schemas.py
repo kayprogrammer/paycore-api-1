@@ -164,7 +164,7 @@ class InvoiceListResponseSchema(ResponseSchema):
 
 
 class MakePaymentSchema(BaseSchema):
-    wallet_id: UUID = Field(..., description="Payer's wallet")
+    wallet_id: UUID = Field(..., description="Payer's wallet ID")
     amount: Optional[Decimal] = Field(
         None, gt=0, example=5000.00, description="Amount (required if not fixed)"
     )

@@ -74,9 +74,9 @@ Django 5.2 + Django Ninja | PostgreSQL 16 | Redis | Celery + RabbitMQ | Promethe
     docs_url="/",
     throttle=[
         # Anonymous users: 5000 requests per minute
-        AnonRateThrottle("5000/m"),
+        AnonRateThrottle("10000/m"),
         # Authenticated users: 10000 requests per minute
-        AuthRateThrottle("10000/m"),
+        AuthRateThrottle("20000/m"),
     ],
 )
 

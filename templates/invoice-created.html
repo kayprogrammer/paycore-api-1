@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New Invoice from {{ merchant_name }}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+    <table align="center" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+        <tr>
+            <td style="padding: 30px; background-color: #3B82F6; color: #ffffff; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">PayCore Invoice</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Invoice #{{ invoice_number }}</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px; font-size: 16px; color: #333333;">
+                <p>Hello {{ customer_name }},</p>
+                <p>You have received a new invoice from <strong>{{ merchant_name }}</strong>.</p>
+
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h2 style="margin: 0 0 15px 0; font-size: 18px; color: #3B82F6;">{{ invoice_title }}</h2>
+                    {% if invoice_description %}
+                    <p style="margin: 0 0 15px 0; color: #666;">{{ invoice_description }}</p>
+                    {% endif %}
+
+                    <table width="100%" style="border-collapse: collapse; margin-top: 15px;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;">Invoice Number:</td>
+                            <td style="padding: 8px 0; text-align: right; font-weight: bold;">{{ invoice_number }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;">Issue Date:</td>
+                            <td style="padding: 8px 0; text-align: right;">{{ issue_date }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;">Due Date:</td>
+                            <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #dc3545;">{{ due_date }}</td>
+                        </tr>
+                        <tr style="border-top: 2px solid #dee2e6;">
+                            <td style="padding: 15px 0; font-size: 18px; font-weight: bold;">Total Amount:</td>
+                            <td style="padding: 15px 0; text-align: right; font-size: 20px; font-weight: bold; color: #3B82F6;">{{ currency_symbol }}{{ total_amount }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <p style="margin: 25px 0 15px 0;">You can view the full invoice details and make payment by clicking the button below:</p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{ invoice_url }}" style="display: inline-block; padding: 14px 32px; background-color: #3B82F6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Invoice & Pay</a>
+                </div>
+
+                {% if notes %}
+                <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #856404;"><strong>Note:</strong> {{ notes }}</p>
+                </div>
+                {% endif %}
+
+                <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 14px; color: #666;">
+                    If you have any questions about this invoice, please contact {{ merchant_name }}.
+                </p>
+
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">
+                    Best regards,<br>
+                    <strong>PayCore Team</strong>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 20px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #999;">
+                <p style="margin: 0;">This is an automated email from PayCore. Please do not reply to this email.</p>
+                <p style="margin: 10px 0 0 0;">&copy; {{ current_year }} PayCore. All rights reserved.</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -54,6 +54,7 @@ class PaymentProcessor:
                     "amount", f"Amount cannot exceed {link.max_amount}"
                 )
 
+        # Get payer wallet
         payer_wallet = await Wallet.objects.select_related(
             "currency", "user"
         ).aget_or_none(wallet_id=data.wallet_id)
@@ -114,8 +115,8 @@ class PaymentProcessor:
         # Create payment record
         payment = await Payment.objects.acreate(
             payment_link=link,
-            payer_name=data.payer_name,
-            payer_email=data.payer_email,
+            payer_name=data.payer_name or f"{payer_wallet.user.first_name} {payer_wallet.user.last_name}",
+            payer_email=data.payer_email or payer_wallet.user.email,
             payer_phone=data.payer_phone,
             payer_wallet=payer_wallet,
             merchant_user=link.user,
@@ -136,6 +137,17 @@ class PaymentProcessor:
         await link.asave(
             update_fields=["payments_count", "total_collected", "status", "updated_at"]
         )
+
+        # Send payment confirmation email asynchronously via Celery
+        try:
+            from apps.payments.tasks import send_payment_confirmation_email_async
+            send_payment_confirmation_email_async.delay(str(payment.payment_id))
+        except Exception as e:
+            # Log error but don't fail payment
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to queue payment confirmation email: {e}")
+
         return payment
 
     @staticmethod
@@ -230,4 +242,15 @@ class PaymentProcessor:
         )
 
         await InvoiceManager.mark_invoice_paid(invoice, amount)
+
+        # Send payment confirmation email asynchronously via Celery
+        try:
+            from apps.payments.tasks import send_payment_confirmation_email_async
+            send_payment_confirmation_email_async.delay(str(payment.payment_id))
+        except Exception as e:
+            # Log error but don't fail payment
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to queue payment confirmation email: {e}")
+
         return payment
