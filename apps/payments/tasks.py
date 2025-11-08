@@ -69,7 +69,38 @@ class PaymentEmailTasks:
             logger.error(f"Payment confirmation email failed: {str(exc)}")
             raise self.retry(exc=exc)
 
+    @staticmethod
+    @shared_task(
+        bind=True,
+        autoretry_for=(Exception,),
+        retry_kwargs={"max_retries": 3, "countdown": 60},
+        name="payments.send_payment_received_email",
+        queue="emails",
+    )
+    def send_payment_received_email(self, payment_id: str):
+        """Send payment received notification email to merchant"""
+        try:
+            payment = Payment.objects.select_related(
+                'merchant_wallet',
+                'merchant_wallet__currency',
+                'merchant_user',
+                'payment_link',
+                'invoice'
+            ).get_or_none(payment_id=payment_id)
+
+            if not payment:
+                logger.error(f"Payment {payment_id} not found")
+                return {"status": "failed", "error": "Payment not found"}
+
+            PaymentEmailUtil.send_payment_received_email(payment)
+            logger.info(f"Payment received email sent to merchant for payment {payment.reference}")
+            return {"status": "success", "reference": payment.reference}
+        except Exception as exc:
+            logger.error(f"Payment received email failed: {str(exc)}")
+            raise self.retry(exc=exc)
+
 
 # Expose task functions for imports
 send_invoice_email_async = PaymentEmailTasks.send_invoice_email
 send_payment_confirmation_email_async = PaymentEmailTasks.send_payment_confirmation_email
+send_payment_received_email_async = PaymentEmailTasks.send_payment_received_email

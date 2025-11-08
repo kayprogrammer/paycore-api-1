@@ -36,12 +36,55 @@
                             <td style="padding: 8px 0; color: #666;">Due Date:</td>
                             <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #dc3545;">{{ due_date }}</td>
                         </tr>
-                        <tr style="border-top: 2px solid #dee2e6;">
-                            <td style="padding: 15px 0; font-size: 18px; font-weight: bold;">Total Amount:</td>
-                            <td style="padding: 15px 0; text-align: right; font-size: 20px; font-weight: bold; color: #3B82F6;">{{ currency_symbol }}{{ total_amount }}</td>
-                        </tr>
                     </table>
                 </div>
+
+                <!-- Invoice Items -->
+                {% if items %}
+                <div style="margin: 25px 0;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #333;">Invoice Items</h3>
+                    <table width="100%" style="border-collapse: collapse; border: 1px solid #dee2e6;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa;">
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-size: 14px; color: #666;">Description</th>
+                                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6; font-size: 14px; color: #666;">Qty</th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6; font-size: 14px; color: #666;">Unit Price</th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6; font-size: 14px; color: #666;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; font-size: 14px;">{{ item.description }}</td>
+                                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; font-size: 14px;">{{ item.quantity }}</td>
+                                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6; font-size: 14px;">{{ currency_symbol }}{{ item.unit_price }}</td>
+                                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6; font-size: 14px; font-weight: 600;">{{ currency_symbol }}{{ item.amount }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr>
+                                <td colspan="3" style="padding: 12px; text-align: right; font-size: 14px; color: #666;">Subtotal:</td>
+                                <td style="padding: 12px; text-align: right; font-size: 14px; font-weight: 600;">{{ currency_symbol }}{{ subtotal }}</td>
+                            </tr>
+                            {% if tax_amount %}
+                            <tr>
+                                <td colspan="3" style="padding: 12px; text-align: right; font-size: 14px; color: #666;">Tax:</td>
+                                <td style="padding: 12px; text-align: right; font-size: 14px;">{{ currency_symbol }}{{ tax_amount }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if discount_amount %}
+                            <tr>
+                                <td colspan="3" style="padding: 12px; text-align: right; font-size: 14px; color: #666;">Discount:</td>
+                                <td style="padding: 12px; text-align: right; font-size: 14px; color: #10B981;">-{{ currency_symbol }}{{ discount_amount }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr style="background-color: #f8f9fa;">
+                                <td colspan="3" style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; border-top: 2px solid #3B82F6;">Total:</td>
+                                <td style="padding: 15px 12px; text-align: right; font-size: 20px; font-weight: bold; color: #3B82F6; border-top: 2px solid #3B82F6;">{{ currency_symbol }}{{ total_amount }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
 
                 <p style="margin: 25px 0 15px 0;">You can view the full invoice details and make payment by clicking the button below:</p>
 

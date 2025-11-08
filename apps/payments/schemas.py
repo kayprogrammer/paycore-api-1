@@ -138,10 +138,12 @@ class InvoiceItemResponseSchema(BaseSchema):
 
 class InvoiceSchema(ModelSchema):
     items: List[InvoiceItemResponseSchema]
+    currency: CurrencySchema = Field(..., alias="wallet.currency")
+    merchant_name: str = Field(..., alias="user.full_name")
 
     class Meta:
         model = Invoice
-        exclude = ["id", "updated_at", "deleted_at"]
+        exclude = ["id", "updated_at", "deleted_at", "wallet", "user"]
 
 
 class InvoiceDataResponseSchema(ResponseSchema):

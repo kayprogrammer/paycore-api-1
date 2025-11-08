@@ -27,7 +27,7 @@ from apps.payments.services.payment_processor import PaymentProcessor
 from apps.payments.models import Payment, PaymentLinkStatus
 from .tasks import PaymentEmailTasks
 logger = logging.getLogger(__name__)
-payment_router = Router(tags=["Payments (16)"])
+payment_router = Router(tags=["Payments (18)"])
 
 
 # ==================== PAYMENT LINKS ====================
@@ -132,6 +132,40 @@ async def pay_via_link(request, slug: str, data: MakePaymentSchema):
 
 
 # ==================== INVOICES ====================
+
+
+@payment_router.get(
+    "/invoices/public/{invoice_number}",
+    summary="Get invoice by invoice number (public)",
+    response={200: InvoiceDataResponseSchema},
+    auth=None,
+)
+async def get_invoice_public(request, invoice_number: str):
+    """Public endpoint to view invoice details"""
+    invoice = await InvoiceManager.get_invoice_by_number(invoice_number)
+    return CustomResponse.success("Invoice retrieved successfully", invoice)
+
+
+@payment_router.post(
+    "/invoices/pay/{invoice_number}",
+    summary="Pay invoice by invoice number",
+    response={201: PaymentDataResponseSchema},
+    auth=AuthKycUser(),
+)
+async def pay_invoice(request, invoice_number: str, data: MakePaymentSchema):
+    """Pay an invoice"""
+    payment = await PaymentProcessor.process_invoice_payment(invoice_number, data)
+
+    payment = await Payment.objects.select_related(
+        "invoice",
+        "payer_wallet",
+        "payer_wallet__currency",
+        "merchant_wallet",
+        "merchant_user",
+        "merchant_wallet__currency",
+        "transaction",
+    ).aget_or_none(payment_id=payment.payment_id)
+    return CustomResponse.success("Payment completed successfully", payment, 201)
 
 
 @payment_router.post(

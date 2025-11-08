@@ -16,7 +16,12 @@ from apps.common.exceptions import (
 from apps.payments.schemas import MakePaymentSchema
 from apps.payments.services.payment_link_manager import PaymentLinkManager
 from apps.payments.services.invoice_manager import InvoiceManager
+from apps.payments.tasks import PaymentEmailTasks
+from apps.notifications.services.base import NotificationService
+from apps.notifications.models import NotificationType, NotificationPriority
+import logging
 
+logger = logging.getLogger(__name__)
 
 class PaymentProcessor:
     """Service for processing payments"""
@@ -140,13 +145,37 @@ class PaymentProcessor:
 
         # Send payment confirmation email asynchronously via Celery
         try:
-            from apps.payments.tasks import send_payment_confirmation_email_async
-            send_payment_confirmation_email_async.delay(str(payment.payment_id))
+            PaymentEmailTasks.send_payment_confirmation_email.delay(str(payment.payment_id))
         except Exception as e:
             # Log error but don't fail payment
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to queue payment confirmation email: {e}")
+
+        # Send payment received email to merchant asynchronously via Celery
+        try:
+            PaymentEmailTasks.send_payment_received_email.delay(str(payment.payment_id))
+        except Exception as e:
+            # Log error but don't fail payment
+            logger.error(f"Failed to queue payment received email: {e}")
+
+        # Create in-app notification for merchant
+        try:
+            NotificationService.create_notification(
+                user=link.user,
+                title="Payment Received!",
+                message=f"You received a payment of {merchant_wallet.currency.symbol}{net_amount:,.2f} for {link.title}",
+                notification_type=NotificationType.PAYMENT,
+                priority=NotificationPriority.HIGH,
+                related_object_type="Payment",
+                related_object_id=str(payment.payment_id),
+                action_url=f"/transactions",
+                action_data={
+                    "payment_id": str(payment.payment_id),
+                    "reference": payment.reference,
+                },
+            )
+        except Exception as e:
+            # Log error but don't fail payment
+            logger.error(f"Failed to create merchant notification: {e}")
 
         return payment
 
@@ -245,12 +274,37 @@ class PaymentProcessor:
 
         # Send payment confirmation email asynchronously via Celery
         try:
-            from apps.payments.tasks import send_payment_confirmation_email_async
-            send_payment_confirmation_email_async.delay(str(payment.payment_id))
+            PaymentEmailTasks.send_payment_confirmation_email.delay(str(payment.payment_id))
         except Exception as e:
             # Log error but don't fail payment
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to queue payment confirmation email: {e}")
+
+        # Send payment received email to merchant asynchronously via Celery
+        try:
+            PaymentEmailTasks.send_payment_received_email.delay(str(payment.payment_id))
+        except Exception as e:
+            # Log error but don't fail payment
+            logger.error(f"Failed to queue payment received email: {e}")
+
+        # Create in-app notification for merchant
+        try:
+            NotificationService.create_notification(
+                user=invoice.user,
+                title="Invoice Payment Received!",
+                message=f"You received a payment of {merchant_wallet.currency.symbol}{net_amount:,.2f} for Invoice {invoice.invoice_number}",
+                notification_type=NotificationType.PAYMENT,
+                priority=NotificationPriority.HIGH,
+                related_object_type="Payment",
+                related_object_id=str(payment.payment_id),
+                action_url=f"/transactions",
+                action_data={
+                    "payment_id": str(payment.payment_id),
+                    "reference": payment.reference,
+                    "invoice_number": invoice.invoice_number,
+                },
+            )
+        except Exception as e:
+            # Log error but don't fail payment
+            logger.error(f"Failed to create merchant notification: {e}")
 
         return payment

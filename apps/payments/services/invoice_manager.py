@@ -71,7 +71,7 @@ class InvoiceManager:
     async def get_invoice(user: User, invoice_id: UUID) -> Invoice:
         invoice = (
             await Invoice.objects.select_related(
-                "wallet", "wallet__currency", "payment_link"
+                "user", "wallet", "wallet__currency", "payment_link"
             )
             .prefetch_related("items")
             .aget_or_none(invoice_id=invoice_id, user=user)
@@ -102,7 +102,7 @@ class InvoiceManager:
     ) -> List[Invoice]:
         queryset = (
             Invoice.objects.filter(user=user)
-            .select_related("wallet", "wallet__currency")
+            .select_related("user", "wallet", "wallet__currency")
             .prefetch_related("items")
         )
 
