@@ -293,7 +293,7 @@ class LoanManager:
     ) -> LoanApplication:
         """Approve a loan application (admin only)"""
         loan = await LoanApplication.objects.select_related(
-            "loan_product", "wallet", "wallet__currency"
+            "user", "loan_product", "loan_product__currency", "wallet", "wallet__currency"
         ).aget_or_none(application_id=application_id)
 
         if not loan:

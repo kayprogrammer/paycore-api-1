@@ -5,6 +5,7 @@ from asgiref.sync import async_to_sync
 from apps.transactions.models import Transaction, TransactionStatus
 from apps.transactions.services.deposit_manager import DepositManager
 from apps.transactions.emails import TransferEmailUtil
+from apps.notifications.tasks import NotificationTasks
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,25 @@ class DepositTasks:
                 f"Amount: {completed_transaction.amount}, "
                 f"Status: {completed_transaction.status}"
             )
+
+            # Send WebSocket notification to user
+            if completed_transaction.status == TransactionStatus.COMPLETED:
+                NotificationTasks.send_notification.delay(
+                    user_id=completed_transaction.to_user.id,
+                    title="Deposit Confirmed",
+                    message=f"Your deposit of {completed_transaction.to_wallet.currency.symbol}{completed_transaction.amount:,.2f} has been confirmed successfully.",
+                    notification_type="transaction",
+                    priority="high",
+                    related_object_type="transaction",
+                    related_object_id=str(completed_transaction.transaction_id),
+                    action_url="/transactions",
+                    send_push=False,
+                    send_realtime=True,
+                )
+                logger.info(
+                    f"Deposit confirmation notification sent to user {completed_transaction.to_user.id}"
+                )
+
             return {
                 "status": "success",
                 "transaction_id": transaction_id,

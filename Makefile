@@ -60,7 +60,7 @@ show-logs:
 	docker-compose logs -f
 
 run:
-	uvicorn paycore.asgi:application --reload
+	uvicorn paycore.asgi:application --host 0.0.0.0 --port 8000 --reload --ws wsproto
 
 mmig: # run with "make mmig" or "make mmig app='app'"
 	if [ -z "$(app)" ]; then \

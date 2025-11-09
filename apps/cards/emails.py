@@ -41,12 +41,12 @@ class CardEmailUtil:
                 "card_type": card.card_type.replace("_", " ").title(),
                 "card_brand": card.card_brand.title() if card.card_brand else "Card",
                 "masked_card_number": masked_number,
-                "cardholder_name": card.cardholder_name,
+                "cardholder_name": card.card_holder_name,
                 "expiry_date": (
-                    card.expiry_date.strftime("%m/%Y") if card.expiry_date else "N/A"
+                    f"{card.expiry_month:02d}/{card.expiry_year}" if card.expiry_month and card.expiry_year else "N/A"
                 ),
-                "issue_date": card.issued_at.strftime("%B %d, %Y"),
-                "is_virtual": card.is_virtual,
+                "issue_date": card.created_at.strftime("%B %d, %Y"),
+                "is_virtual": card.card_type == "virtual",
                 "is_active": card.status == "active",
                 "currency_name": card.wallet.currency.name if card.wallet else "N/A",
                 "card_url": card_url,

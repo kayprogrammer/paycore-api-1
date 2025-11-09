@@ -171,7 +171,7 @@ The Docker setup includes 10 services:
 
 | Service                   | Port        | Description                               |
 | ------------------------- | ----------- | ----------------------------------------- |
-| **web**             | 8000        | Django API (uvicorn with 4 workers)       |
+| **web**             | 8000        | Django API (uvicorn with WebSocket support) |
 | **db**              | 5432        | PostgreSQL 16 database                    |
 | **redis**           | 6379        | Redis cache and session store             |
 | **rabbitmq**        | 5672, 15672 | RabbitMQ message broker + management UI   |
@@ -272,7 +272,7 @@ make init
 You'll need multiple terminal windows:
 
 ```bash
-# Terminal 1: Django API
+# Terminal 1: Django API (with WebSocket support via wsproto)
 make run
 
 # Terminal 2: Celery worker (general tasks)

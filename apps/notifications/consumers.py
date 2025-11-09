@@ -1,8 +1,8 @@
-import json
-import logging
+import json, logging
+from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from apps.accounts.auth import Authentication
 from apps.notifications.models import Notification
 from django.utils import timezone
 
@@ -13,43 +13,25 @@ logger = logging.getLogger(__name__)
 class NotificationConsumer(AsyncWebsocketConsumer):
     """
     WebSocket consumer for real-time notifications
-
     Connection URL: ws://domain.com/ws/notifications/?token=<access_token>
-
-    Messages sent to client:
-    {
-        "type": "notification",
-        "notification": {
-            "notification_id": "...",
-            "title": "...",
-            "message": "...",
-            "notification_type": "payment",
-            "priority": "high",
-            ...
-        }
-    }
-
-    {
-        "type": "unread_count",
-        "count": 5
-    }
     """
 
     async def connect(self):
-        # Get user from scope (set by AuthMiddleware)
-        self.user = self.scope.get("user")
-
-        if not self.user or not self.user.is_authenticated:
+        query_string = self.scope.get("query_string", b"").decode()
+        query_params = parse_qs(query_string)
+        token = query_params.get("token", [None])[0]
+        user = await Authentication.retrieve_user_from_token(token)
+        if not user:
             logger.warning("Unauthorized WebSocket connection attempt")
             await self.close()
             return
-
-        self.user_group_name = f"user_{self.user.id}_notifications"
+        self.scope["user"] = self.user = user
+        self.user_group_name = f"user_{user.id}_notifications"
 
         # Join user's notification group
         await self.channel_layer.group_add(self.user_group_name, self.channel_name)
         await self.accept()
-        logger.info(f"WebSocket connected for user {self.user.id}")
+        logger.info(f"WebSocket connected for user {user.id}")
 
         # Send initial unread count
         unread_count = await self.get_unread_count()

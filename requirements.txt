@@ -24,6 +24,7 @@ constantly==23.10.4
 cron_descriptor==2.0.6
 cryptography==45.0.7
 daphne==4.0.0
+dj-database-url==3.0.1
 Django==5.2.6
 django-autoslug==1.9.9
 django-celery-beat==2.8.1
@@ -56,6 +57,7 @@ h2==4.3.0
 hiredis==3.3.0
 hpack==4.1.0
 httpcore==1.0.9
+httptools==0.7.1
 httpx==0.28.1
 humanize==4.13.0
 hyperframe==6.1.0
@@ -92,8 +94,9 @@ pytest-django==4.11.1
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-decouple==3.8
+python-dotenv==1.2.1
 pytz==2025.2
-dj-database-url==2.3.0
+PyYAML==6.0.3
 qrcode==8.2
 redis==5.2.1
 requests==2.32.5
@@ -112,7 +115,11 @@ typing_extensions==4.15.0
 tzdata==2025.2
 urllib3==2.5.0
 uvicorn==0.35.0
+uvloop==0.22.1
 vine==5.1.0
+watchfiles==1.1.1
 wcwidth==0.2.13
+websockets==15.0.1
 whitenoise==6.10.0
+wsproto==1.2.0
 zope.interface==8.0.1

@@ -60,6 +60,8 @@ class UpdatePaymentLinkSchema(BaseSchema):
 
 
 class PaymentLinkSchema(ModelSchema):
+    currency: CurrencySchema = Field(..., alias="wallet.currency")
+
     class Meta:
         model = PaymentLink
         exclude = ["id", "deleted_at", "user", "wallet"]

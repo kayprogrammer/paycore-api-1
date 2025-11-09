@@ -33,6 +33,6 @@ else
   echo "Seeding FAQs..."
   python manage.py seed_faqs
 
-  echo "Starting Gunicorn..."
-  exec gunicorn --bind :8000 --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --max-requests 1000 --max-requests-jitter 100 paycore.asgi:application
+  echo "Starting Uvicorn with WebSocket support..."
+  exec uvicorn paycore.asgi:application --host 0.0.0.0 --port 8000 --workers 2 --ws wsproto --timeout-keep-alive 120
 fi

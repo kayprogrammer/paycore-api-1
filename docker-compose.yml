@@ -65,7 +65,7 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             uvicorn paycore.asgi:application --host 0.0.0.0 --port 8000 --workers 4"
+             uvicorn paycore.asgi:application --host 0.0.0.0 --port 8000 --workers 4 --ws wsproto"
     env_file:
       - .env
     environment:

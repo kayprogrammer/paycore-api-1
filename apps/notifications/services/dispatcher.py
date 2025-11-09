@@ -285,7 +285,6 @@ class UnifiedNotificationDispatcher:
         try:
             # Get routing config for this event
             routing_config = EMAIL_TASK_ROUTER.get(event_type)
-
             if not routing_config:
                 logger.warning(f"No email task routing configured for {event_type}")
                 return {"success": False, "error": "No email routing configured"}
@@ -302,12 +301,12 @@ class UnifiedNotificationDispatcher:
 
             # Dynamically import and call the task
             task_path = routing_config["task"]
-            module_path, task_class_method = task_path.rsplit(".", 1)
-            task_class, method_name = (
-                task_class_method.rsplit(".", 1)
-                if "." in task_class_method
-                else (task_class_method, None)
-            )
+            # Split into: module.TaskClass.method_name
+            # e.g., "apps.wallets.tasks.WalletEmailTasks.send_wallet_created_email"
+            parts = task_path.split(".")
+            method_name = parts[-1]  # Last part is the method name
+            task_class = parts[-2]  # Second to last is the class name
+            module_path = ".".join(parts[:-2])  # Everything before is the module path
 
             # Import the module
             module = importlib.import_module(module_path)

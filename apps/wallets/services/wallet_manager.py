@@ -6,7 +6,6 @@ import random
 
 from apps.accounts.models import User
 from apps.common.utils import set_dict_attr
-from apps.compliance.models import KYCStatus, KYCVerification
 from apps.wallets.models import Wallet, Currency, WalletStatus
 from apps.common.exceptions import (
     NotFoundError,
@@ -18,6 +17,11 @@ from asgiref.sync import sync_to_async
 
 from apps.wallets.schemas import CreateWalletSchema, UpdateWalletSchema
 from apps.wallets.services.providers.factory import AccountProviderFactory
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationChannel,
+    NotificationEventType,
+)
 
 
 class WalletManager:
@@ -101,6 +105,27 @@ class WalletManager:
             is_test_mode=test_mode,
             **data.model_dump(exclude={"currency_code"}),
         )
+
+        # Send wallet creation notification
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=user,
+            event_type=NotificationEventType.WALLET_CREATED,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.PUSH,
+                NotificationChannel.EMAIL,
+            ],
+            title="Wallet Created Successfully",
+            message=f"Your {currency.code} wallet has been created successfully",
+            context_data={
+                "wallet_id": str(wallet.wallet_id),
+                "wallet_type": wallet.wallet_type,
+                "currency": currency.code,
+                "account_number": wallet.account_number,
+                "bank_name": wallet.bank_name,
+            },
+        )
+
         return wallet
 
     @staticmethod

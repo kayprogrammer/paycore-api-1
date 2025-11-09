@@ -54,6 +54,8 @@ class WebSocketService:
             # Send to user's group
             user_group_name = f"user_{user_id}_notifications"
 
+            logger.info(f"📤 Sending WebSocket notification {notification.id} to user {user_id}: {notification.title}")
+
             async_to_sync(channel_layer.group_send)(
                 user_group_name,
                 {
@@ -62,7 +64,7 @@ class WebSocketService:
                 },
             )
 
-            logger.info(f"WebSocket notification sent to user {user_id}")
+            logger.info(f"✅ WebSocket notification sent to user {user_id}")
             return True
 
         except Exception as e:

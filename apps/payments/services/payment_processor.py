@@ -22,6 +22,7 @@ from apps.notifications.services.dispatcher import (
     NotificationEventType,
 )
 from apps.notifications.models import NotificationPriority
+from asgiref.sync import sync_to_async
 import logging
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,7 @@ class PaymentProcessor:
             fee_amount=fee_amount,
             net_amount=net_amount,
             description=f"Payment: {link.title}",
+            reference=reference,
             external_reference=reference,
         )
 
@@ -149,7 +151,7 @@ class PaymentProcessor:
         )
 
         # Send payment success notification to payer (in-app, push, email)
-        UnifiedNotificationDispatcher.dispatch(
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
             user=payer_wallet.user,
             event_type=NotificationEventType.PAYMENT_SUCCESS,
             channels=[
@@ -171,7 +173,7 @@ class PaymentProcessor:
         )
 
         # Send payment received notification to merchant (in-app, push, email)
-        UnifiedNotificationDispatcher.dispatch(
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
             user=link.user,
             event_type=NotificationEventType.PAYMENT_RECEIVED,
             channels=[
@@ -264,6 +266,7 @@ class PaymentProcessor:
             fee_amount=fee_amount,
             net_amount=net_amount,
             description=f"Invoice Payment: {invoice.invoice_number}",
+            reference=reference,
             external_reference=reference,
         )
 
@@ -287,7 +290,7 @@ class PaymentProcessor:
         await InvoiceManager.mark_invoice_paid(invoice, amount)
 
         # Send payment success notification to payer (in-app, push, email)
-        UnifiedNotificationDispatcher.dispatch(
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
             user=payer_wallet.user,
             event_type=NotificationEventType.PAYMENT_SUCCESS,
             channels=[
@@ -310,7 +313,7 @@ class PaymentProcessor:
         )
 
         # Send payment received notification to merchant (in-app, push, email)
-        UnifiedNotificationDispatcher.dispatch(
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
             user=invoice.user,
             event_type=NotificationEventType.PAYMENT_RECEIVED,
             channels=[

@@ -13,7 +13,12 @@ from apps.common.exceptions import (
 from apps.cards.schemas import CreateCardSchema, UpdateCardSchema
 from apps.cards.services.providers.factory import CardProviderFactory
 from asgiref.sync import sync_to_async
-
+from apps.notifications.services.dispatcher import (
+    UnifiedNotificationDispatcher,
+    NotificationEventType,
+    NotificationChannel,
+)
+from django.conf import settings
 
 class CardManager:
     """Service for managing card creation, updates, and lifecycle"""
@@ -86,7 +91,26 @@ class CardManager:
             billing_address=(
                 data.billing_address.model_dump() if data.billing_address else {}
             ),
-            status=CardStatus.INACTIVE,  # Cards start inactive, must be activated
+            status=CardStatus.ACTIVE if settings.USE_INTERNAL_PROVIDER else CardStatus.INACTIVE,  
+        )
+
+        # Send card creation notification
+        await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
+            user=user,
+            event_type=NotificationEventType.CARD_ISSUED,
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.EMAIL
+            ],
+            title="Card Issued Successfully",
+            message=f"Your {data.card_brand} {data.card_type} card has been issued successfully",
+            context_data={
+                "card_id": str(card.card_id),
+                "card_type": card.card_type,
+                "card_brand": card.card_brand,
+                "card_number": f"****{card.card_number[-4:]}",
+                "currency": wallet.currency.code,
+            },
         )
 
         return card

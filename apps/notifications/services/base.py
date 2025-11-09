@@ -63,6 +63,7 @@ class NotificationService:
                 metadata=metadata or {},
                 expires_at=expires_at,
             )
+            logger.info(f"✅ Created notification {notification.id} for user {user.id}: {title} (type={notification_type})")
 
             update_fields = ["updated_at"]
             # Send push notification if enabled
@@ -161,7 +162,7 @@ class NotificationService:
     ) -> bool:
         notification_ids = payload.notification_ids
         filters = {} if len(notification_ids) < 1 else {"id__in": notification_ids}
-        await Notification.objects.filter(user=user, is_read=False, **filters).adelete()
+        await Notification.objects.filter(user=user, **filters).adelete()
 
     @staticmethod
     async def get_notification_stats(user: User) -> Dict[str, Any]:

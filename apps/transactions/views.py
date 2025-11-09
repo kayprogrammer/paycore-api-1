@@ -191,9 +191,9 @@ async def initiate_deposit(request, data: InitiateDepositSchema):
         description=data.description,
     )
     if settings.USE_INTERNAL_PROVIDER:
-        # Schedule auto-confirmation after 15 seconds
+        # Schedule auto-confirmation after 5 seconds
         DepositTasks.auto_confirm_deposit.apply_async(
-            args=[str(transaction.transaction_id)], countdown=10  # 10 seconds delay
+            args=[str(transaction.transaction_id)], countdown=5  # 5 second delay
         )
 
     return CustomResponse.success(

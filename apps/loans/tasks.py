@@ -65,30 +65,27 @@ class LoanApprovalTasks:
                 # Use the loan applicant as reviewer for demo purposes
                 system_user = loan.user
 
-            # Use LoanManager to approve the loan
             # Approve with requested amount and existing interest rate
             approval_data = ApproveLoanSchema(
                 approved_amount=loan.requested_amount,
                 interest_rate=loan.interest_rate,
             )
-
             approved_loan = async_to_sync(LoanManager.approve_loan)(
                 reviewer=system_user,
                 application_id=application_id,
                 data=approval_data,
             )
-
             logger.info(
                 f"Loan {application_id} auto-approved successfully. "
                 f"Amount: {approved_loan.approved_amount}, "
                 f"Status: {approved_loan.status}"
             )
 
-            # Schedule auto-disbursement after 10 seconds
-            if settings.USE_INTERNAL_PROVIDER:
-                LoanApprovalTasks.auto_disburse_loan.apply_async(
-                    args=[str(application_id)], countdown=10  # 10 seconds delay
-                )
+            # Use LoanProcessor to disburse the loan
+            async_to_sync(LoanProcessor.disburse_loan)(
+                application_id=application_id,
+                admin_user=system_user,
+            )
 
             return {
                 "status": "success",
@@ -120,9 +117,12 @@ class LoanApprovalTasks:
         """
         try:
             # Get loan application to check status
-            loan = LoanApplication.objects.select_related(
-                "loan_product", "wallet", "wallet__currency", "user"
-            ).get_or_none(application_id=application_id)
+            try:
+                loan = LoanApplication.objects.select_related(
+                    "loan_product", "wallet", "wallet__currency", "user"
+                ).get(application_id=application_id)
+            except LoanApplication.DoesNotExist:
+                loan = None
 
             if not loan:
                 logger.error(
@@ -144,7 +144,7 @@ class LoanApprovalTasks:
                 return {"status": "skipped", "reason": "already_disbursed"}
 
             # Create a system user for disbursement if needed
-            system_user = User.objects.filter(email="system@paycore.com").first()
+            system_user = User.objects.filter(is_staff=True).first()
 
             # Use LoanProcessor to disburse the loan
             disbursed_loan = async_to_sync(LoanProcessor.disburse_loan)(
@@ -582,17 +582,20 @@ class LoanEmailTasks:
     def send_loan_approved_email(self, loan_id: str):
         """Send loan approval notification email"""
         try:
-            loan = LoanApplication.objects.select_related(
-                "user", "wallet", "wallet__currency"
-            ).get_or_none(application_id=loan_id)
+            try:
+                loan = LoanApplication.objects.select_related(
+                    "user", "wallet", "wallet__currency"
+                ).get(application_id=loan_id)
+            except LoanApplication.DoesNotExist:
+                loan = None
 
             if not loan:
                 logger.error(f"Loan {loan_id} not found")
                 return {"status": "failed", "error": "Loan not found"}
 
             LoanEmailUtil.send_loan_approved_email(loan)
-            logger.info(f"Loan approval email sent for loan {loan.reference_number}")
-            return {"status": "success", "reference": loan.reference_number}
+            logger.info(f"Loan approval email sent for loan {loan.application_id}")
+            return {"status": "success", "application_id": str(loan.application_id)}
         except Exception as exc:
             logger.error(f"Loan approval email failed: {str(exc)}")
             raise self.retry(exc=exc)
@@ -608,9 +611,12 @@ class LoanEmailTasks:
     def send_loan_disbursed_email(self, loan_id: str):
         """Send loan disbursement notification email"""
         try:
-            loan = LoanApplication.objects.select_related(
-                "user", "wallet", "wallet__currency"
-            ).get_or_none(application_id=loan_id)
+            try:
+                loan = LoanApplication.objects.select_related(
+                    "user", "wallet", "wallet__currency"
+                ).get(application_id=loan_id)
+            except LoanApplication.DoesNotExist:
+                loan = None
 
             if not loan:
                 logger.error(f"Loan {loan_id} not found")
@@ -618,9 +624,9 @@ class LoanEmailTasks:
 
             LoanEmailUtil.send_loan_disbursed_email(loan)
             logger.info(
-                f"Loan disbursement email sent for loan {loan.reference_number}"
+                f"Loan disbursement email sent for loan {loan.application_id}"
             )
-            return {"status": "success", "reference": loan.reference_number}
+            return {"status": "success", "application_id": str(loan.application_id)}
         except Exception as exc:
             logger.error(f"Loan disbursement email failed: {str(exc)}")
             raise self.retry(exc=exc)
@@ -636,9 +642,14 @@ class LoanEmailTasks:
     def send_loan_repayment_email(self, repayment_id: str):
         """Send loan repayment confirmation email"""
         try:
-            repayment = LoanRepayment.objects.select_related(
-                "loan", "loan__user", "loan__wallet", "loan__wallet__currency"
-            ).get_or_none(repayment_id=repayment_id)
+            from apps.loans.models import LoanRepayment
+
+            try:
+                repayment = LoanRepayment.objects.select_related(
+                    "loan", "loan__user", "loan__wallet", "loan__wallet__currency"
+                ).get(repayment_id=repayment_id)
+            except LoanRepayment.DoesNotExist:
+                repayment = None
 
             if not repayment:
                 logger.error(f"Loan Repayment {repayment_id} not found")

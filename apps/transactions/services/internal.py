@@ -28,13 +28,24 @@ class InternalDepositProvider(BaseDepositProvider):
     """
 
     SUPPORTED_CURRENCIES = [
+        # Fiat Currencies (African)
         "NGN",  # Nigerian Naira
-        "USD",  # US Dollar
-        "EUR",  # Euro
-        "GBP",  # British Pound
         "KES",  # Kenyan Shilling
         "GHS",  # Ghanaian Cedi
         "ZAR",  # South African Rand
+        "EGP",  # Egyptian Pound
+        # Fiat Currencies (Major)
+        "USD",  # US Dollar
+        "EUR",  # Euro
+        "GBP",  # British Pound
+        "CAD",  # Canadian Dollar
+        "AUD",  # Australian Dollar
+        # Cryptocurrencies
+        "BTC",  # Bitcoin
+        "ETH",  # Ethereum
+        "USDT",  # Tether
+        "USDC",  # USD Coin
+        "BNB",  # Binance Coin
     ]
 
     def __init__(self, test_mode: bool = False):
