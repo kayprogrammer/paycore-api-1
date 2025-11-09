@@ -3,6 +3,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 import logging
 from datetime import datetime
+from apps.loans.models import LoanRepaymentSchedule
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class LoanEmailUtil:
 
             context = {
                 "user_name": loan.user.full_name,
-                "loan_reference": loan.reference_number,
+                "loan_reference": loan.reference or loan.external_reference,
                 "approved_amount": f"{loan.approved_amount:,.2f}",
                 "interest_rate": f"{loan.interest_rate}",
                 "loan_term": f"{loan.term_months}",
@@ -54,7 +55,7 @@ class LoanEmailUtil:
             )
         except Exception as e:
             logger.error(
-                f"Failed to send loan approval email for {loan.reference_number}: {e}",
+                f"Failed to send loan approval email for {loan.reference or loan.external_reference}: {e}",
                 exc_info=True,
             )
 
@@ -68,7 +69,7 @@ class LoanEmailUtil:
 
             context = {
                 "user_name": loan.user.full_name,
-                "loan_reference": loan.reference_number,
+                "loan_reference": loan.reference or loan.external_reference,
                 "disbursed_amount": f"{loan.disbursed_amount:,.2f}",
                 "disbursement_date": loan.disbursed_at.strftime(
                     "%B %d, %Y at %I:%M %p"
@@ -93,7 +94,7 @@ class LoanEmailUtil:
             )
         except Exception as e:
             logger.error(
-                f"Failed to send loan disbursement email for {loan.reference_number}: {e}",
+                f"Failed to send loan disbursement email for {loan.reference or loan.external_reference}: {e}",
                 exc_info=True,
             )
 
@@ -102,26 +103,31 @@ class LoanEmailUtil:
         """Send loan repayment confirmation to user"""
         try:
             frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
-            loan_url = f"{frontend_url}/loans/{repayment.loan.loan_id}"
+            loan_url = f"{frontend_url}/loans/{repayment.loan.application_id}"
             transaction_url = f"{frontend_url}/transactions/{repayment.transaction_id}"
 
             # Check if this is the final payment
-            is_final_payment = repayment.loan.remaining_balance <= 0
-
+            is_final_payment = repayment.schedule.outstanding_amount <= 0
+            schedule = repayment.schedule
+            # Get the next schedule after this
+            next_schedule = LoanRepaymentSchedule.objects.filter(loan=schedule.loan, due_date__gt=schedule.due_date).first()
             context = {
                 "user_name": repayment.loan.user.full_name,
-                "loan_reference": repayment.loan.reference_number,
-                "payment_reference": repayment.reference_number,
+                "loan_reference": repayment.reference
+                or repayment.external_reference,
+                "payment_reference": repayment.reference or repayment.transaction_id,
                 "payment_amount": f"{repayment.amount:,.2f}",
-                "payment_date": repayment.paid_at.strftime("%B %d, %Y at %I:%M %p"),
-                "principal_paid": f"{repayment.principal_amount:,.2f}",
-                "interest_paid": f"{repayment.interest_amount:,.2f}",
-                "remaining_balance": f"{repayment.loan.remaining_balance:,.2f}",
+                "amount_paid": f"{repayment.amount:,.2f}",
+                "payment_date": repayment.created_at.strftime("%B %d, %Y at %I:%M %p"),
+                "principal_paid": f"{repayment.principal_paid:,.2f}",
+                "interest_paid": f"{repayment.interest_paid:,.2f}",
+                "remaining_balance": f"{repayment.schedule.outstanding_amount:,.2f}",
                 "next_payment_date": (
-                    repayment.loan.next_payment_date.strftime("%B %d, %Y")
-                    if repayment.loan.next_payment_date and not is_final_payment
+                    next_schedule.due_date.strftime("%B %d, %Y")
+                    if next_schedule
                     else None
                 ),
+                "next_payment_amount": f"{next_schedule.total_amount:,.2f}" if next_schedule else 0,
                 "is_final_payment": is_final_payment,
                 "currency_symbol": repayment.loan.wallet.currency.symbol,
                 "loan_url": loan_url,
@@ -132,13 +138,13 @@ class LoanEmailUtil:
             }
 
             cls._send_email(
-                subject=f"Loan Repayment Successful - {repayment.reference_number}",
+                subject=f"Loan Repayment Successful - {repayment.reference or repayment.transaction_id}",
                 template_name="loan-repayment-success.html",
                 context=context,
                 recipient=repayment.loan.user.email,
             )
         except Exception as e:
             logger.error(
-                f"Failed to send loan repayment email for {repayment.reference_number}: {e}",
+                f"Failed to send loan repayment email for {repayment.reference or repayment.transaction_id}: {e}",
                 exc_info=True,
             )

@@ -63,7 +63,9 @@ class NotificationService:
                 metadata=metadata or {},
                 expires_at=expires_at,
             )
-            logger.info(f"✅ Created notification {notification.id} for user {user.id}: {title} (type={notification_type})")
+            logger.info(
+                f"✅ Created notification {notification.id} for user {user.id}: {title} (type={notification_type})"
+            )
 
             update_fields = ["updated_at"]
             # Send push notification if enabled

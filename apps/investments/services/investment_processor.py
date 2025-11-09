@@ -7,6 +7,7 @@ from asgiref.sync import sync_to_async
 from django.utils import timezone
 from django.db.models import Sum, Count, Avg, Q, F
 from typing import Optional
+import secrets
 
 from apps.accounts.models import User
 from apps.common.decorators import aatomic
@@ -56,15 +57,16 @@ class InvestmentProcessor:
         await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
         # Create transaction
+        transaction_ref = f"INV-PAYOUT-{int(timezone.now().timestamp())}-{secrets.token_urlsafe(8)}"
         transaction = await Transaction.objects.acreate(
-            transaction_id=Transaction.generate_transaction_id(),
-            user=investment.user,
-            wallet=wallet,
+            to_user=investment.user,
+            to_wallet=wallet,
             transaction_type=TransactionType.INVESTMENT_PAYOUT,
             amount=total_payout,
-            currency=wallet.currency,
+            net_amount=total_payout,
             status=TransactionStatus.COMPLETED,
             description=f"Maturity payout for {investment.product.name}",
+            external_reference=transaction_ref,
             metadata={
                 "investment_id": str(investment.investment_id),
                 "principal": str(investment.principal_amount),
@@ -144,15 +146,16 @@ class InvestmentProcessor:
         await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
         # Create transaction
+        transaction_ref = f"INV-RETURN-{int(timezone.now().timestamp())}-{secrets.token_urlsafe(8)}"
         transaction = await Transaction.objects.acreate(
-            transaction_id=Transaction.generate_transaction_id(),
-            user=investment.user,
-            wallet=wallet,
+            to_user=investment.user,
+            to_wallet=wallet,
             transaction_type=TransactionType.INVESTMENT_RETURN,
             amount=investment_return.amount,
-            currency=wallet.currency,
+            net_amount=investment_return.amount,
             status=TransactionStatus.COMPLETED,
             description=f"Investment return from {investment.product.name}",
+            external_reference=transaction_ref,
             metadata={
                 "investment_id": str(investment.investment_id),
                 "return_id": str(investment_return.return_id),

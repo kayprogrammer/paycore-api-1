@@ -20,6 +20,7 @@ from apps.notifications.services.dispatcher import (
 )
 from django.conf import settings
 
+
 class CardManager:
     """Service for managing card creation, updates, and lifecycle"""
 
@@ -91,17 +92,18 @@ class CardManager:
             billing_address=(
                 data.billing_address.model_dump() if data.billing_address else {}
             ),
-            status=CardStatus.ACTIVE if settings.USE_INTERNAL_PROVIDER else CardStatus.INACTIVE,  
+            status=(
+                CardStatus.ACTIVE
+                if settings.USE_INTERNAL_PROVIDER
+                else CardStatus.INACTIVE
+            ),
         )
 
         # Send card creation notification
         await sync_to_async(UnifiedNotificationDispatcher.dispatch)(
             user=user,
             event_type=NotificationEventType.CARD_ISSUED,
-            channels=[
-                NotificationChannel.IN_APP,
-                NotificationChannel.EMAIL
-            ],
+            channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
             title="Card Issued Successfully",
             message=f"Your {data.card_brand} {data.card_type} card has been issued successfully",
             context_data={

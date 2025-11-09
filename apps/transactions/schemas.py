@@ -145,8 +145,11 @@ class TransactionSchema(BaseSchema):
     def resolve_reference(obj):
         if not obj.reference:
             provider_resp = obj.metadata.get("provider_response", {})
-            return obj.metadata.get("reference", None) or provider_resp.get("reference", None)
+            return obj.metadata.get("reference", None) or provider_resp.get(
+                "reference", None
+            )
         return obj.reference
+
 
 class TransactionDetailSchema(TransactionSchema):
     from_balance_before: Optional[Decimal] = Field(None, example=500.00)

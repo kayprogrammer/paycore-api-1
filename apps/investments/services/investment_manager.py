@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
 from typing import Optional
+import secrets
 
 from apps.accounts.models import User
 from apps.common.decorators import aatomic
@@ -122,6 +123,7 @@ class InvestmentManager:
         await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
         # Create transaction
+        transaction_ref = f"INV-{int(timezone.now().timestamp())}-{secrets.token_urlsafe(8)}"
         transaction = await Transaction.objects.acreate(
             from_user=user,
             from_wallet=wallet,
@@ -130,6 +132,7 @@ class InvestmentManager:
             net_amount=data.amount,
             status=TransactionStatus.COMPLETED,
             description=f"Investment in {product.name}",
+            external_reference=transaction_ref,
         )
 
         # Create investment
@@ -274,6 +277,7 @@ class InvestmentManager:
         wallet.available_balance += payout_amount
         await wallet.asave(update_fields=["balance", "available_balance", "updated_at"])
 
+        transaction_ref = f"INV-LIQ-{int(timezone.now().timestamp())}-{secrets.token_urlsafe(8)}"
         transaction = await Transaction.objects.acreate(
             to_user=user,
             to_wallet=wallet,
@@ -282,6 +286,7 @@ class InvestmentManager:
             net_amount=payout_amount,
             status=TransactionStatus.COMPLETED,
             description=f"Early liquidation of investment {investment.investment_id}",
+            external_reference=transaction_ref,
             metadata={
                 "principal": str(investment.principal_amount),
                 "returns": str(investment.actual_returns),

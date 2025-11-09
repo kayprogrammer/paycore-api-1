@@ -2,6 +2,8 @@ from django.db import models
 from django.utils import timezone
 from decimal import Decimal
 import uuid
+import secrets
+import string
 
 from apps.accounts.models import User
 from apps.common.models import BaseModel
@@ -202,6 +204,20 @@ class Transaction(BaseModel):
 
     def __str__(self):
         return f"{self.transaction_type} - {self.amount} ({self.status})"
+
+    @staticmethod
+    def generate_reference():
+        """Generate a standard 28-character reference starting with PYC"""
+        # PYC + 25 random uppercase letters and digits = 28 characters
+        chars = string.ascii_uppercase + string.digits
+        random_part = ''.join(secrets.choice(chars) for _ in range(25))
+        return f"PYC{random_part}"
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-generate reference if not provided"""
+        if not self.reference:
+            self.reference = self.generate_reference()
+        super().save(*args, **kwargs)
 
     @property
     def currency_code(self):

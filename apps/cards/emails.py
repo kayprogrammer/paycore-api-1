@@ -43,7 +43,9 @@ class CardEmailUtil:
                 "masked_card_number": masked_number,
                 "cardholder_name": card.card_holder_name,
                 "expiry_date": (
-                    f"{card.expiry_month:02d}/{card.expiry_year}" if card.expiry_month and card.expiry_year else "N/A"
+                    f"{card.expiry_month:02d}/{card.expiry_year}"
+                    if card.expiry_month and card.expiry_year
+                    else "N/A"
                 ),
                 "issue_date": card.created_at.strftime("%B %d, %Y"),
                 "is_virtual": card.card_type == "virtual",

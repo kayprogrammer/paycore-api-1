@@ -19,6 +19,7 @@ from apps.loans.schemas import MakeLoanRepaymentSchema, ApproveLoanSchema
 from apps.accounts.models import User
 from apps.loans.emails import LoanEmailUtil
 from apps.loans.models import LoanApplication
+from apps.loans.models import LoanRepayment
 
 logger = logging.getLogger(__name__)
 
@@ -623,9 +624,7 @@ class LoanEmailTasks:
                 return {"status": "failed", "error": "Loan not found"}
 
             LoanEmailUtil.send_loan_disbursed_email(loan)
-            logger.info(
-                f"Loan disbursement email sent for loan {loan.application_id}"
-            )
+            logger.info(f"Loan disbursement email sent for loan {loan.application_id}")
             return {"status": "success", "application_id": str(loan.application_id)}
         except Exception as exc:
             logger.error(f"Loan disbursement email failed: {str(exc)}")
@@ -642,14 +641,9 @@ class LoanEmailTasks:
     def send_loan_repayment_email(self, repayment_id: str):
         """Send loan repayment confirmation email"""
         try:
-            from apps.loans.models import LoanRepayment
-
-            try:
-                repayment = LoanRepayment.objects.select_related(
-                    "loan", "loan__user", "loan__wallet", "loan__wallet__currency"
-                ).get(repayment_id=repayment_id)
-            except LoanRepayment.DoesNotExist:
-                repayment = None
+            repayment = LoanRepayment.objects.select_related(
+                "loan", "loan__user", "loan__wallet", "loan__wallet__currency"
+            ).get_or_none(repayment_id=repayment_id)
 
             if not repayment:
                 logger.error(f"Loan Repayment {repayment_id} not found")
@@ -657,9 +651,9 @@ class LoanEmailTasks:
 
             LoanEmailUtil.send_loan_repayment_email(repayment)
             logger.info(
-                f"Loan repayment email sent for repayment {repayment.reference_number}"
+                f"Loan repayment email sent for repayment {repayment.reference}"
             )
-            return {"status": "success", "reference": repayment.reference_number}
+            return {"status": "success", "reference": repayment.reference}
         except Exception as exc:
             logger.error(f"Loan repayment email failed: {str(exc)}")
             raise self.retry(exc=exc)
