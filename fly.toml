@@ -21,9 +21,9 @@ console_command = '/app/manage.py shell'
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = 'suspend'
+  auto_stop_machines = false  # Keep machines always running for better performance
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1  # Always keep at least 1 machine running
   processes = ['app']
 
   # Add health checks to prevent premature restarts
@@ -35,14 +35,16 @@ console_command = '/app/manage.py shell'
     timeout = "15s"
     type = "http"
 
+# API Server - Upgraded to 2GB RAM and 2 shared CPUs
 [[vm]]
-  memory = '512mb'
+  memory = '2gb'  # Increased from 512mb - critical for performance
   cpu_kind = 'shared'
-  cpus = 1
+  cpus = 2  # Increased from 1 - handles concurrent requests better
   processes = ['app']
 
+# Celery Worker - Upgraded to 1GB RAM
 [[vm]]
-  memory = '512mb'
+  memory = '1gb'  # Increased from 512mb - handles background tasks better
   cpu_kind = 'shared'
   cpus = 1
   processes = ['celery']
